@@ -127,25 +127,25 @@ export default function StationPhaseTable() {
   const phases = [
     {
       id: 1,
-      name: "Civil Work",
+      name: "Civil and Antenna Install",
       icon: <Engineering fontSize="large" color="primary" />,
       milestones: ["Civil Work", "Foundation", "Site Preparation"],
     },
     {
       id: 2,
-      name: "Installation",
+      name: "Laying Of Cable",
       icon: <Settings fontSize="large" color="primary" />,
       milestones: ["Installation", "Equipment Setup", "Hardware Installation"],
     },
     {
       id: 3,
-      name: "Antenna Tuning",
+      name: "Installation Of Transmitter",
       icon: <Timeline fontSize="large" color="primary" />,
       milestones: ["Antenna Tuning", "Antenna Tunning", "Signal Testing", "Configuration"],
     },
     {
       id: 4,
-      name: "Final Check & Completion",
+      name: "Final Check & Handover",
       icon: <VerifiedUser fontSize="large" color="primary" />,
       milestones: ["Final Check", "Completion Certificate", "Final Check & Completion", "Testing", "Verification"],
     },

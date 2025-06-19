@@ -1,175 +1,232 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import "./TicketList.css";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  CircularProgress,
+  Pagination,
+  InputAdornment,
+  Stack,
+  Alert
+} from '@mui/material';
+import { Search, Add } from '@mui/icons-material';
+import CreateTicketDialog from './CreateTicketDialog';
 
-function TicketList() {
-  const [projects, setProjects] = useState([]);
-  const [filteredProjects, setFilteredProjects] = useState([]);
+const TicketList = () => {
+  const [tickets, setTickets] = useState([]);
+  const [filtered, setFiltered] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(15);
-const navigate = useNavigate()
+  const [page, setPage] = useState(1);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [error, setError] = useState('');
+  const rowsPerPage = 10;
+
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await axios.get(
-          "https://namami-infotech.com/SANCHAR/src/tender/sanchar_tender.php?menuId=1"
-        );
-        if (response.data.success) {
-          setProjects(response.data.data);
-          setFilteredProjects(response.data.data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch projects", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProjects();
+    fetchTickets();
   }, []);
 
-  const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearchTerm(value);
-    const filtered = projects.filter((project) => {
-      const tenderNo = project.TenderNo?.toLowerCase() || "";
-      const buyer = project.BuyerName?.toLowerCase() || "";
-      return tenderNo.includes(value) || buyer.includes(value);
-    });
-    setFilteredProjects(filtered);
-    setPage(0);
+  const fetchTickets = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const response = await fetch('https://namami-infotech.com/SANCHAR/src/support/get_tickets.php');
+      const data = await response.json();
+
+      if (data.success) {
+        setTickets(data.data);
+        setFiltered(data.data);
+      } else {
+        setTickets([]);
+        setFiltered([]);
+        setError('Failed to fetch tickets');
+      }
+    } catch (err) {
+      console.error('Error fetching tickets:', err);
+      setError('Network error occurred while fetching tickets');
+      setTickets([]);
+      setFiltered([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const totalPages = Math.ceil(filteredProjects.length / rowsPerPage);
-  const startIndex = page * rowsPerPage;
-  const currentRecords = filteredProjects.slice(startIndex, startIndex + rowsPerPage);
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return isNaN(date) ? "-" : date.toLocaleDateString("en-GB");
-  };
-
-  const openInNewTab = (url) => {
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-  const openInSameTab = (url) => {
-    window.open(url, "noopener,noreferrer");
-  };
-
-  if (loading) {
-    return (
-      <div className="project-loading-container">
-        <div className="project-spinner"></div>
-        <div>Loading projects...</div>
-      </div>
+  const handleSearch = (event) => {
+    const val = event.target.value.toLowerCase();
+    setSearchTerm(val);
+    const filteredList = tickets.filter(
+      (ticket) =>
+        ticket.Station?.toLowerCase().includes(val) ||
+        ticket.EmpName?.toLowerCase().includes(val) ||
+        ticket.ContactPerson?.toLowerCase().includes(val)
     );
-  }
+    setFiltered(filteredList);
+    setPage(1);
+  };
+
+  const handleTicketCreated = () => {
+    fetchTickets();
+    setIsCreateDialogOpen(false);
+  };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'assigned':
+        return 'primary';
+      case 'in progress':
+        return 'warning';
+      case 'complete':
+        return 'success';
+      case 'closed':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const startIndex = (page - 1) * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const paginatedTickets = filtered.slice(startIndex, endIndex);
 
   return (
-    <div className="project-list-container">
-      <div className="project-list-header">
-        <h2 className="project-list-title">Support Ticket</h2>
-        <input
-          type="text"
-          placeholder="Search by Tender No. or Buyer"
-          value={searchTerm}
-          onChange={handleSearch}
-          className="project-search-input"
-        />
-      </div>
+    <Box sx={{ p: 0 }}>
+      
+        {/* Header */}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            Support Tickets
+          </Typography>
+          
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ minWidth: { xs: '100%', sm: 'auto' } }}>
+            <TextField
+              placeholder="Search by Station, Technician, or Contact Person"
+              value={searchTerm}
+              onChange={handleSearch}
+              size="small"
+              sx={{ minWidth: 300 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setIsCreateDialogOpen(true)}
+            sx={{ whiteSpace: 'nowrap', backgroundColor: '#F69320', color: '#fff', '&:hover': { backgroundColor: '#F69320' } }}
+            >
+              New Ticket
+            </Button>
+          </Stack>
+        </Box>
 
-      <div className="project-table-container">
-        <table className="project-table">
-          <thead>
-            <tr>
-              <th>Tender No</th>
-              <th>Buyer</th>
-              <th>Date</th>
-              <th>Tender Copy</th>
-              <th>Tasks</th>
-              <th>Assign</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentRecords.length > 0 ? (
-              currentRecords.map((project) => (
-                <tr key={project.ActivityId}>
-                  <td onClick={() => navigate(`/tender/view/${project.ActivityId}`)} style={{cursor:"pointer", fontWeight:"bold", color:"blue"}}>{project.TenderNo || "-"}</td>
-                  <td>{project.BuyerName || "-"}</td>
-                  <td>{formatDate(project.TenderDate)}</td>
-                      <td>
-                        {project.TenderCopy && project.TenderCopy.endsWith(".pdf") ? (
-                          <button
-                            className="project-link-button"
-                            onClick={() => openInNewTab(project.TenderCopy)}
-                          >
-                            📄 Open PDF
-                          </button>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                  <td>
-                    <button
-                      className="project-view-button"
-                      onClick={() =>  navigate(`/project/view/${project.TenderNo}`, {
-                        state: {
-                          tenderNo: project.TenderNo,
-                          ActivityId: project.ActivityId
-                         }
-                      })
-                      }
-                    >
-                      👁️
-                    </button>
-                  </td>
-                  <td>
-                    <button
-                      className="project-view-button"
-                      onClick={() =>  navigate(`/assign/task/${project.ActivityId}`, {
-                        state: { tenderNo: project.TenderNo }
-                      })
-                      }
-                    >
-                      📝
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" className="project-no-records">
-                  No records found
-                </td>
-              </tr>
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Loading State */}
+        {loading ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 8 }}>
+            <CircularProgress size={40} sx={{ mb: 2 }} />
+            <Typography color="text.secondary">Loading tickets...</Typography>
+          </Box>
+        ) : (
+          <>
+            {/* Table */}
+            <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#F69320', color: '#fff' }}>
+                    <TableCell sx={{color:"#fff"}}><strong>ID</strong></TableCell>
+                    <TableCell sx={{color:"#fff"}}><strong>Technician</strong></TableCell>
+                    <TableCell sx={{color:"#fff"}}><strong>Station</strong></TableCell>
+                    <TableCell sx={{color:"#fff"}}><strong>Contact Person</strong></TableCell>
+                    <TableCell sx={{color:"#fff"}}><strong>Contact Number</strong></TableCell>
+                    <TableCell sx={{color:"#fff"}}><strong>Status</strong></TableCell>
+                    <TableCell sx={{color:"#fff"}}><strong>Date</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paginatedTickets.length > 0 ? (
+                    paginatedTickets.map((ticket) => (
+                      <TableRow key={ticket.Id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {ticket.Id}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>{ticket.EmpName}</TableCell>
+                        <TableCell>{ticket.Station}</TableCell>
+                        <TableCell>{ticket.ContactPerson}</TableCell>
+                        <TableCell>{ticket.ContactNumber}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={ticket.Status}
+                            color={getStatusColor(ticket.Status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {new Date(ticket.Date).toLocaleDateString('en-GB')}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">
+                          No tickets found.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filtered.length)} of {filtered.length} tickets
+                </Typography>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(event, value) => setPage(value)}
+                  color="primary"
+                  showFirstButton
+                  showLastButton
+                />
+              </Box>
             )}
-          </tbody>
-        </table>
-      </div>
+          </>
+        )}
 
-      <div className="project-pagination">
-        <button
-          className="project-pagination-button"
-          disabled={page === 0}
-          onClick={() => setPage(page - 1)}
-        >
-          Previous
-        </button>
-        <span className="project-page-info">
-          Page {page + 1} of {totalPages || 1}
-        </span>
-        <button
-          className="project-pagination-button"
-          disabled={page >= totalPages - 1}
-          onClick={() => setPage(page + 1)}
-        >
-          Next
-        </button>
-      </div>
-    </div>
+      {/* Create Ticket Dialog */}
+      <CreateTicketDialog
+        open={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onTicketCreated={handleTicketCreated}
+      />
+    </Box>
   );
-}
+};
 
 export default TicketList;

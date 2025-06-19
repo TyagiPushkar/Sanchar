@@ -30,28 +30,28 @@ import { styled } from "@mui/material/styles"
 
 const milestones = [
   {
-    label: "Civil Work",
+    label: "Civil and Antenna Install",
     value: "2",
     color: "#2196f3",
     bgColor: "#e3f2fd",
     phase: 1,
   },
   {
-    label: "Installation",
+    label: "Laying Of Cable",
     value: "3",
     color: "#9c27b0",
     bgColor: "#f3e5f5",
     phase: 2,
   },
   {
-    label: "Antenna Tunning",
+    label: "Installation Of Transmitter",
     value: "4",
     color: "#4caf50",
     bgColor: "#e8f5e8",
     phase: 3,
   },
   {
-    label: "Final Check & Completion Certificate",
+    label: "Final Check & Handover",
     value: "5",
     color: "#ff9800",
     bgColor: "#fff3e0",

@@ -203,6 +203,7 @@ function Sidebar() {
                             opacity: expanded ? 1 : 0,
                             transition: "opacity 0.3s ease",
                             whiteSpace: "nowrap",
+                        
                           }}
                         >
                           {route.name}
