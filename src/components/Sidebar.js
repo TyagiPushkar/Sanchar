@@ -46,7 +46,7 @@ function Sidebar() {
     { path: "/participant", name: "Participants", icon: <Person /> },
     { path: "/projects", name: "Projects", icon: <AccountTreeIcon /> },
     { path: "/employees", name: "Employees", icon: <BadgeIcon /> },
-    // { path: "/support-ticket", name: "Support Ticket", icon: <SupportAgentIcon /> },
+    { path: "/support-ticket", name: "Support Ticket", icon: <SupportAgentIcon /> },
   ]
 
   const userModules = user?.modules || []

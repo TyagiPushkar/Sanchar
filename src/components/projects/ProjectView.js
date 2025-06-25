@@ -129,25 +129,25 @@ export default function StationPhaseTable() {
       id: 1,
       name: "Civil and Antenna Install",
       icon: <Engineering fontSize="large" color="primary" />,
-      milestones: ["Civil Work", "Foundation", "Site Preparation"],
+      milestones: ["Civil and Antenna Install"],
     },
     {
       id: 2,
       name: "Laying Of Cable",
       icon: <Settings fontSize="large" color="primary" />,
-      milestones: ["Installation", "Equipment Setup", "Hardware Installation"],
+      milestones: ["Laying Of Cable"],
     },
     {
       id: 3,
       name: "Installation Of Transmitter",
       icon: <Timeline fontSize="large" color="primary" />,
-      milestones: ["Antenna Tuning", "Antenna Tunning", "Signal Testing", "Configuration"],
+      milestones: ["Installation Of Transmitter"],
     },
     {
       id: 4,
       name: "Final Check & Handover",
       icon: <VerifiedUser fontSize="large" color="primary" />,
-      milestones: ["Final Check", "Completion Certificate", "Final Check & Completion", "Testing", "Verification"],
+      milestones: ["Final Check & Handover"],
     },
   ]
 
