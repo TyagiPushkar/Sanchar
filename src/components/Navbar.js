@@ -272,6 +272,7 @@ function Navbar() {
                 fontSize: { xs: "0.9rem", sm: "1.1rem" },
                 display: "flex",
                 alignItems: "center",
+                ml:30
               }}
             >
               <span style={{ fontWeight: 600 }}>{greeting}</span>

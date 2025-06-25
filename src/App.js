@@ -33,7 +33,9 @@ function App() {
         return () => {
             document.removeEventListener('contextmenu', handleRightClick);
         };
-    }, []);
+     
+   }, []);
+  
   return (
     <ThemeProvider theme={theme}>
       <AuthProvider>
