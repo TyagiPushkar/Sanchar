@@ -21,6 +21,7 @@ import {
   Autocomplete,
   CircularProgress,
   Container,
+  InputAdornment
 } from "@mui/material"
 import { useNavigate } from "react-router-dom"
 
@@ -35,6 +36,35 @@ function AdmissionFormLogic() {
   const [loading, setLoading] = useState(true)
   const [loadingError, setLoadingError] = useState("")
   const navigate = useNavigate()
+
+  // Amount fields configuration
+  const amountFieldIds = [62, 64, 66, 70] // Fields to sum
+  const totalFieldId = 72 // Field to display total
+
+  // Format currency helper
+  const formatCurrency = (value) => {
+    const num = parseFloat(value) || 0
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(num)
+  }
+
+  // Calculate sum whenever any amount field changes
+  useEffect(() => {
+    let sum = 0
+    amountFieldIds.forEach(id => {
+      const value = parseFloat(formData[id]) || 0
+      sum += value
+    })
+
+    // Update total field if sum has changed
+    if (formData[totalFieldId] !== sum.toString()) {
+      handleChange(totalFieldId, sum.toFixed(2))
+    }
+  }, [formData[62], formData[64], formData[66], formData[70]])
 
   const handleChange = (id, value) => {
     setFormData((prev) => ({ ...prev, [id]: value }))
@@ -52,48 +82,35 @@ function AdmissionFormLogic() {
       return
     }
 
-    // Special case for Dependent = 6
     if (parentCheckpoint.Dependent.trim() === "6") {
-      // Set the dependent ID 6 to be visible for this parent
       const newVisibleDependents = { ...visibleDependents }
       newVisibleDependents[parentId] = [6]
       setVisibleDependents(newVisibleDependents)
       return
     }
 
-    // Check if the parent field is of type Radio, Checkbox, or Dropdown (TypeId 5, 6, or 9)
     if ([5, 6, 9].includes(parentCheckpoint.TypeId)) {
       const options = parentCheckpoint.Options ? parentCheckpoint.Options.split(",").map((opt) => opt.trim()) : []
       const dependentMapping = parentCheckpoint.Dependent.split(":").map((dep) => dep.trim())
 
-      // Create a map of visible dependent fields
       const newVisibleDependents = { ...visibleDependents }
 
-      // For Radio and Dropdown (single select)
       if (parentCheckpoint.TypeId === 5 || (parentCheckpoint.TypeId === 9 && parentCheckpoint.Correct !== "1")) {
-        // Find the selected option index
         const selectedIndex = options.findIndex((opt) => opt.trim() === value)
 
         if (selectedIndex !== -1 && selectedIndex < dependentMapping.length) {
-          // Get dependent IDs for the selected option
           const dependentIds = dependentMapping[selectedIndex]
             .split(",")
             .filter((id) => id !== "0")
             .map((id) => Number.parseInt(id))
 
-          // Set visible dependents for this parent
           newVisibleDependents[parentId] = dependentIds
         } else {
-          // Clear dependents if no match
           newVisibleDependents[parentId] = []
         }
       }
-      // For Checkbox and multi-select Dropdown
       else if (parentCheckpoint.TypeId === 6 || (parentCheckpoint.TypeId === 9 && parentCheckpoint.Correct === "1")) {
-        // For multi-select, value could be an array or comma-separated string
         const selectedValues = Array.isArray(value) ? value : value ? value.split(",").map((v) => v.trim()) : []
-
-        // Get all dependent IDs for all selected options
         const dependentIds = []
         selectedValues.forEach((val) => {
           const optionIndex = options.findIndex((opt) => opt.trim() === val)
@@ -106,7 +123,6 @@ function AdmissionFormLogic() {
           }
         })
 
-        // Set visible dependents for this parent
         newVisibleDependents[parentId] = dependentIds
       }
 
@@ -114,9 +130,7 @@ function AdmissionFormLogic() {
     }
   }
 
-  // Function to check if a checkpoint should be visible as a dependent
   const isVisibleDependent = (checkpointId) => {
-    // Check if this checkpoint is a dependent of any parent in visibleDependents
     for (const parentId in visibleDependents) {
       if (visibleDependents[parentId].includes(checkpointId)) {
         return true
@@ -125,7 +139,6 @@ function AdmissionFormLogic() {
     return false
   }
 
-  // Function to get the parent ID of a dependent checkpoint
   const getParentId = (checkpointId) => {
     for (const parentId in visibleDependents) {
       if (visibleDependents[parentId].includes(checkpointId)) {
@@ -161,13 +174,11 @@ function AdmissionFormLogic() {
     fetchData()
   }, [])
 
-  // Initialize dependencies when form data or checkpoints change
   useEffect(() => {
-    // Process all form fields to update dependencies
     Object.entries(formData).forEach(([id, value]) => {
       updateDependentFields(Number.parseInt(id), value)
     })
-  }, [checkpoints]) // Only run when checkpoints are loaded
+  }, [checkpoints])
 
   const getType = (typeId) => {
     const type = types.find((t) => t.TypeId === typeId)
@@ -182,7 +193,81 @@ function AdmissionFormLogic() {
     const editable = cp.Editable === 1
     const isMandatory = cp.Mandatory === 1
 
-    // Special layout for Header / Description
+    // Special case for total amount field (72)
+    if (cp.CheckpointId === totalFieldId) {
+      return (
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={4}>
+            <Typography sx={{ fontWeight: 500, color: "#555" }}>
+              {cp.Description}
+              {isMandatory && <span style={{ color: "red", marginLeft: "4px" }}>*</span>}
+            </Typography>
+          </Grid>
+          <Grid item xs={8}>
+            <TextField
+              fullWidth
+              value={formatCurrency(value || "0")}
+              InputProps={{
+                readOnly: true,
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#f5f5f5",
+                  "& input": {
+                    fontWeight: "bold",
+                    color: "#2e7d32",
+                  }
+                },
+              }}
+            />
+          </Grid>
+        </Grid>
+      )
+    }
+
+    // Special case for amount fields (62, 64, 66, 70)
+    if (amountFieldIds.includes(cp.CheckpointId)) {
+      return (
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={4}>
+            <Typography sx={{ fontWeight: 500, color: "#555" }}>
+              {cp.Description}
+              {isMandatory && <span style={{ color: "red", marginLeft: "4px" }}>*</span>}
+            </Typography>
+          </Grid>
+          <Grid item xs={8}>
+            <TextField
+              fullWidth
+              type="number"
+              value={value}
+              onChange={(e) => handleChange(cp.CheckpointId, e.target.value)}
+              error={error}
+              helperText={error ? "This field is required" : ""}
+              disabled={!editable}
+              size="small"
+              InputProps={{
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+              }}
+              inputProps={{
+                step: "0.01",
+                min: "0"
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#F69320",
+                },
+              }}
+              onBlur={(e) => {
+                const num = parseFloat(e.target.value) || 0
+                handleChange(cp.CheckpointId, num.toFixed(2))
+              }}
+            />
+          </Grid>
+        </Grid>
+      )
+    }
+
     if (type.toLowerCase().includes("header")) {
       return (
         <Typography variant="h6" sx={{ mt: 3, mb: 1, textAlign: "center", color: "#F69320", fontWeight: "bold" }}>
@@ -199,7 +284,6 @@ function AdmissionFormLogic() {
       )
     }
 
-    // Common layout: Label left, Field right
     return (
       <Grid container spacing={2} alignItems="center">
         <Grid item xs={4}>
@@ -249,23 +333,6 @@ function AdmissionFormLogic() {
                   />
                 )
               case "Number":
-                return (
-                  <TextField
-                    fullWidth
-                    type="number"
-                    value={value}
-                    onChange={(e) => handleChange(cp.CheckpointId, e.target.value)}
-                    error={error}
-                    helperText={error ? "This field is required" : ""}
-                    disabled={!editable}
-                    size="small"
-                    sx={{
-                      "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                        borderColor: "#F69320",
-                      },
-                    }}
-                  />
-                )
               case "Digit":
                 return (
                   <TextField
@@ -475,12 +542,10 @@ function AdmissionFormLogic() {
     )
   }
 
-  // Function to render a checkpoint with its dependent fields
   const renderCheckpointWithDependents = (cp, pageData) => {
     const isEven = pageData.indexOf(cp.CheckpointId) % 2 === 0
     const bgColor = isEven ? "#f8f8f8" : "#ffffff"
 
-    // Get dependent checkpoints for this parent
     const dependentIds = visibleDependents[cp.CheckpointId] || []
     const dependentCheckpoints = checkpoints.filter((c) => dependentIds.includes(c.CheckpointId))
 
@@ -505,7 +570,6 @@ function AdmissionFormLogic() {
           <Box sx={{ flexGrow: 1 }}>{renderField(cp)}</Box>
         </Box>
 
-        {/* Render dependent fields if any */}
         {dependentCheckpoints.length > 0 && (
           <Box
             sx={{
@@ -528,7 +592,6 @@ function AdmissionFormLogic() {
   const pageData = pages[currentPage] || []
 
   const handleNext = () => {
-    // Don't validate on next - just proceed to the next page
     setCurrentPage((prev) => prev + 1)
   }
 
@@ -542,13 +605,10 @@ function AdmissionFormLogic() {
   }
 
   const handleSubmit = async (isDraft = false) => {
-    // Only validate required fields on final submission, not for drafts
     if (!isDraft) {
-      // Validate all fields across all pages
       const newErrors = {}
       let hasErrors = false
 
-      // Check all pages for required fields
       pages.forEach((pageCheckpoints) => {
         pageCheckpoints.forEach((id) => {
           const cp = checkpoints.find((c) => c.CheckpointId === id)
@@ -582,14 +642,12 @@ function AdmissionFormLogic() {
       }
     }
 
-    // Clear any previous errors
     setErrors({})
 
     const menuId = 1
     const date = new Date()
     const dateTime = date.toISOString().slice(0, 19).replace("T", " ")
 
-    // Show loading indicator
     Swal.fire({
       title: isDraft ? "Saving draft..." : "Submitting form...",
       allowOutsideClick: false,
@@ -612,11 +670,9 @@ function AdmissionFormLogic() {
             const type = getType(cp.TypeId).toLowerCase()
             const value = formData[id]
 
-            // Skip if this is a dependent field with parent ID
             const parentId = getParentId(cp.CheckpointId)
 
             if (parentId) {
-              // For dependent fields, use combined ID format: parentId_dependentId
               const combinedId = `${parentId}_${cp.CheckpointId}`
 
               if (type === "pic/camera") {
@@ -635,7 +691,7 @@ function AdmissionFormLogic() {
                 textData[combinedId] = Array.isArray(value) ? value.join(",") : value
               }
 
-              continue // Skip adding with regular ID
+              continue
             }
 
             if (type === "pic/camera") {
@@ -643,7 +699,7 @@ function AdmissionFormLogic() {
                 const base64 = await convertToBase64(value)
                 imageData[id] = base64
               }
-              continue // Skip adding to textData
+              continue
             }
 
             if (
@@ -695,7 +751,7 @@ function AdmissionFormLogic() {
           }
         }
 
-        submitData() // call the async inner function
+        submitData()
       },
       (error) => {
         Swal.fire({
@@ -784,20 +840,17 @@ function AdmissionFormLogic() {
         ))}
       </Stepper>
 
-      {/* Progress indicator */}
       <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
         <Typography variant="body2" color="text.secondary">
           Step {currentPage + 1} of {pages.length}
         </Typography>
       </Box>
 
-      {/* Render checkpoints for current page */}
       <Box sx={{ mb: 3 }}>
         {pageData.map((id) => {
           const cp = checkpoints.find((c) => c.CheckpointId === id)
           if (!cp) return null
 
-          // Skip dependent fields - they will be rendered with their parent
           if (isVisibleDependent(cp.CheckpointId)) {
             return null
           }
@@ -836,7 +889,7 @@ function AdmissionFormLogic() {
                   backgroundColor: "#616161",
                 },
               }}
-              onClick={() => handleSubmit(true)} // Save Draft
+              onClick={() => handleSubmit(true)}
             >
               Save Draft
             </Button>
@@ -850,7 +903,7 @@ function AdmissionFormLogic() {
                   backgroundColor: "#e08416",
                 },
               }}
-              onClick={() => handleSubmit(false)} // Submit
+              onClick={() => handleSubmit(false)}
             >
               Submit
             </Button>
@@ -873,7 +926,6 @@ function AdmissionFormLogic() {
         )}
       </Box>
 
-      {/* Help text */}
       <Box sx={{ mt: 4, textAlign: "center" }}>
         <Typography variant="body2" color="text.secondary">
           Fields marked with <span style={{ color: "red" }}>*</span> are mandatory

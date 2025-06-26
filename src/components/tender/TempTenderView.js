@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
 import {
@@ -689,16 +689,16 @@ function TempTenderView() {
 
   const renderStudentDetails = () => {
     const fields = candidateDetailsIds.map((id) => {
-      const value = getValueByChkId(id)
+      const value = getValueByChkId(id);
       return {
         id,
         label: checkpoints[id] || `Checkpoint #${id}`,
         value,
         isImage: isImageUrl(value),
         isPdf: isPdfUrl(value),
-      }
-    })
-
+      };
+    });
+  
     return (
       <StyledCard highlight={true}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "15px" }}>
@@ -706,7 +706,7 @@ function TempTenderView() {
             <Award size={20} color="#F69320" style={{ marginRight: "10px" }} />
             <StyledTitle level={2}>Tender Details</StyledTitle>
           </div>
-
+  
           {isAdmin && (
             <div>
               {isEditing ? (
@@ -741,7 +741,7 @@ function TempTenderView() {
           )}
         </div>
         <StyledDivider />
-
+  
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {/* Photo and basic info section */}
           <div
@@ -764,7 +764,16 @@ function TempTenderView() {
                 boxShadow: "0 4px 15px rgba(0, 0, 0, 0.05)",
               }}
             >
-              {isPdfUrl(getValueByChkId(studentPhotoChkId)) ? (
+              {isEditing ? (
+                <div style={{ marginBottom: '15px' }}>
+                  <FileUploadField
+                    chkId={studentPhotoChkId}
+                    currentValue={editedData[studentPhotoChkId] || getValueByChkId(studentPhotoChkId)}
+                    onChange={handleInputChange}
+                    isEditing={isEditing}
+                  />
+                </div>
+              ) : isPdfUrl(getValueByChkId(studentPhotoChkId)) ? (
                 <div
                   style={{
                     width: "120px",
@@ -795,7 +804,7 @@ function TempTenderView() {
               )}
               <div style={{ fontSize: "14px", fontWeight: "600", marginTop: "5px" }}>Tender</div>
             </div>
-
+  
             {/* Key Details */}
             <div
               style={{ flex: "1", padding: "15px", backgroundColor: "rgba(255, 255, 255, 0.7)", borderRadius: "12px" }}
@@ -830,7 +839,7 @@ function TempTenderView() {
               </StyledGrid>
             </div>
           </div>
-
+  
           {/* Additional Details */}
           <div>
             <StyledTitle level={3} style={{ marginBottom: "15px" }}>
@@ -855,7 +864,7 @@ function TempTenderView() {
                     )}
                   </StyledFieldBox>
                 ))}
-
+  
               {/* Render image and PDF fields separately */}
               {fields
                 .filter((f) => f.isImage || f.isPdf)
@@ -866,11 +875,19 @@ function TempTenderView() {
                       {field.label}
                     </StyledFieldLabel>
                     {isEditing ? (
-                      <StyledInput
-                        value={editedData[field.id] || ""}
-                        onChange={(e) => handleInputChange(field.id, e.target.value)}
-                        placeholder={field.isPdf ? "Enter PDF URL" : "Enter image URL"}
-                      />
+                      <>
+                        <StyledInput
+                          value={editedData[field.id] || ""}
+                          onChange={(e) => handleInputChange(field.id, e.target.value)}
+                          placeholder={field.isPdf ? "Enter PDF URL" : "Enter image URL"}
+                        />
+                        <FileUploadField
+                          chkId={field.id}
+                          currentValue={editedData[field.id] || field.value}
+                          onChange={handleInputChange}
+                          isEditing={isEditing}
+                        />
+                      </>
                     ) : field.isImage ? (
                       <StyledButton
                         style={{ marginTop: "5px", padding: "6px 12px", fontSize: "12px" }}
@@ -894,8 +911,8 @@ function TempTenderView() {
           </div>
         </div>
       </StyledCard>
-    )
-  }
+    );
+  };
 
   const getGridColumns = () => {
     if (windowWidth < 480) return "1fr"
@@ -983,31 +1000,48 @@ function TempTenderView() {
                 }
                 return (
                   <StyledFieldBox
-                    key={`${item.ChkId}-${index}`}
-                    isEditing={isEditing}
-                    variant={fieldVariant}
-                    style={{
-                      backgroundColor: isImage || isPdf ? "rgba(246, 147, 32, 0.05)" : undefined,
-                      border: isImage || isPdf ? "1px solid rgba(246, 147, 32, 0.2)" : undefined,
-                    }}
-                  >
-                    <StyledFieldLabel>
-                      {isImage ? (
-                        <ImageIcon size={16} />
-                      ) : isPdf ? (
-                        <FileText size={16} />
+                  key={`${item.ChkId}-${index}`}
+                  isEditing={isEditing}
+                  variant={fieldVariant}
+                  style={{
+                    backgroundColor: isImage || isPdf ? "rgba(246, 147, 32, 0.05)" : undefined,
+                    border: isImage || isPdf ? "1px solid rgba(246, 147, 32, 0.2)" : undefined,
+                  }}
+                >
+                  <StyledFieldLabel>
+                    {isImage ? (
+                      <ImageIcon size={16} />
+                    ) : isPdf ? (
+                      <FileText size={16} />
+                    ) : (
+                      getIconForField(getLabel(item.ChkId))
+                    )}
+                    {getLabel(item.ChkId)}
+                  </StyledFieldLabel>
+              
+                  {isEditing ? (
+                    <>
+                      {isImage || isPdf ? (
+                        <>
+                          <StyledInput
+                            value={editedData[item.ChkId] || ""}
+                            onChange={(e) => handleInputChange(item.ChkId, e.target.value)}
+                            placeholder={isPdf ? "Enter PDF URL" : isImage ? "Enter image URL" : "Enter value"}
+                          />
+                          <FileUploadField
+                            chkId={item.ChkId}
+                            currentValue={editedData[item.ChkId] || item.Value}
+                            onChange={handleInputChange}
+                            isEditing={isEditing}
+                          />
+                        </>
                       ) : (
-                        getIconForField(getLabel(item.ChkId))
+                        <StyledInput
+                          value={editedData[item.ChkId] || ""}
+                          onChange={(e) => handleInputChange(item.ChkId, e.target.value)}
+                        />
                       )}
-                      {getLabel(item.ChkId)}
-                    </StyledFieldLabel>
-
-                    {isEditing ? (
-                      <StyledInput
-                        value={editedData[item.ChkId] || ""}
-                        onChange={(e) => handleInputChange(item.ChkId, e.target.value)}
-                        placeholder={isPdf ? "Enter PDF URL" : isImage ? "Enter image URL" : "Enter value"}
-                      />
+                    </>
                     ) : isImage ? (
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
                         <div style={{ position: "relative", marginBottom: "10px" }}>
@@ -1140,6 +1174,124 @@ const calculateGST = (amount) => {
   };
   const priceCheckpoints = [10, 12, 15, 17, 22, 24,26,28,29,62,64,66,70,72]; // Add more IDs as needed
 
+  const FileUploadField = ({ chkId, currentValue, onChange, isEditing }) => {
+    const [previewUrl, setPreviewUrl] = useState(currentValue);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef(null);
+  
+    const handleFileChange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+  
+      setIsUploading(true);
+  
+      try {
+        // Create preview for images
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setPreviewUrl(event.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+  
+        // Convert file to base64
+        const base64Data = await convertToBase64(file);
+        
+        // Call your API to upload the file
+        const response = await axios.post('https://namami-infotech.com/SANCHAR/src/menu/edit_image.php', {
+          ActivityId: activityId,
+          ChkId: chkId,
+          ImageData: base64Data
+        });
+  
+        if (response.data.success) {
+          onChange(chkId, response.data.data.ImageUrl);
+          setToast({
+            show: true,
+            message: 'File uploaded successfully',
+            type: 'success'
+          });
+        } else {
+          throw new Error(response.data.message || 'Upload failed');
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        setToast({
+          show: true,
+          message: error.message || 'Failed to upload file',
+          type: 'error'
+        });
+        setPreviewUrl(currentValue); // Revert to previous value
+      } finally {
+        setIsUploading(false);
+      }
+    };
+  
+    const convertToBase64 = (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+      });
+    };
+  
+    const triggerFileInput = () => {
+      fileInputRef.current.click();
+    };
+  
+    if (!isEditing) {
+      return null;
+    }
+  
+    return (
+      <div style={{ marginTop: '10px' }}>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*,.pdf"
+          style={{ display: 'none' }}
+        />
+        
+        <StyledButton
+          onClick={triggerFileInput}
+          style={{ width: '100%' }}
+          disabled={isUploading}
+        >
+          {isUploading ? 'Uploading...' : 'Upload New File'}
+        </StyledButton>
+        
+        {previewUrl && isImageUrl(previewUrl) && (
+          <img
+            src={previewUrl}
+            alt="Preview"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '200px',
+              marginTop: '10px',
+              borderRadius: '8px'
+            }}
+          />
+        )}
+        
+        {previewUrl && isPdfUrl(previewUrl) && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginTop: '10px',
+            padding: '10px',
+            backgroundColor: '#f5f5f5',
+            borderRadius: '8px'
+          }}>
+            <FileText size={24} style={{ marginRight: '10px' }} />
+            <span>PDF Document</span>
+          </div>
+        )}
+      </div>
+    );
+  };
   if (loading) {
     return <StyledLoading />
   }

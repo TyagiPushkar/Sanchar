@@ -39,6 +39,26 @@ function EditDraft() {
   const [loadingError, setLoadingError] = useState("")
   const navigate = useNavigate()
 
+  // Function to calculate sum of specified checkpoint values
+  const calculateSum = () => {
+    const fieldsToSum = [62, 64, 66, 70] // Checkpoint IDs to sum
+    let sum = 0
+    
+    fieldsToSum.forEach(id => {
+      const value = formData[id] || 0
+      const numericValue = parseFloat(value) || 0
+      sum += numericValue
+    })
+    
+    return sum
+  }
+
+  // Update the sum whenever relevant fields change
+  useEffect(() => {
+    const sum = calculateSum()
+    setFormData(prev => ({ ...prev, 72: sum.toString() }))
+  }, [formData[62], formData[64], formData[66], formData[70]])
+
   const handleChange = (id, value) => {
     console.log(`Handling change for field ${id} with value:`, value)
 
@@ -506,7 +526,7 @@ function EditDraft() {
     console.log(`Rendering field ${id} (${cp.Description}) with actualId: ${actualId}, value:`, value)
     const options = cp.Options ? cp.Options.split(",").map((opt) => opt.trim()) : []
     const error = errors[id]
-    const editable = cp.Editable === 1
+    const editable = cp.Editable === 1 && cp.CheckpointId !== 72 // Make sure Checkpoint 72 is not editable
     const isMandatory = cp.Mandatory === 1
 
     if (type.includes("header")) {

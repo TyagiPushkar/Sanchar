@@ -30,6 +30,9 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
+  Autocomplete,
+  TextField,
+  CircularProgress
 } from "@mui/material"
 import {
   CheckCircle,
@@ -91,13 +94,6 @@ const PhaseCell = styled(TableCell)(({ theme, completed }) => ({
   },
 }))
 
-const PhaseIcon = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: theme.spacing(1),
-}))
-
 const ClickableListItem = styled(ListItem)(({ theme }) => ({
   cursor: "pointer",
   borderRadius: "8px",
@@ -122,8 +118,13 @@ export default function StationPhaseTable() {
   const [selectedPhase, setSelectedPhase] = useState(null)
   const [selectedStation, setSelectedStation] = useState(null)
   const [phaseTasks, setPhaseTasks] = useState([])
+  const [employees, setEmployees] = useState([])
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [selectedEmployee, setSelectedEmployee] = useState(null)
+  const [reassignLoading, setReassignLoading] = useState(false)
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" })
 
-  // Define the 4 phases
   const phases = [
     {
       id: 1,
@@ -151,33 +152,36 @@ export default function StationPhaseTable() {
     },
   ]
 
-  // Fetch stations and tasks
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
+        setError(null)
 
-        // Fetch stations
-        const stationsResponse = await axios.get(
-          `https://namami-infotech.com/SANCHAR/src/tender/tender_stations.php?ActivityId=${ActivityId}`,
-        )
+        const [stationsResponse, tasksResponse, employeesResponse] = await Promise.all([
+          axios.get(`https://namami-infotech.com/SANCHAR/src/tender/tender_stations.php?ActivityId=${ActivityId}`),
+          axios.get(`https://namami-infotech.com/SANCHAR/src/task/project_task.php?TenderNo=${tenderNo}`),
+          axios.get("https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1")
+        ])
 
         if (stationsResponse.data.success) {
-          const stationsList = stationsResponse.data.stations
-          setStations(stationsList)
-
-          // Fetch tasks for the tender
-          const tasksResponse = await axios.get(
-            `https://namami-infotech.com/SANCHAR/src/task/project_task.php?TenderNo=${tenderNo}`,
-          )
-
-          if (tasksResponse.data.success) {
-            const tasksData = tasksResponse.data.data
-            setTasks(tasksData)
-          }
+          setStations(stationsResponse.data.stations)
         } else {
           throw new Error(stationsResponse.data.message || "Failed to fetch stations")
         }
+
+        if (tasksResponse.data.success) {
+          setTasks(tasksResponse.data.data)
+        } else {
+          throw new Error(tasksResponse.data.message || "Failed to fetch tasks")
+        }
+
+        if (employeesResponse.data.success) {
+          setEmployees(employeesResponse.data.data)
+        } else {
+          console.error("Failed to fetch employees:", employeesResponse.data.message)
+        }
+
       } catch (err) {
         setError(err.message || "Failed to fetch data")
         console.error("Error fetching data:", err)
@@ -191,26 +195,23 @@ export default function StationPhaseTable() {
     }
   }, [ActivityId, tenderNo])
 
-  // Check if a phase is completed for a station
   const isPhaseCompleted = (station, phase) => {
     return tasks.some(
       (task) =>
         task.Station === station &&
         phase.milestones.some((milestone) => task.Milestone?.toLowerCase().includes(milestone.toLowerCase())) &&
-        task.Status?.toLowerCase() === "complete",
+        task.Status?.toLowerCase() === "complete"
     )
   }
 
-  // Get tasks for a specific phase and station
   const getPhaseTasksForStation = (station, phase) => {
     return tasks.filter(
       (task) =>
         task.Station === station &&
-        phase.milestones.some((milestone) => task.Milestone?.toLowerCase().includes(milestone.toLowerCase())),
+        phase.milestones.some((milestone) => task.Milestone?.toLowerCase().includes(milestone.toLowerCase()))
     )
   }
 
-  // Handle phase cell click
   const handlePhaseClick = (station, phase) => {
     const filteredTasks = getPhaseTasksForStation(station, phase)
     setSelectedPhase(phase)
@@ -219,25 +220,69 @@ export default function StationPhaseTable() {
     setDialogOpen(true)
   }
 
-  // Handle task click - redirect to task view
   const handleTaskClick = (taskId) => {
     navigate(`/task/view/${taskId}`)
   }
 
-  // Format date
+  const handleReassignClick = (task, e) => {
+    e.stopPropagation()
+    setSelectedTask(task)
+    setSelectedEmployee(employees.find(emp => emp.EmpId === task.EmpId) || null)
+    setReassignDialogOpen(true)
+  }
+
+  const handleReassignTask = async () => {
+    if (!selectedTask || !selectedEmployee) return
+
+    setReassignLoading(true)
+    try {
+      const response = await axios.post(
+        "https://namami-infotech.com/SANCHAR/src/task/edit_task.php",
+        {
+          TaskId: selectedTask.Id,
+          EmpName: selectedEmployee.Name,
+          EmpId: selectedEmployee.EmpId
+        }
+      )
+
+      if (response.data.success) {
+        setTasks(tasks.map(task => 
+          task.Id === selectedTask.Id 
+            ? { ...task, EmpName: selectedEmployee.Name, EmpId: selectedEmployee.EmpId }
+            : task
+        ))
+        
+        setToast({
+          show: true,
+          message: "Task reassigned successfully!",
+          type: "success"
+        })
+        setReassignDialogOpen(false)
+      } else {
+        throw new Error(response.data.message || "Failed to reassign task")
+      }
+    } catch (err) {
+      setToast({
+        show: true,
+        message: err.message || "Error reassigning task",
+        type: "error"
+      })
+    } finally {
+      setReassignLoading(false)
+    }
+  }
+
   const formatDate = (dateString) => {
     if (!dateString) return "N/A"
     const date = new Date(dateString)
     return isNaN(date) ? dateString : date.toLocaleDateString("en-GB")
   }
 
-  // Get project stats
   const getProjectStats = () => {
     const totalStations = stations.length
     const totalTasks = tasks.length
     const completedTasks = tasks.filter((task) => task.Status?.toLowerCase() === "complete").length
 
-    // Calculate completed phases
     let totalPhases = 0
     let completedPhases = 0
 
@@ -424,7 +469,6 @@ export default function StationPhaseTable() {
                   <TableRow key={station} hover>
                     <TableCell>
                       <Box sx={{ display: "flex", alignItems: "center" }}>
-                        {/* <LocationOn sx={{ mr: 1, color: "#F69320" }} /> */}
                         <Typography variant="body2" fontWeight="medium">
                           {station}
                         </Typography>
@@ -442,8 +486,6 @@ export default function StationPhaseTable() {
                           completed={completed}
                           onClick={() => handlePhaseClick(station, phase)}
                         >
-                          {/* <PhaseIcon>{phase.icon}</PhaseIcon> */}
-
                           {completed ? (
                             <CheckCircle sx={{ color: "success.main", fontSize: 28 }} />
                           ) : hasTask ? (
@@ -455,12 +497,6 @@ export default function StationPhaseTable() {
                           <Typography variant="body2" sx={{ mt: 0 }}>
                             {completed ? "Completed" : hasTask ? "In Progress" : "Not Started"}
                           </Typography>
-
-                          {/* {hasTask && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              {phaseTasks.length} task{phaseTasks.length !== 1 ? "s" : ""}
-                            </Typography>
-                          )} */}
                         </PhaseCell>
                       )
                     })}
@@ -516,7 +552,7 @@ export default function StationPhaseTable() {
                                 <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
                                   <Person sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
                                   <Typography variant="body2" color="text.secondary">
-                                    Assigned to: {task.EmpName || "N/A"}
+                                    Assigned to: {task.EmpName || "N/A"} ({task.EmpId})
                                   </Typography>
                                 </Box>
                               </Grid>
@@ -529,13 +565,21 @@ export default function StationPhaseTable() {
                                 </Box>
                               </Grid>
                             </Grid>
-                            <Box sx={{ mt: 1 }}>
+                            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
                               <Chip
                                 label={task.Status || "Unknown"}
                                 size="small"
                                 color={task.Status?.toLowerCase() === "complete" ? "success" : "warning"}
                                 variant="outlined"
                               />
+                              <Button 
+                                size="small" 
+                                variant="outlined"
+                                onClick={(e) => handleReassignClick(task, e)}
+                                sx={{ ml: 1 }}
+                              >
+                                Reassign
+                              </Button>
                             </Box>
                           </Box>
                         }
@@ -548,7 +592,94 @@ export default function StationPhaseTable() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Reassign Dialog */}
+        <Dialog open={reassignDialogOpen} onClose={() => setReassignDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Reassign Task</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <Box mb={3}>
+              <Typography variant="subtitle1" gutterBottom>
+                Task: {selectedTask?.Milestone}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Current Assignee: {selectedTask?.EmpName} ({selectedTask?.EmpId})
+              </Typography>
+            </Box>
+
+            <Autocomplete
+              options={employees}
+              getOptionLabel={(option) => `${option.Name} (${option.EmpId})`}
+              value={selectedEmployee}
+              onChange={(_, newValue) => setSelectedEmployee(newValue)}
+              renderInput={(params) => (
+                <TextField {...params} label="Select Employee" variant="outlined" fullWidth />
+              )}
+              renderOption={(props, option) => (
+                <Box component="li" {...props}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    {option.Pic ? (
+                      <img 
+                        src={option.Pic} 
+                        alt={option.Name}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    ) : (
+                      <Person sx={{ width: 40, height: 40, color: 'action.active' }} />
+                    )}
+                    <Box>
+                      <Typography>{option.Name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {option.Designation} • {option.EmpId}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              )}
+              fullWidth
+              loading={employees.length === 0}
+              loadingText="Loading employees..."
+              noOptionsText="No employees found"
+            />
+          </DialogContent>
+          <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Button onClick={() => setReassignDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={handleReassignTask}
+              disabled={!selectedEmployee || reassignLoading}
+              sx={{ bgcolor: "#F69320" }}
+              startIcon={reassignLoading ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              {reassignLoading ? "Reassigning..." : "Confirm Reassign"}
+            </Button>
+          </Box>
+        </Dialog>
       </motion.div>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Alert
+              severity={toast.type}
+              onClose={() => setToast({...toast, show: false})}
+              sx={{ minWidth: 300, boxShadow: 3 }}
+            >
+              {toast.message}
+            </Alert>
+          </motion.div>
+        </Box>
+      )}
     </Container>
   )
 }
