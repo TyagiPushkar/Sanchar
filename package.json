@@ -36,6 +36,7 @@
     "react-geolocated": "^4.2.0",
     "react-icons": "^5.3.0",
     "react-leaflet": "^4.2.1",
+    "react-pinch-zoom-pan": "^1.4.5",
     "react-router-dom": "^6.25.1",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",

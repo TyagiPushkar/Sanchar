@@ -38,7 +38,7 @@ function AdmissionFormLogic() {
   const navigate = useNavigate()
 
   // Amount fields configuration
-  const amountFieldIds = [62, 64, 66, 70] // Fields to sum
+  const amountFieldIds = [62, 64, 66, 70];
   const totalFieldId = 72 // Field to display total
 
   // Format currency helper
@@ -53,18 +53,30 @@ function AdmissionFormLogic() {
   }
 
   // Calculate sum whenever any amount field changes
-  useEffect(() => {
-    let sum = 0
-    amountFieldIds.forEach(id => {
-      const value = parseFloat(formData[id]) || 0
-      sum += value
-    })
+ // Calculate total bid value whenever any amount field changes
+useEffect(() => {
+  // Get all the required field values
+  const field61 = parseFloat(formData[61]) || 0;  // Quantity 1
+  const field62 = parseFloat(formData[62]) || 0;  // Rate 1
+  const field63 = parseFloat(formData[63]) || 0;  // Quantity 2
+  const field64 = parseFloat(formData[64]) || 0;  // Rate 2
+  const field65 = parseFloat(formData[65]) || 0;  // Quantity 3
+  const field66 = parseFloat(formData[66]) || 0;  // Rate 3
+  const field69 = parseFloat(formData[69]) || 0;  // Quantity 4
+  const field70 = parseFloat(formData[70]) || 0;  // Rate 4
 
-    // Update total field if sum has changed
-    if (formData[totalFieldId] !== sum.toString()) {
-      handleChange(totalFieldId, sum.toFixed(2))
-    }
-  }, [formData[62], formData[64], formData[66], formData[70]])
+  // Calculate the total using the formula
+  const total = (field61 * field62) + 
+                (field63 * field64) + 
+                (field65 * field66) + 
+                (field69 * field70);
+
+  // Update total field if sum has changed
+  if (formData[totalFieldId] !== total.toString()) {
+    handleChange(totalFieldId, total.toFixed(2));
+  }
+}, [formData[61], formData[62], formData[63], formData[64], 
+    formData[65], formData[66], formData[69], formData[70]]);
 
   const handleChange = (id, value) => {
     setFormData((prev) => ({ ...prev, [id]: value }))
