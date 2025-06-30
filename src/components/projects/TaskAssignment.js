@@ -141,59 +141,67 @@ export default function TaskAssignment() {
     }
   }
 
-  // Check if a station is available for a specific milestone based on phase progression
   const isStationAvailableForMilestone = (stationName, selectedMilestoneValue) => {
-    const selectedMilestoneData = milestones.find((m) => m.value === selectedMilestoneValue)
-    if (!selectedMilestoneData) return false
-
-    const currentPhase = selectedMilestoneData.phase
-
-    // Check if station already has a task assigned for this milestone (convert MenuId to string for comparison)
+    const selectedMilestoneData = milestones.find((m) => m.value === selectedMilestoneValue);
+    if (!selectedMilestoneData) return false;
+  
+    const currentPhase = selectedMilestoneData.phase;
+  
+    // Check if station already has this milestone completed or assigned
     const hasCurrentMilestoneTask = existingTasks.some(
       (task) =>
-        task.Station === stationName && task.MenuId.toString() === selectedMilestoneValue && task.Status === "Assigned",
-    )
-
+        task.Station === stationName && 
+        task.MenuId.toString() === selectedMilestoneValue && 
+        (task.Status === "Complete" || task.Status === "Assigned")
+    );
+  
     if (hasCurrentMilestoneTask) {
-      return false // Station already has this milestone assigned - don't show it again
+      return false; // Station already has this milestone completed or assigned
     }
-
-    // For phase 1 (Civil Work), all stations are available if not already assigned
+  
+    // For phase 1 (Civil Work), all stations are available if not already assigned/completed
     if (currentPhase === 1) {
-      return true
+      return true;
     }
-
-    // For subsequent phases, check if previous phase is assigned (treating "Assigned" as completed)
-    const previousPhase = currentPhase - 1
-    const previousMilestone = milestones.find((m) => m.phase === previousPhase)
-
-    if (!previousMilestone) return false
-
-    // Check if station has the previous phase assigned (convert MenuId to string for comparison)
+  
+    // For subsequent phases, check if previous phase is completed
+    const previousPhase = currentPhase - 1;
+    const previousMilestone = milestones.find((m) => m.phase === previousPhase);
+  
+    if (!previousMilestone) return false;
+  
+    // Check if station has the previous phase completed
     const hasPreviousPhaseCompleted = existingTasks.some(
       (task) =>
         task.Station === stationName &&
         task.MenuId.toString() === previousMilestone.value &&
-        task.Status === "Complete",
-    )
-
-    return hasPreviousPhaseCompleted
-  }
+        task.Status === "Complete"
+    );
+  
+    return hasPreviousPhaseCompleted;
+  };
 
   // Filter available stations based on selected milestone
-  const filterAvailableStations = () => {
-    if (!milestone) {
-      setAvailableStations(stations)
-      return
-    }
-
-    const filtered = stations.filter((station) => isStationAvailableForMilestone(station.name, milestone))
-
-    setAvailableStations(filtered)
-
-    // Remove selected stations that are no longer available
-    setSelectedStations((prev) => prev.filter((station) => isStationAvailableForMilestone(station.name, milestone)))
+ // Filter available stations based on selected milestone
+const filterAvailableStations = () => {
+  if (!milestone) {
+    setAvailableStations([]);
+    return;
   }
+
+  const filtered = stations.filter((station) => 
+    isStationAvailableForMilestone(station.name, milestone)
+  );
+
+  setAvailableStations(filtered);
+
+  // Remove selected stations that are no longer available
+  setSelectedStations((prev) => 
+    prev.filter((station) => 
+      isStationAvailableForMilestone(station.name, milestone)
+    )
+  );
+};
 
   useEffect(() => {
     // Fetch stations
@@ -323,40 +331,68 @@ export default function TaskAssignment() {
   }
 
   const selectedMilestone = milestones.find((m) => m.value === milestone)
-
-  // Get station status for display
   const getStationStatus = (stationName) => {
-    if (!milestone) return null
-
-    const isAvailable = isStationAvailableForMilestone(stationName, milestone)
+    if (!milestone) return null;
+  
+    const selectedMilestoneData = milestones.find((m) => m.value === milestone);
+    if (!selectedMilestoneData) return null;
+  
+    // Check if already has current milestone task (completed or assigned)
     const hasCurrentTask = existingTasks.some(
-      (task) => task.Station === stationName && task.MenuId.toString() === milestone && task.Status === "Assigned",
-    )
-
+      (task) => 
+        task.Station === stationName && 
+        task.MenuId.toString() === milestone && 
+        (task.Status === "Complete" || task.Status === "Assigned")
+    );
+  
     if (hasCurrentTask) {
-      return { type: "assigned", message: "Already assigned for this milestone" }
+      const status = existingTasks.find(
+        (task) => 
+          task.Station === stationName && 
+          task.MenuId.toString() === milestone
+      ).Status;
+      
+      return { 
+        type: status === "Complete" ? "completed" : "assigned",
+        message: status === "Complete" 
+          ? "Already completed this milestone" 
+          : "Already assigned for this milestone"
+      };
     }
-
-    if (!isAvailable) {
-      const selectedMilestoneData = milestones.find((m) => m.value === milestone)
-      if (selectedMilestoneData && selectedMilestoneData.phase > 1) {
-        const previousPhase = selectedMilestoneData.phase - 1
-        const previousMilestone = milestones.find((m) => m.phase === previousPhase)
-        const hasPreviousTask = existingTasks.some(
+  
+    // For phases > 1, check previous phase completion
+    if (selectedMilestoneData.phase > 1) {
+      const previousPhase = selectedMilestoneData.phase - 1;
+      const previousMilestone = milestones.find((m) => m.phase === previousPhase);
+      
+      if (!previousMilestone) return null;
+  
+      const hasPreviousPhaseCompleted = existingTasks.some(
+        (task) =>
+          task.Station === stationName &&
+          task.MenuId.toString() === previousMilestone.value &&
+          task.Status === "Complete"
+      );
+  
+      if (!hasPreviousPhaseCompleted) {
+        const hasPreviousPhaseAssigned = existingTasks.some(
           (task) =>
             task.Station === stationName &&
-            task.MenuId.toString() === previousMilestone?.value &&
-            task.Status === "Assigned",
-        )
-
-        if (!hasPreviousTask) {
-          return { type: "blocked", message: `${previousMilestone?.label} not assigned yet` }
-        }
+            task.MenuId.toString() === previousMilestone.value &&
+            task.Status === "Assigned"
+        );
+  
+        return {
+          type: "blocked",
+          message: hasPreviousPhaseAssigned 
+            ? `${previousMilestone.label} in progress` 
+            : `${previousMilestone.label} not completed`
+        };
       }
     }
-
-    return null
-  }
+  
+    return null;
+  };
 
   return (
     <>
