@@ -22,6 +22,8 @@ import User from './pages/User';
 import ViewLOA from './pages/ViewLOA';
 import Projects from './pages/Projects';
 import Ticket from './pages/Ticket';
+import Material from './pages/Material';
+import Invoices from './pages/Invoices';
 function App() {
    useEffect(() => {
         const handleRightClick = (event) => {
@@ -75,7 +77,13 @@ function App() {
 
 
             <Route path="/support-ticket" element={<PrivateRoute element={Ticket} />} />
-            
+
+
+            <Route path="/material-supplied" element={<PrivateRoute element={Material} />} />
+            <Route path="/add-material" element={<PrivateRoute element={Material} />} />
+
+            <Route path="/invoices" element={<PrivateRoute element={Invoices} />} />
+            <Route path="/add-invoice" element={<PrivateRoute element={Invoices} />} />
 
             <Route path="/menus" element={<PrivateRoute element={Menus} />} />
             <Route path="/add-menu" element={<PrivateRoute element={Menus} />} />

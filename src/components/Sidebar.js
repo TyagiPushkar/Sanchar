@@ -24,6 +24,9 @@ import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import BadgeIcon from '@mui/icons-material/Badge';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import HRSmileLogo from "../assets/images (1).png"
+import InventoryIcon from '@mui/icons-material/Inventory';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import EngineeringIcon from '@mui/icons-material/Engineering';
 
 function Sidebar() {
   const location = useLocation()
@@ -47,6 +50,9 @@ function Sidebar() {
     { path: "/projects", name: "Projects", icon: <AccountTreeIcon /> },
     { path: "/employees", name: "Employees", icon: <BadgeIcon /> },
     { path: "/support-ticket", name: "Support Ticket", icon: <SupportAgentIcon /> },
+    { path: "/material-supplied", name: "Material Supplied", icon: <InventoryIcon /> },
+    { path: "/invoices", name: "Invoices", icon: <ReceiptIcon /> },
+    { path: "/amc-work", name: "AMC Work", icon: <EngineeringIcon /> },
   ]
 
   const userModules = user?.modules || []
@@ -217,13 +223,7 @@ function Sidebar() {
 
             {secondaryRoutes.length > 0 && (
               <>
-                <Divider
-                  sx={{
-                    my: 2,
-                    mx: 2,
-                    opacity: 0.6,
-                  }}
-                />
+               
 
                 {/* Secondary Navigation */}
                 <List sx={{ width: "100%", px: 1.5 }}>
