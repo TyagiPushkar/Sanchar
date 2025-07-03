@@ -85,6 +85,7 @@ const navigate = useNavigate()
           <thead>
             <tr>
               <th>Tender No</th>
+              <th>LOA No</th>
               <th>Buyer</th>
               <th>Date</th>
               <th>Tender Copy</th>
@@ -97,6 +98,7 @@ const navigate = useNavigate()
               currentRecords.map((project) => (
                 <tr key={project.ActivityId}>
                   <td onClick={() => navigate(`/tender/view/${project.ActivityId}`)} style={{cursor:"pointer", fontWeight:"bold", color:"blue"}}>{project.TenderNo || "-"}</td>
+                  <td>{project.LOA || "-"}</td>
                   <td>{project.BuyerName || "-"}</td>
                   <td>{formatDate(project.TenderDate)}</td>
                       <td>

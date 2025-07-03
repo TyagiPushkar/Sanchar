@@ -272,10 +272,20 @@ export default function StationPhaseTable() {
     }
   }
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString, format = "dd-mm-yyyy") => {
     if (!dateString) return "N/A"
     const date = new Date(dateString)
-    return isNaN(date) ? dateString : date.toLocaleDateString("en-GB")
+    
+    if (isNaN(date)) return dateString
+    
+    if (format === "dd-mm-yyyy") {
+      const day = String(date.getDate()).padStart(2, '0')
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const year = date.getFullYear()
+      return `${day}-${month}-${year}`
+    }
+    
+    return date.toLocaleDateString("en-GB")
   }
 
   const getProjectStats = () => {
@@ -486,13 +496,29 @@ export default function StationPhaseTable() {
                           completed={completed}
                           onClick={() => handlePhaseClick(station, phase)}
                         >
-                          {completed ? (
-                            <CheckCircle sx={{ color: "success.main", fontSize: 28 }} />
-                          ) : hasTask ? (
-                            <Info sx={{ color: "warning.main", fontSize: 28 }} />
-                          ) : (
-                            <Cancel sx={{ color: "text.disabled", fontSize: 28 }} />
-                          )}
+                         {
+  completed ? (
+    <Box>
+      <CheckCircle sx={{ color: "success.main", fontSize: 28 }} />
+      <Typography variant="caption" display="block">
+        {formatDate(
+          tasks.find(t => 
+            t.Station === station && 
+            t.Status?.toLowerCase() === "complete" &&
+            phase.milestones.some(m => 
+              t.Milestone?.toLowerCase().includes(m.toLowerCase())
+            )
+          )?.UpdateDateTime,
+          "dd-mm-yyyy"
+        )}
+      </Typography>
+    </Box>
+  ) : hasTask ? (
+    <Info sx={{ color: "warning.main", fontSize: 28 }} />
+  ) : (
+    <Cancel sx={{ color: "text.disabled", fontSize: 28 }} />
+  )
+}
 
                           <Typography variant="body2" sx={{ mt: 0 }}>
                             {completed ? "Completed" : hasTask ? "In Progress" : "Not Started"}
@@ -529,65 +555,76 @@ export default function StationPhaseTable() {
               </Alert>
             ) : (
               <List>
-                {phaseTasks.map((task) => (
-                  <Box key={task.Id}>
-                    <ClickableListItem alignItems="flex-start" onClick={() => handleTaskClick(task.Id)}>
-                      <ListItemIcon>
-                        {task.Status?.toLowerCase() === "complete" ? (
-                          <CheckCircle color="success" />
-                        ) : (
-                          <Info color="warning" />
-                        )}
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography variant="subtitle1" fontWeight="medium">
-                            {task.Milestone}
-                          </Typography>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 1 }}>
-                            <Grid container spacing={2}>
-                              <Grid item xs={12} sm={6}>
-                                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                                  <Person sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                                  <Typography variant="body2" color="text.secondary">
-                                    Assigned to: {task.EmpName || "N/A"} ({task.EmpId})
-                                  </Typography>
-                                </Box>
-                              </Grid>
-                              <Grid item xs={12} sm={6}>
-                                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                                  <CalendarToday sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                                  <Typography variant="body2" color="text.secondary">
-                                    Target Date: {formatDate(task.TargetDate)}
-                                  </Typography>
-                                </Box>
-                              </Grid>
-                            </Grid>
-                            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-                              <Chip
-                                label={task.Status || "Unknown"}
-                                size="small"
-                                color={task.Status?.toLowerCase() === "complete" ? "success" : "warning"}
-                                variant="outlined"
-                              />
-                              <Button 
-                                size="small" 
-                                variant="outlined"
-                                onClick={(e) => handleReassignClick(task, e)}
-                                sx={{ ml: 1 }}
-                              >
-                                Reassign
-                              </Button>
-                            </Box>
-                          </Box>
-                        }
-                      />
-                    </ClickableListItem>
-                    <Divider variant="inset" component="li" />
+                // Inside the task list rendering in the dialog
+{phaseTasks.map((task) => (
+  <Box key={task.Id}>
+    <ClickableListItem alignItems="flex-start" onClick={() => handleTaskClick(task.Id)}>
+      <ListItemIcon>
+        {task.Status?.toLowerCase() === "complete" ? (
+          <CheckCircle color="success" />
+        ) : (
+          <Info color="warning" />
+        )}
+      </ListItemIcon>
+      <ListItemText
+        primary={
+          <Typography variant="subtitle1" fontWeight="medium">
+            {task.Milestone}
+          </Typography>
+        }
+        secondary={
+          <Box sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                  <Person sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Assigned to: {task.EmpName || "N/A"} ({task.EmpId})
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                  <CalendarToday sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Target Date: {formatDate(task.TargetDate)}
+                  </Typography>
+                </Box>
+              </Grid>
+              {task.Status?.toLowerCase() === "complete" && task.UpdateDateTime && (
+                <Grid item xs={12} sm={6}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                    <CheckCircle sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
+                    <Typography variant="body2" color="text.secondary">
+                      Completed on: {formatDate(task.UpdateDateTime, "dd-mm-yyyy")}
+                    </Typography>
                   </Box>
-                ))}
+                </Grid>
+              )}
+            </Grid>
+            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Chip
+                label={task.Status || "Unknown"}
+                size="small"
+                color={task.Status?.toLowerCase() === "complete" ? "success" : "warning"}
+                variant="outlined"
+              />
+              <Button 
+                size="small" 
+                variant="outlined"
+                onClick={(e) => handleReassignClick(task, e)}
+                sx={{ ml: 1 }}
+              >
+                Reassign
+              </Button>
+            </Box>
+          </Box>
+        }
+      />
+    </ClickableListItem>
+    <Divider variant="inset" component="li" />
+  </Box>
+))}
               </List>
             )}
           </DialogContent>

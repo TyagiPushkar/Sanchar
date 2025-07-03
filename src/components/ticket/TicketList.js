@@ -159,7 +159,8 @@ const TicketList = () => {
                     <TableCell sx={{color:"#fff"}}><strong>Contact Person</strong></TableCell>
                     <TableCell sx={{color:"#fff"}}><strong>Contact Number</strong></TableCell>
                     <TableCell sx={{color:"#fff"}}><strong>Status</strong></TableCell>
-                    <TableCell sx={{color:"#fff"}}><strong>Date</strong></TableCell>
+                    <TableCell sx={{ color: "#fff" }}><strong>Assign Date</strong></TableCell>
+                    <TableCell sx={{color:"#fff"}}><strong>CompletionDate</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -184,6 +185,9 @@ const TicketList = () => {
                         </TableCell>
                         <TableCell>
                           {new Date(ticket.Date).toLocaleDateString('en-GB')}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(ticket.UpdateDateTime).toLocaleDateString('en-GB')}
                         </TableCell>
                       </TableRow>
                     ))
