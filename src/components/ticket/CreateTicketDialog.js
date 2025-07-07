@@ -24,6 +24,7 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
     contactPerson: "",
     contactNumber: "",
     remark: "",
+    LOA: ""
   })
   const [technicians, setTechnicians] = useState([])
   const [stations, setStations] = useState([])
@@ -42,21 +43,21 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
   const fetchData = async () => {
     try {
       setDataLoading(true)
-
+      
       // Fetch technicians
-      const techResponse = await fetch(
-        "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
-      )
-      const techData = await techResponse.json()
+      const [techResponse, stationResponse] = await Promise.all([
+        fetch("https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1"),
+        fetch("https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php")
+      ])
+
+      const [techData, stationData] = await Promise.all([
+        techResponse.json(),
+        stationResponse.json()
+      ])
 
       if (techData.success) {
-        const filteredTechnicians = techData.data.filter((emp) => emp.Role === "Technician")
-        setTechnicians(filteredTechnicians)
+        setTechnicians(techData.data.filter(emp => emp.Role === "Technician"))
       }
-
-      // Fetch stations
-      const stationResponse = await fetch("https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php")
-      const stationData = await stationResponse.json()
 
       if (stationData.success) {
         setStations(stationData.data)
@@ -65,7 +66,7 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       console.error("Error fetching data:", error)
       setSnackbar({
         open: true,
-        message: "Failed to load technicians and stations data",
+        message: "Failed to load data",
         severity: "error",
       })
     } finally {
@@ -80,71 +81,49 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       contactPerson: "",
       contactNumber: "",
       remark: "",
+      LOA: ""
     })
     setErrors({})
   }
 
   const validateForm = () => {
     const newErrors = {}
-
-    if (!formData.empId) {
-      newErrors.empId = "Please select a technician"
-    }
-    if (!formData.station) {
-      newErrors.station = "Please select a station"
-    }
-    if (!formData.contactPerson.trim()) {
-      newErrors.contactPerson = "Contact person is required"
-    }
+    if (!formData.empId) newErrors.empId = "Technician is required"
+    if (!formData.station) newErrors.station = "Station is required"
+    if (!formData.contactPerson.trim()) newErrors.contactPerson = "Contact person is required"
+    if (!formData.LOA.trim()) newErrors.LOA = "LOA is required"
     if (!formData.contactNumber.trim()) {
       newErrors.contactNumber = "Contact number is required"
     } else if (formData.contactNumber.length < 10) {
-      newErrors.contactNumber = "Contact number must be at least 10 digits"
+      newErrors.contactNumber = "Invalid contact number"
     }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
-  }
-
-  const handleInputChange = (field) => (event) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: event.target.value,
-    }))
-
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({
-        ...prev,
-        [field]: "",
-      }))
-    }
-  }
+}
 
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      return
-    }
+    if (!validateForm()) return
 
     try {
       setLoading(true)
+      const selectedTechnician = technicians.find(tech => tech.EmpId === formData.empId)
 
-      const selectedTechnician = technicians.find((tech) => tech.EmpId === formData.empId)
-
-      const submitData = new FormData()
-      submitData.append("Milestone", "Support Ticket")
-      submitData.append("MenuId", "7")
-      submitData.append("EmpName", selectedTechnician?.Name || "")
-      submitData.append("EmpId", formData.empId)
-      submitData.append("Station", formData.station)
-      submitData.append("Status", "Assigned")
-      submitData.append("Remark", formData.remark || "")
-      submitData.append("ContactPerson", formData.contactPerson)
-      submitData.append("ContactNumber", formData.contactNumber)
+      const formDataToSend = new FormData()
+      formDataToSend.append("Milestone", "Support Ticket")
+      formDataToSend.append("MenuId", "7")
+      formDataToSend.append("EmpName", selectedTechnician?.Name || "")
+      formDataToSend.append("EmpId", formData.empId)
+      formDataToSend.append("Station", formData.station)
+      formDataToSend.append("Status", "Assigned")
+      formDataToSend.append("Remark", formData.remark)
+      formDataToSend.append("ContactPerson", formData.contactPerson)
+      formDataToSend.append("ContactNumber", formData.contactNumber)
+      formDataToSend.append("LOA", formData.LOA)
 
       const response = await fetch("https://namami-infotech.com/SANCHAR/src/support/create_ticket.php", {
         method: "POST",
-        body: submitData,
+        body: formDataToSend,
       })
 
       const result = await response.json()
@@ -152,18 +131,19 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       if (result.success) {
         setSnackbar({
           open: true,
-          message: "Support ticket created successfully",
+          message: "Ticket created successfully",
           severity: "success",
         })
         onTicketCreated()
+        onClose()
       } else {
         throw new Error(result.message || "Failed to create ticket")
       }
     } catch (error) {
-      console.error("Error creating ticket:", error)
+      console.error("Error:", error)
       setSnackbar({
         open: true,
-        message: "Failed to create support ticket",
+        message: error.message,
         severity: "error",
       })
     } finally {
@@ -171,136 +151,133 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
     }
   }
 
-  const handleClose = () => {
-    resetForm()
-    onClose()
-  }
-
   return (
     <>
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle>
-          <Typography variant="h6" component="div">
-            Create New Support Ticket
-          </Typography>
+          <Typography variant="h6">Create Support Ticket</Typography>
           <Typography variant="body2" color="text.secondary">
-            Fill in the details to create a new support ticket for a technician.
+            Assign a technician to resolve an issue
           </Typography>
         </DialogTitle>
 
         <DialogContent dividers>
           {dataLoading ? (
-            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", py: 4 }}>
-              <CircularProgress size={24} sx={{ mr: 2 }} />
-              <Typography>Loading data...</Typography>
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
             </Box>
           ) : (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 1 }}>
-              
-
+            <Box sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}>
               <Autocomplete
-                 fullWidth
-                 options={stations}
-                 getOptionLabel={(option) =>
-                   `${option.StationName} - ${option.ZoneName}`
-                 }
-                 value={stations.find((s) => s.StationName === formData.station) || null}
-                 onChange={(event, newValue) => {
-                   setFormData((prev) => ({
-                     ...prev,
-                     station: newValue ? newValue.StationName : "",
-                   }))
-                   if (errors.station) {
-                     setErrors((prev) => ({ ...prev, station: "" }))
-                   }
-                 }}
-                 renderInput={(params) => (
-                   <TextField
-                     {...params}
-                     label="Station"
-                     error={!!errors.station}
-                     helperText={errors.station}
-                   />
-                 )}
+                options={stations}
+                getOptionLabel={(option) => `${option.StationName} - ${option.ZoneName}`}
+                value={stations.find(s => s.StationName === formData.station) || null}
+                onChange={(e, newValue) => {
+                  setFormData(prev => ({ ...prev, station: newValue?.StationName || "" }))
+                  if (errors.station) setErrors(prev => ({ ...prev, station: "" }))
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Station"
+                    error={!!errors.station}
+                    helperText={errors.station}
+                    required
+                  />
+                )}
               />
 
               <TextField
-                fullWidth
                 label="Contact Person"
                 value={formData.contactPerson}
-                onChange={handleInputChange("contactPerson")}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, contactPerson: e.target.value }))
+                  if (errors.contactPerson) setErrors(prev => ({ ...prev, contactPerson: "" }))
+                }}
                 error={!!errors.contactPerson}
                 helperText={errors.contactPerson}
-                placeholder="Enter contact person name"
+                required
+                fullWidth
               />
 
               <TextField
+                label="LOA"
+                value={formData.LOA}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, LOA: e.target.value }))
+                  if (errors.LOA) setErrors(prev => ({ ...prev, LOA: "" }))
+                }}
+                error={!!errors.LOA}
+                helperText={errors.LOA}
+                required
                 fullWidth
+              />
+
+              <TextField
                 label="Contact Number"
                 value={formData.contactNumber}
-                onChange={handleInputChange("contactNumber")}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, contactNumber: e.target.value }))
+                  if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: "" }))
+                }}
                 error={!!errors.contactNumber}
                 helperText={errors.contactNumber}
-                placeholder="Enter contact number"
+                required
+                fullWidth
               />
 
-              {/* Remark */}
+              <Autocomplete
+                options={technicians}
+                getOptionLabel={(option) => `${option.Name} (${option.EmpId})`}
+                value={technicians.find(t => t.EmpId === formData.empId) || null}
+                onChange={(e, newValue) => {
+                  setFormData(prev => ({ ...prev, empId: newValue?.EmpId || "" }))
+                  if (errors.empId) setErrors(prev => ({ ...prev, empId: "" }))
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Technician"
+                    error={!!errors.empId}
+                    helperText={errors.empId}
+                    required
+                  />
+                )}
+              />
+
               <TextField
-                fullWidth
-                label="Remark (Optional)"
+                label="Remarks (Optional)"
                 value={formData.remark}
-                onChange={handleInputChange("remark")}
+                onChange={(e) => setFormData(prev => ({ ...prev, remark: e.target.value }))}
                 multiline
                 rows={3}
-                placeholder="Enter any additional remarks"
-                              />
-              <Autocomplete
-                   fullWidth
-                   options={technicians}
-                   getOptionLabel={(option) => `${option.Name} (${option.EmpId})`}
-                   value={technicians.find((t) => t.EmpId === formData.empId) || null}
-                   onChange={(event, newValue) => {                 
-                   setFormData((prev) => ({
-                     ...prev,
-                     empId: newValue ? newValue.EmpId : "",
-                   }))
-                   if (errors.empId) {
-                     setErrors((prev) => ({ ...prev, empId: "" }))
-                   }
-                   }}
-                   renderInput={(params) => (
-                    <TextField
-                      {...params}
-                      label="Technician"
-                      error={!!errors.empId}
-                      helperText={errors.empId}
-                    />
-                   )}
-             />
+                fullWidth
+              />
             </Box>
           )}
         </DialogContent>
 
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-          <LoadingButton onClick={handleSubmit} loading={loading} variant="contained" disabled={dataLoading}>
+        <DialogActions>
+          <Button onClick={onClose} disabled={loading}>Cancel</Button>
+          <LoadingButton 
+            onClick={handleSubmit} 
+            loading={loading} 
+            variant="contained"
+            disabled={dataLoading}
+          >
             Create Ticket
           </LoadingButton>
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
       >
         <Alert
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           severity={snackbar.severity}
-          sx={{ width: "100%" }}
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         >
           {snackbar.message}
         </Alert>

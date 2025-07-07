@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar"
 import Sidebar from "../components/Sidebar"
 import { Box, useMediaQuery, useTheme, Container } from "@mui/material"
 import TicketList from "../components/ticket/TicketList"
+import TicketView from "../components/ticket/TicketView"
 
 
 function Ticket() {
@@ -19,7 +20,10 @@ function Ticket() {
   const renderContent = () => {
      if (currentPath.includes("/support-ticket")) {
           return <TicketList />
-        } 
+    } 
+     else if (currentPath.includes("/tickets/")) {
+          return <TicketView />
+    }
        
     return <TicketList /> // Default fallback
   }

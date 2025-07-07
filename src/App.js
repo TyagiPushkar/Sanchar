@@ -78,6 +78,7 @@ function App() {
 
 
             <Route path="/support-ticket" element={<PrivateRoute element={Ticket} />} />
+            <Route path="/tickets/:ticketId" element={<PrivateRoute element={Ticket} />} />
 
 
             <Route path="/material-supplied" element={<PrivateRoute element={Material} />} />
