@@ -25,6 +25,7 @@ import {
   Divider,
   Grid,
   Stack,
+  CircularProgress,
 } from "@mui/material"
 import {
   ArrowBack,
@@ -41,6 +42,8 @@ import {
   Phone,
   LocationOn,
   Description,
+  CheckCircle,
+  Warning,
 } from "@mui/icons-material"
 import { styled } from "@mui/material/styles"
 
@@ -65,22 +68,10 @@ const StatusChip = styled(Chip)(({ status, theme }) => ({
     theme.palette.error.dark,
 }))
 
-const PriorityChip = styled(Chip)(({ priority, theme }) => ({
-  fontWeight: 600,
-  backgroundColor:
-    priority === 'High' ? theme.palette.error.light :
-    priority === 'Medium' ? theme.palette.warning.light :
-    theme.palette.success.light,
-  color:
-    priority === 'High' ? theme.palette.error.dark :
-    priority === 'Medium' ? theme.palette.warning.dark :
-    theme.palette.success.dark,
-}))
-
 const TicketView = () => {
   const { ticketId } = useParams()
   const navigate = useNavigate()
-  const [ticket, setTicket] = useState(null)
+  const [ticketData, setTicketData] = useState([])
   const [checkpoints, setCheckpoints] = useState([])
   const [menus, setMenus] = useState([])
   const [loading, setLoading] = useState(true)
@@ -88,6 +79,7 @@ const TicketView = () => {
   const [selectedImage, setSelectedImage] = useState(null)
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1)
+  const [isWIP, setIsWIP] = useState(false)
 
   // Fetch ticket details
   useEffect(() => {
@@ -100,7 +92,10 @@ const TicketView = () => {
         const data = await response.json()
         
         if (data.success) {
-          setTicket(data.data)
+          setTicketData(data.data)
+          // Check if checkpoint 133 has value "No" (WIP state)
+          const wipCheck = data.data.find(item => item.ChkId === "133" && item.Value === "No")
+          setIsWIP(!!wipCheck)
         } else {
           setError(data.message || 'Failed to fetch ticket details')
         }
@@ -195,75 +190,119 @@ const TicketView = () => {
     return null
   }
 
+  const groupDataByActivity = () => {
+    const grouped = {}
+    
+    ticketData.forEach(item => {
+      if (!grouped[item.ActivityId]) {
+        grouped[item.ActivityId] = {
+          activityId: item.ActivityId,
+          datetime: item.Datetime,
+          latLong: item.LatLong,
+          items: []
+        }
+      }
+      grouped[item.ActivityId].items.push(item)
+    })
+    
+    return Object.values(grouped)
+  }
+
   const renderCheckpointData = () => {
-    if (!ticket || !Array.isArray(ticket)) {
+    if (!ticketData || !Array.isArray(ticketData)) {
       return <Alert severity="info">No checkpoint data available</Alert>
     }
 
-    // Filter out meta entries
-    const filteredData = ticket.filter(item => !item.ChkId.includes('.meta'))
+    const activityGroups = groupDataByActivity()
 
     return (
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Field</TableCell>
-              <TableCell>Value</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredData.map((item) => {
-              const checkpoint = getCheckpointById(item.ChkId)
-              return (
-                <TableRow key={item.SRNo}>
-                  <TableCell>
-                    {checkpoint?.Description || `Checkpoint ${item.ChkId}`}
-                  </TableCell>
-                  <TableCell>
-                    {isImageUrl(item.Value) ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <ImageThumbnail onClick={() => handleImageClick(item.Value)}>
-                          <img
-                            src={item.Value}
-                            alt={`Checkpoint ${item.ChkId}`}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            onError={(e) => {
-                              e.target.src = '/placeholder.svg'
-                            }}
-                          />
-                          <ImageOverlay className="overlay">
-                            <Visibility sx={{ color: 'white', fontSize: 20 }} />
-                          </ImageOverlay>
-                        </ImageThumbnail>
-                        <Box>
-                          <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <ImageIcon fontSize="small" /> Image Attachment
-                          </Typography>
-                          <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
-                            <Tooltip title="View Image">
-                              <IconButton size="small" color="primary" onClick={() => handleImageClick(item.Value)}>
-                                <Visibility fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Download Image">
-                              <IconButton size="small" color="primary" onClick={() => downloadImage(item.Value, `checkpoint-${item.ChkId}`)}>
-                                <Download fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </Box>
-                      </Box>
-                    ) : (
-                      <Typography>{item.Value || 'No value provided'}</Typography>
-                    )}
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Box>
+        {isWIP && (
+          <Alert severity="warning" icon={<Warning />} sx={{ mb: 3 }}>
+            This ticket is in Work In Progress (WIP) state. More entries are expected.
+          </Alert>
+        )}
+
+        {activityGroups.map((group, groupIndex) => (
+          <Box key={groupIndex} sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold">
+                Activity {groupIndex + 1}
+              </Typography>
+              
+            </Box>
+
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Field</TableCell>
+                    <TableCell>Value</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {group.items.filter(item => !item.ChkId.includes('.meta')).map((item) => {
+                    const checkpoint = getCheckpointById(item.ChkId)
+                    return (
+                      <TableRow key={item.SRNo}>
+                        <TableCell>
+                          {checkpoint?.Description || `Checkpoint ${item.ChkId}`}
+                          {item.ChkId === "133" && (
+                            <Chip 
+                              label={item.Value === "Yes" ? "Complete" : "WIP"} 
+                              size="small" 
+                              color={item.Value === "Yes" ? "success" : "warning"} 
+                              sx={{ ml: 1 }} 
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isImageUrl(item.Value) ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <ImageThumbnail onClick={() => handleImageClick(item.Value)}>
+                                <img
+                                  src={item.Value}
+                                  alt={`Checkpoint ${item.ChkId}`}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    e.target.src = '/placeholder.svg'
+                                  }}
+                                />
+                                <ImageOverlay className="overlay">
+                                  <Visibility sx={{ color: 'white', fontSize: 20 }} />
+                                </ImageOverlay>
+                              </ImageThumbnail>
+                              <Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <ImageIcon fontSize="small" /> Image Attachment
+                                </Typography>
+                                <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+                                  <Tooltip title="View Image">
+                                    <IconButton size="small" color="primary" onClick={() => handleImageClick(item.Value)}>
+                                      <Visibility fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Download Image">
+                                    <IconButton size="small" color="primary" onClick={() => downloadImage(item.Value, `checkpoint-${item.ChkId}`)}>
+                                      <Download fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </Box>
+                              </Box>
+                            </Box>
+                          ) : (
+                            <Typography>{item.Value || 'No value provided'}</Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        ))}
+      </Box>
     )
   }
 
@@ -276,14 +315,16 @@ const TicketView = () => {
           </IconButton>
           <Skeleton variant="text" width={200} height={40} />
         </Box>
-        <Skeleton variant="rectangular" height={400} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
+        </Box>
       </Box>
     )
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
           <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
             <ArrowBack />
@@ -297,9 +338,9 @@ const TicketView = () => {
     )
   }
 
-  if (!ticket) {
+  if (!ticketData || ticketData.length === 0) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ p: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
           <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
             <ArrowBack />
