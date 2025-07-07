@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import "./InvoicesList.css";
+import "./AMCWorkList.css";
 
-function InvoicesList() {
+function AMCWorkList() {
   const [transactions, setTransactions] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
@@ -14,18 +14,16 @@ function InvoicesList() {
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const navigate = useNavigate();
 
+  // Define the checkpoint IDs you want to display in the main table
+  const displayCheckpointIds = ["589", "590", "591", "592", "593", "594"];
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch transactions data
-        const transactionsResponse = await axios.get(
-          "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=9"
-        );
-        
-        // Fetch checkpoints data
-        const checkpointsResponse = await axios.get(
-          "https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php"
-        );
+        const [transactionsResponse, checkpointsResponse] = await Promise.all([
+          axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=10"),
+          axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php")
+        ]);
 
         if (transactionsResponse.data.success && checkpointsResponse.data.success) {
           setTransactions(transactionsResponse.data.data);
@@ -44,21 +42,13 @@ function InvoicesList() {
     fetchData();
   }, []);
 
-  // Get checkpoint description by ID
   const getCheckpointDescription = (checkpointId) => {
     const checkpoint = checkpoints.find(cp => cp.CheckpointId === parseInt(checkpointId));
     return checkpoint ? checkpoint.Description : `Field ${checkpointId}`;
   };
 
-  // Extract all unique checkpoint IDs from all transactions
   const getAllCheckpointIds = () => {
-    const allIds = new Set();
-    transactions.forEach(transaction => {
-      transaction.Details.forEach(detail => {
-        allIds.add(detail.ChkId);
-      });
-    });
-    return Array.from(allIds);
+    return displayCheckpointIds;
   };
 
   const handleSearch = (e) => {
@@ -75,47 +65,13 @@ function InvoicesList() {
     setPage(0);
   };
 
-  const handleChangePage = (newPage) => setPage(newPage);
-
-  const formatDate = (datetime) => {
-    if (!datetime) return "-";
-    const dateObj = new Date(datetime);
-    const day = String(dateObj.getDate()).padStart(2, "0");
-    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const year = dateObj.getFullYear();
-    return `${day}/${month}/${year}`;
+  const handleViewDetails = (transaction) => {
+    navigate("/details", { state: { transaction, checkpoints } });
   };
 
   const getTransactionValue = (transaction, checkpointId) => {
     const detail = transaction.Details.find(d => d.ChkId === checkpointId);
-    
-    if (!detail) return "-";
-    
-    // Special handling for checkpoint ID 580 (image/pdf link)
-    if (checkpointId === "583") {
-      return (
-        <button 
-          className="view-button"
-          onClick={() => window.open(detail.Value, "_blank")}
-          title="View Document"
-        >
-          <span className="view-icon">👁️</span>
-        </button>
-      );
-    }
-    if (checkpointId === "588") {
-        return (
-          <button 
-            className="view-button"
-            onClick={() => window.open(detail.Value, "_blank")}
-            title="View Document"
-          >
-            <span className="view-icon">👁️</span>
-          </button>
-        );
-      }
-    
-    return detail.Value;
+    return detail ? detail.Value : "-";
   };
 
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
@@ -136,13 +92,12 @@ function InvoicesList() {
   return (
     <div className="material-list-container">
       <div className="material-list-header">
-        <h2 className="material-list-title">Invoices List</h2>
-
+        <h2 className="material-list-title">AMC WORK List</h2>
         <div className="material-list-actions">
           <div className="search-container">
             <input
               type="text"
-              placeholder="Search invoices..."
+              placeholder="Search ..."
               value={searchTerm}
               onChange={handleSearch}
               className="search-input"
@@ -151,9 +106,9 @@ function InvoicesList() {
           </div>
           <button
             className="action-button new-material-button"
-            onClick={() => navigate("/add-invoice")}
+            onClick={() => navigate("/add-amc-work")}
           >
-            Add Invoice
+            Add Work
           </button>
         </div>
       </div>
@@ -164,28 +119,34 @@ function InvoicesList() {
         <table className="material-table">
           <thead>
             <tr>
-             
               {allCheckpointIds.map(checkpointId => (
                 <th key={checkpointId}>{getCheckpointDescription(checkpointId)}</th>
               ))}
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {currentRecords.length > 0 ? (
               currentRecords.map((record) => (
                 <tr key={record.ActivityId}>
-                 
                   {allCheckpointIds.map(checkpointId => (
                     <td key={`${record.ActivityId}-${checkpointId}`}>
                       {getTransactionValue(record, checkpointId)}
                     </td>
                   ))}
-                  
+                  <td>
+                    <button 
+                      className="view-button"
+                      onClick={() => handleViewDetails(record)}
+                    >
+                      👁️
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={allCheckpointIds.length + 2} className="no-records">
+                <td colSpan={allCheckpointIds.length + 1} className="no-records">
                   No records found
                 </td>
               </tr>
@@ -198,7 +159,7 @@ function InvoicesList() {
         <button
           className="pagination-button"
           disabled={page === 0}
-          onClick={() => handleChangePage(page - 1)}
+          onClick={() => setPage(page - 1)}
         >
           Previous
         </button>
@@ -208,7 +169,7 @@ function InvoicesList() {
         <button
           className="pagination-button"
           disabled={page >= totalPages - 1 || filteredRecords.length === 0}
-          onClick={() => handleChangePage(page + 1)}
+          onClick={() => setPage(page + 1)}
         >
           Next
         </button>
@@ -217,4 +178,4 @@ function InvoicesList() {
   );
 }
 
-export default InvoicesList;
+export default AMCWorkList;
