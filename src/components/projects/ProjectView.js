@@ -621,7 +621,8 @@ export default function StationPhaseTable() {
                                 </Grid>
                               )}
                             </Grid>
-                            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                            {task.Status?.toLowerCase() !== "complete" && (
+                              <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
                               <Chip
                                 label={task.Status || "Unknown"}
                                 size="small"
@@ -637,6 +638,8 @@ export default function StationPhaseTable() {
                                 Reassign
                               </Button>
                             </Box>
+                            )}
+                            
                           </Box>
                         }
                       />
