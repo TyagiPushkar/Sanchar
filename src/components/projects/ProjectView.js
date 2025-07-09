@@ -124,6 +124,7 @@ export default function StationPhaseTable() {
   const [selectedEmployee, setSelectedEmployee] = useState(null)
   const [reassignLoading, setReassignLoading] = useState(false)
   const [toast, setToast] = useState({ show: false, message: "", type: "success" })
+  const [completionDate, setCompletionDate] = useState(null)
 
   const phases = [
     {
@@ -158,10 +159,11 @@ export default function StationPhaseTable() {
         setLoading(true)
         setError(null)
 
-        const [stationsResponse, tasksResponse, employeesResponse] = await Promise.all([
+        const [stationsResponse, tasksResponse, employeesResponse, completionDateResponse] = await Promise.all([
           axios.get(`https://namami-infotech.com/SANCHAR/src/tender/tender_stations.php?ActivityId=${ActivityId}`),
           axios.get(`https://namami-infotech.com/SANCHAR/src/task/project_task.php?TenderNo=${tenderNo}`),
-          axios.get("https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1")
+          axios.get("https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1"),
+          axios.get(`https://namami-infotech.com/SANCHAR/src/task/project_complete.php?TenderNo=${tenderNo}`)
         ])
 
         if (stationsResponse.data.success) {
@@ -180,6 +182,10 @@ export default function StationPhaseTable() {
           setEmployees(employeesResponse.data.data)
         } else {
           console.error("Failed to fetch employees:", employeesResponse.data.message)
+        }
+
+        if (completionDateResponse.data.success && completionDateResponse.data.data.length > 0) {
+          setCompletionDate(completionDateResponse.data.data[0])
         }
 
       } catch (err) {
@@ -358,17 +364,23 @@ export default function StationPhaseTable() {
     <Container maxWidth="xl" sx={{ py: 0 }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         {/* Header */}
-        <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: 'wrap' }}>
           <Box>
             <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, color: "#F69320" }}>
               Tender No: {tenderNo || "N/A"}
             </Typography>
+            {completionDate && (
+              <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CalendarToday fontSize="small" color="action" />
+                Project Completion Date: {formatDate(completionDate)}
+              </Typography>
+            )}
           </Box>
           <Button
             variant="contained"
             startIcon={<Refresh />}
             onClick={() => window.location.reload()}
-            sx={{ bgcolor: "#F69320" }}
+            sx={{ bgcolor: "#F69320", mt: { xs: 2, sm: 0 } }}
           >
             Refresh Data
           </Button>
@@ -496,30 +508,32 @@ export default function StationPhaseTable() {
                           completed={completed}
                           onClick={() => handlePhaseClick(station, phase)}
                         >
-                         {
-  completed ? (
-    <Box>
-      <CheckCircle sx={{ color: "success.main", fontSize: 28 }} />
-      <Typography variant="caption" display="block">
-        {formatDate(
-          tasks.find(t => 
-            t.Station === station && 
-            t.Status?.toLowerCase() === "complete" &&
-            phase.milestones.some(m => 
-              t.Milestone?.toLowerCase().includes(m.toLowerCase())
-            )
-          )?.UpdateDateTime,
-          "dd-mm-yyyy"
-        )}
-      </Typography>
-    </Box>
-  ) : hasTask ? (
-    <Info sx={{ color: "warning.main", fontSize: 28 }} />
-  ) : (
-    <Cancel sx={{ color: "text.disabled", fontSize: 28 }} />
-  )
-}
-
+                          {completed ? (
+                            <Box>
+                              <CheckCircle sx={{ color: "success.main", fontSize: 28 }} />
+                              <Typography variant="caption" display="block">
+                                {formatDate(
+                                  tasks.find(t => 
+                                    t.Station === station && 
+                                    t.Status?.toLowerCase() === "complete" &&
+                                    phase.milestones.some(m => 
+                                      t.Milestone?.toLowerCase().includes(m.toLowerCase())
+                                    )
+                                  )?.UpdateDateTime,
+                                  "dd-mm-yyyy"
+                                )}
+                              </Typography>
+                              {completionDate && (
+                                <Typography variant="caption" display="block" color="text.secondary">
+                                  Target: {completionDate}
+                                </Typography>
+                              )}
+                            </Box>
+                          ) : hasTask ? (
+                            <Info sx={{ color: "warning.main", fontSize: 28 }} />
+                          ) : (
+                            <Cancel sx={{ color: "text.disabled", fontSize: 28 }} />
+                          )}
                           <Typography variant="body2" sx={{ mt: 0 }}>
                             {completed ? "Completed" : hasTask ? "In Progress" : "Not Started"}
                           </Typography>
@@ -555,76 +569,85 @@ export default function StationPhaseTable() {
               </Alert>
             ) : (
               <List>
-                // Inside the task list rendering in the dialog
-{phaseTasks.map((task) => (
-  <Box key={task.Id}>
-    <ClickableListItem alignItems="flex-start" onClick={() => handleTaskClick(task.Id)}>
-      <ListItemIcon>
-        {task.Status?.toLowerCase() === "complete" ? (
-          <CheckCircle color="success" />
-        ) : (
-          <Info color="warning" />
-        )}
-      </ListItemIcon>
-      <ListItemText
-        primary={
-          <Typography variant="subtitle1" fontWeight="medium">
-            {task.Milestone}
-          </Typography>
-        }
-        secondary={
-          <Box sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                  <Person sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Assigned to: {task.EmpName || "N/A"} ({task.EmpId})
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                  <CalendarToday sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Target Date: {formatDate(task.TargetDate)}
-                  </Typography>
-                </Box>
-              </Grid>
-              {task.Status?.toLowerCase() === "complete" && task.UpdateDateTime && (
-                <Grid item xs={12} sm={6}>
-                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                    <CheckCircle sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                    <Typography variant="body2" color="text.secondary">
-                      Completed on: {formatDate(task.UpdateDateTime, "dd-mm-yyyy")}
-                    </Typography>
+                {phaseTasks.map((task) => (
+                  <Box key={task.Id}>
+                    <ClickableListItem alignItems="flex-start" onClick={() => handleTaskClick(task.Id)}>
+                      <ListItemIcon>
+                        {task.Status?.toLowerCase() === "complete" ? (
+                          <CheckCircle color="success" />
+                        ) : (
+                          <Info color="warning" />
+                        )}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography variant="subtitle1" fontWeight="medium">
+                            {task.Milestone}
+                          </Typography>
+                        }
+                        secondary={
+                          <Box sx={{ mt: 1 }}>
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                                  <Person sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
+                                  <Typography variant="body2" color="text.secondary">
+                                    Assigned to: {task.EmpName || "N/A"} ({task.EmpId})
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12} sm={6}>
+                                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                                  <CalendarToday sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
+                                  <Typography variant="body2" color="text.secondary">
+                                    Target Date: {formatDate(task.TargetDate)}
+                                  </Typography>
+                                </Box>
+                              </Grid>
+                              {task.Status?.toLowerCase() === "complete" && task.UpdateDateTime && (
+                                <Grid item xs={12} sm={6}>
+                                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                                    <CheckCircle sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
+                                    <Typography variant="body2" color="text.secondary">
+                                      Completed on: {formatDate(task.UpdateDateTime, "dd-mm-yyyy")}
+                                    </Typography>
+                                  </Box>
+                                </Grid>
+                              )}
+                              {completionDate && (
+                                <Grid item xs={12} sm={6}>
+                                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                                    {/* <VerifiedUser sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} /> */}
+                                    {/* <Typography variant="body2" color="text.secondary">
+                                      Project Target: {completionDate}
+                                    </Typography> */}
+                                  </Box>
+                                </Grid>
+                              )}
+                            </Grid>
+                            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                              <Chip
+                                label={task.Status || "Unknown"}
+                                size="small"
+                                color={task.Status?.toLowerCase() === "complete" ? "success" : "warning"}
+                                variant="outlined"
+                              />
+                              <Button 
+                                size="small" 
+                                variant="outlined"
+                                onClick={(e) => handleReassignClick(task, e)}
+                                sx={{ ml: 1 }}
+                              >
+                                Reassign
+                              </Button>
+                            </Box>
+                          </Box>
+                        }
+                      />
+                    </ClickableListItem>
+                    <Divider variant="inset" component="li" />
                   </Box>
-                </Grid>
-              )}
-            </Grid>
-            <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Chip
-                label={task.Status || "Unknown"}
-                size="small"
-                color={task.Status?.toLowerCase() === "complete" ? "success" : "warning"}
-                variant="outlined"
-              />
-              <Button 
-                size="small" 
-                variant="outlined"
-                onClick={(e) => handleReassignClick(task, e)}
-                sx={{ ml: 1 }}
-              >
-                Reassign
-              </Button>
-            </Box>
-          </Box>
-        }
-      />
-    </ClickableListItem>
-    <Divider variant="inset" component="li" />
-  </Box>
-))}
+                ))}
               </List>
             )}
           </DialogContent>
