@@ -523,11 +523,7 @@ export default function StationPhaseTable() {
                                   "dd-mm-yyyy"
                                 )}
                               </Typography>
-                              {completionDate && (
-                                <Typography variant="caption" display="block" color="text.secondary">
-                                  Target: {completionDate}
-                                </Typography>
-                              )}
+                              
                             </Box>
                           ) : hasTask ? (
                             <Info sx={{ color: "warning.main", fontSize: 28 }} />
