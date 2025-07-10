@@ -169,11 +169,18 @@ const TicketView = () => {
     setZoomLevel(1)
   }
 
-  const isImageUrl = (url) => {
-    if (!url) return false
-    return /\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/i.test(url) || url.startsWith("data:image/")
-  }
 
+  const isImageUrl = (url) => {
+    if (!url) return false;
+    return /\.(jpeg|jpg|gif|png|webp|svg|bmp|tiff|ico)$/i.test(url) || url.startsWith("data:image");
+  };
+  
+  const isSupportedFile = (url) => {
+    if (!url) return false;
+    return /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|rtf|zip|rar|7z|tar|gz|mp3|wav|ogg|mp4|mov|avi|mkv|webm)$/i.test(url);
+  };
+  
+  
   const getCheckpointById = (checkpointId) => {
     return checkpoints.find((cp) => cp.CheckpointId === parseInt(checkpointId))
   }
@@ -292,7 +299,8 @@ const TicketView = () => {
                             </Box>
                           ) : (
                             <Typography>{item.Value || 'No value provided'}</Typography>
-                          )}
+                                )}
+                                
                         </TableCell>
                       </TableRow>
                     )

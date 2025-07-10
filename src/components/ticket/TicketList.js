@@ -197,7 +197,7 @@ const TicketList = () => {
                         {new Date(ticket.Date).toLocaleDateString('en-GB')}
                       </TableCell>
                       <TableCell>
-                        {new Date(ticket.UpdateDateTime).toLocaleDateString('en-GB')}
+                        {(ticket.UpdateDateTime)}
                       </TableCell>
                       <TableCell>
                         <IconButton 

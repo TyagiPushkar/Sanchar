@@ -167,7 +167,19 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
               <CircularProgress />
             </Box>
           ) : (
-            <Box sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+              <Box sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+                 <TextField
+                label="LOA"
+                value={formData.LOA}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, LOA: e.target.value }))
+                  if (errors.LOA) setErrors(prev => ({ ...prev, LOA: "" }))
+                }}
+                error={!!errors.LOA}
+                helperText={errors.LOA}
+                required
+                fullWidth
+              />
               <Autocomplete
                 options={stations}
                 getOptionLabel={(option) => `${option.StationName} - ${option.ZoneName}`}
@@ -200,18 +212,7 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                 fullWidth
               />
 
-              <TextField
-                label="LOA"
-                value={formData.LOA}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, LOA: e.target.value }))
-                  if (errors.LOA) setErrors(prev => ({ ...prev, LOA: "" }))
-                }}
-                error={!!errors.LOA}
-                helperText={errors.LOA}
-                required
-                fullWidth
-              />
+             
 
               <TextField
                 label="Contact Number"
