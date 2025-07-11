@@ -90,6 +90,7 @@ function App() {
             <Route path="/amc-work" element={<PrivateRoute element={AMCWork} />} />
             <Route path="/add-amc-work" element={<PrivateRoute element={AMCWork} />} />
             <Route path="/details" element={<PrivateRoute element={AMCWork} />} />
+            <Route path="/edit-amc-work" element={<PrivateRoute element={AMCWork} />} />
 
             <Route path="/menus" element={<PrivateRoute element={Menus} />} />
             <Route path="/add-menu" element={<PrivateRoute element={Menus} />} />

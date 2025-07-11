@@ -9,6 +9,7 @@ import AddInvoices from "../components/invoices/AddInvoices"
 import AMCWorkList from "../components/amc/AMCWorkList"
 import AddAMC from "../components/amc/AddAMC"
 import AMCWorkDetails from "../components/amc/AMCWorkDetails"
+import EditAMCWork from "../components/amc/EditAMCWork"
 
 
 function AMCWork() {
@@ -29,6 +30,9 @@ function AMCWork() {
       else if (currentPath.includes("/details")) {
         return <AMCWorkDetails />
     }
+    else if (currentPath.includes("/edit-amc-work")) {
+      return <EditAMCWork />
+  }
     return <AMCWorkList /> // Default fallback
   }
 

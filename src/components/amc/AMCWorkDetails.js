@@ -1,18 +1,43 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "./AMCWorkList.css"; // Reuse the same CSS
+import "./AMCWorkList.css";
 
 function AMCWorkDetails() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const { transaction, checkpoints } = state || {};
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+      }
+    }
+  }, []);
 
   if (!transaction) {
-    return <div>No data available</div>;
+    return (
+      <div className="material-list-container">
+        <div className="error-message">No data available</div>
+        <button
+          className="action-button back-button"
+          onClick={() => navigate(-1)}
+        >
+          Back to List
+        </button>
+      </div>
+    );
   }
 
   const getCheckpointDescription = (checkpointId) => {
-    const checkpoint = checkpoints.find(cp => cp.CheckpointId === parseInt(checkpointId));
+    // Convert both to strings for consistent comparison
+    const checkpoint = checkpoints.find(cp => 
+      cp.CheckpointId.toString() === checkpointId.toString()
+    );
     return checkpoint ? checkpoint.Description : `Field ${checkpointId}`;
   };
 
@@ -21,7 +46,6 @@ function AMCWorkDetails() {
     
     if (!detail) return "-";
     
-    // Special handling for document links
     if (["599", "603", "609","613","619","623","629","633"].includes(checkpointId)) {
       return (
         <button 
@@ -37,19 +61,33 @@ function AMCWorkDetails() {
     return detail.Value;
   };
 
-  // Get all unique checkpoint IDs from the transaction
+  const handleEdit = () => {
+    navigate("/edit-amc-work", { state: { transaction, checkpoints } });
+  };
+
   const allCheckpointIds = [...new Set(transaction.Details.map(detail => detail.ChkId))];
+  const isAdmin = user?.role === "Admin";
 
   return (
     <div className="material-list-container">
       <div className="material-list-header">
         <h2 className="material-list-title">AMC Work Details</h2>
-        <button
-          className="action-button back-button"
-          onClick={() => navigate(-1)}
-        >
-          Back to List
-        </button>
+        <div className="action-buttons">
+          <button
+            className="action-button back-button"
+            onClick={() => navigate(-1)}
+          >
+            Back to List
+          </button>
+          {isAdmin && (
+            <button
+              className="action-button edit-button"
+              onClick={handleEdit}
+            >
+              Edit
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="table-container">

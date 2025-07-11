@@ -12,14 +12,19 @@ function AMCWorkList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(15);
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // Define the checkpoint IDs you want to display in the main table
   const displayCheckpointIds = ["589", "590", "591", "592", "593", "594"];
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+
         const [transactionsResponse, checkpointsResponse] = await Promise.all([
           axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=10"),
           axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php")
@@ -43,7 +48,10 @@ function AMCWorkList() {
   }, []);
 
   const getCheckpointDescription = (checkpointId) => {
-    const checkpoint = checkpoints.find(cp => cp.CheckpointId === parseInt(checkpointId));
+    // Convert both to strings for consistent comparison
+    const checkpoint = checkpoints.find(cp => 
+      cp.CheckpointId.toString() === checkpointId.toString()
+    );
     return checkpoint ? checkpoint.Description : `Field ${checkpointId}`;
   };
 
@@ -69,16 +77,22 @@ function AMCWorkList() {
     navigate("/details", { state: { transaction, checkpoints } });
   };
 
+  const handleEdit = (transaction) => {
+    navigate("/edit-amc-work", { state: { transaction, checkpoints } });
+  };
+
   const getTransactionValue = (transaction, checkpointId) => {
     const detail = transaction.Details.find(d => d.ChkId === checkpointId);
     return detail ? detail.Value : "-";
   };
 
+  
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
   const currentRecords = filteredRecords.slice(startIndex, endIndex);
   const allCheckpointIds = getAllCheckpointIds();
+  const isAdmin = user?.role === "Admin";
 
   if (loading) {
     return (
@@ -104,12 +118,14 @@ function AMCWorkList() {
             />
             <span className="search-icon">🔍</span>
           </div>
-          <button
-            className="action-button new-material-button"
-            onClick={() => navigate("/add-amc-work")}
-          >
-            Add Work
-          </button>
+          {isAdmin && (
+            <button
+              className="action-button new-material-button"
+              onClick={() => navigate("/add-amc-work")}
+            >
+              Add Work
+            </button>
+          )}
         </div>
       </div>
 
@@ -135,12 +151,22 @@ function AMCWorkList() {
                     </td>
                   ))}
                   <td>
-                    <button 
-                      className="view-button"
-                      onClick={() => handleViewDetails(record)}
-                    >
-                      👁️
-                    </button>
+                    <div className="action-buttons">
+                      <button 
+                        className="view-button"
+                        onClick={() => handleViewDetails(record)}
+                      >
+                        👁️
+                      </button>
+                      {isAdmin && (
+                        <button 
+                          className="edit-button"
+                          onClick={() => handleEdit(record)}
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

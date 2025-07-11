@@ -581,29 +581,32 @@ function AddAMC() {
   const handleSubmit = async () => {
     const newErrors = {}
     let hasErrors = false
-
+  
+    // First pass: Validate mandatory fields
     pages.forEach((pageCheckpoints) => {
       pageCheckpoints.forEach((id) => {
         const cp = checkpoints.find((c) => c.CheckpointId === id)
-        const value = formData[id]
         if (!cp) return
-
+  
         const type = getType(cp.TypeId).toLowerCase()
         if (type.includes("header") || type.includes("description")) return
-
-        if (
-          cp.Mandatory === 1 &&
-          (value === undefined ||
+  
+        // Only check mandatory fields
+        if (cp.Mandatory === 1) {
+          const value = formData[id]
+          if (
+            value === undefined ||
             value === null ||
             (typeof value === "string" && value.trim() === "") ||
-            (Array.isArray(value) && value.length === 0))
-        ) {
-          newErrors[id] = true
-          hasErrors = true
+            (Array.isArray(value) && value.length === 0)
+          ) {
+            newErrors[id] = true
+            hasErrors = true
+          }
         }
       })
     })
-
+  
     if (hasErrors) {
       setErrors(newErrors)
       Swal.fire({
@@ -613,13 +616,13 @@ function AddAMC() {
       })
       return
     }
-
+  
     setErrors({})
-
+  
     const menuId = 10
     const date = new Date()
     const dateTime = date.toISOString().slice(0, 19).replace("T", " ")
-
+  
     Swal.fire({
       title: "Submitting form...",
       allowOutsideClick: false,
@@ -627,71 +630,75 @@ function AddAMC() {
         Swal.showLoading()
       },
     })
-
+  
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const latLong = `${pos.coords.latitude}, ${pos.coords.longitude}`
         const activityId = `${dateTime.replace(/\D/g, "")}_${latLong.replace(/[^0-9]/g, "")}`
-
+  
         try {
-          // Prepare text data - only include fields that have values
+          // Prepare text data - include ALL fields, with null for unfilled ones
           const textData = {}
           const imageData = {}
-
+  
           // Process all checkpoints that are in the form pages
           for (const page of pages) {
             for (const id of page) {
               const cp = checkpoints.find(c => c.CheckpointId === id)
               if (!cp) continue
-
+  
               const type = getType(cp.TypeId).toLowerCase()
-              const value = formData[id]
-
+              
               // Skip headers and descriptions
               if (type.includes("header") || type.includes("description")) continue
-
-              // Skip if no value or empty value
-              if (value === undefined || value === null || 
-                  (typeof value === "string" && value.trim() === "") || 
-                  (Array.isArray(value) && value.length === 0)) {
-                continue
-              }
-
-              // Handle dependent fields
+  
+              const value = formData[id]
               const parentId = getParentId(id)
+  
+              // Handle dependent fields
               if (parentId) {
                 const combinedId = `${parentId}_${id}`
                 
                 if (type === "pic/camera") {
-                  const base64 = await convertToBase64(value)
-                  imageData[combinedId] = base64
+                  if (value) {
+                    const base64 = await convertToBase64(value)
+                    imageData[combinedId] = base64
+                  } else {
+                    imageData[combinedId] = null
+                  }
                 } else {
-                  textData[combinedId] = Array.isArray(value) ? value.join(",") : value
+                  textData[combinedId] = value 
+                    ? (Array.isArray(value) ? value.join(",") : value)
+                    : null
                 }
                 continue
               }
-
+  
               // Handle regular fields
               if (type === "pic/camera") {
-                const base64 = await convertToBase64(value)
-                imageData[id] = base64
+                if (value) {
+                  const base64 = await convertToBase64(value)
+                  imageData[id] = base64
+                } else {
+                  imageData[id] = null
+                }
               } else {
-                textData[id] = Array.isArray(value) ? value.join(",") : value
+                textData[id] = value 
+                  ? (Array.isArray(value) ? value.join(",") : value)
+                  : null
               }
             }
           }
-
-          // Submit text data only if there's something to submit
-          if (Object.keys(textData).length > 0) {
-            await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_transaction.php", {
-              menuId,
-              ActivityId: activityId,
-              LatLong: latLong,
-              data: textData,
-            })
-          }
-
-          // Submit image data only if there's something to submit
+  
+          // Submit text data (now includes all fields)
+          await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_transaction.php", {
+            menuId,
+            ActivityId: activityId,
+            LatLong: latLong,
+            data: textData,
+          })
+  
+          // Submit image data (now includes all fields)
           if (Object.keys(imageData).length > 0) {
             await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_image.php", {
               menuId,
@@ -700,7 +707,7 @@ function AddAMC() {
               data: imageData,
             })
           }
-
+  
           Swal.fire({
             icon: "success",
             title: "Form Submitted",
