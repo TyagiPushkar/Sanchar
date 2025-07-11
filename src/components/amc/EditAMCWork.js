@@ -8,6 +8,7 @@ function EditAMCWork() {
   const navigate = useNavigate();
   const { transaction, checkpoints } = state || {};
   const [editedData, setEditedData] = useState({});
+  const [files, setFiles] = useState({}); // Store file objects separately
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -26,7 +27,6 @@ function EditAMCWork() {
   }, [transaction, navigate]);
 
   const getCheckpointDescription = (checkpointId) => {
-    // Convert both to strings for consistent comparison
     const checkpoint = checkpoints.find(cp => 
       cp.CheckpointId.toString() === checkpointId.toString()
     );
@@ -40,13 +40,37 @@ function EditAMCWork() {
     }));
   };
 
+  const handleFileChange = (checkpointId, file) => {
+    if (file) {
+      setFiles(prev => ({
+        ...prev,
+        [checkpointId]: file
+      }));
+      // Update the displayed value to show the file name
+      setEditedData(prev => ({
+        ...prev,
+        [checkpointId]: file.name
+      }));
+    }
+  };
+
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     setError("");
     setSuccess("");
     
     try {
-      const response = await axios.post(
+      // First, update text data
+      const textResponse = await axios.post(
         "https://namami-infotech.com/SANCHAR/src/menu/edit_transaction.php",
         {
           ActivityId: transaction.ActivityId,
@@ -55,12 +79,39 @@ function EditAMCWork() {
         }
       );
 
-      if (response.data.success) {
-        setSuccess("Changes saved successfully!");
-        setTimeout(() => navigate("/amc-work"), 1500);
-      } else {
-        throw new Error(response.data.message || "Failed to save changes");
+      if (!textResponse.data.success) {
+        throw new Error(textResponse.data.message || "Failed to save text data");
       }
+
+      // Then handle file uploads if there are any
+      const fileEntries = Object.entries(files);
+      if (fileEntries.length > 0) {
+        const imageData = {};
+        
+        // Convert files to base64
+        for (const [checkpointId, file] of fileEntries) {
+          const base64 = await convertToBase64(file);
+          imageData[checkpointId] = base64;
+        }
+
+        // Upload images
+        const imageResponse = await axios.post(
+          "https://namami-infotech.com/SANCHAR/src/menu/add_image.php",
+          {
+            menuId: 10, // Assuming menuId is 10 for AMC work
+            ActivityId: transaction.ActivityId,
+            LatLong: null,
+            data: imageData
+          }
+        );
+
+        if (!imageResponse.data.success) {
+          throw new Error(imageResponse.data.message || "Failed to upload images");
+        }
+      }
+
+      setSuccess("Changes saved successfully!");
+      setTimeout(() => navigate("/amc-work"), 1500);
     } catch (err) {
       setError(err.message || "An error occurred while saving");
       console.error("Save error:", err);
@@ -118,13 +169,20 @@ function EditAMCWork() {
                   {isDocumentField(checkpointId) ? (
                     <div className="document-field">
                       <input
-                        type="text"
-                        value={editedData[checkpointId] || ""}
-                        onChange={(e) => handleInputChange(checkpointId, e.target.value)}
-                        className="edit-input"
-                        placeholder="Document URL"
+                        type="file"
+                        id={`file-upload-${checkpointId}`}
+                        style={{ display: 'none' }}
+                        onChange={(e) => handleFileChange(checkpointId, e.target.files[0])}
+                        accept="image/*,application/pdf"
                       />
-                      {editedData[checkpointId] && (
+                      <label htmlFor={`file-upload-${checkpointId}`} className="file-upload-label">
+                        Choose File
+                      </label>
+                      <span className="file-name">
+                        {files[checkpointId] ? files[checkpointId].name : 
+                         editedData[checkpointId] ? editedData[checkpointId] : "No file selected"}
+                      </span>
+                      {editedData[checkpointId] && !files[checkpointId] && (
                         <button
                           className="view-button"
                           onClick={() => window.open(editedData[checkpointId], "_blank")}
