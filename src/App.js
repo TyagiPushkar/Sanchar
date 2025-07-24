@@ -25,6 +25,7 @@ import Ticket from './pages/Ticket';
 import Material from './pages/Material';
 import Invoices from './pages/Invoices';
 import AMCWork from './pages/AMCWork';
+import Report from './pages/Report';
 function App() {
    useEffect(() => {
         const handleRightClick = (event) => {
@@ -53,6 +54,9 @@ function App() {
             <Route path="/notification" element={<PrivateRoute element={Notification} />} />
             <Route path="/leave" element={<PrivateRoute element={Leave} />} />
             <Route path="/profile" element={<PrivateRoute element={User} />} />
+
+            <Route path="/summary" element={<PrivateRoute element={Report} />} />
+
 
             <Route path="/tender" element={<PrivateRoute element={Tender} />} />
             <Route path="/draft" element={<PrivateRoute element={Tender} />} />
