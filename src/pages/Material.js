@@ -6,6 +6,7 @@ import Sidebar from "../components/Sidebar"
 import { Box, useMediaQuery, useTheme, Container } from "@mui/material"
 import MaterialList from "../components/material/MaterialList"
 import AddMaterial from "../components/material/AddMaterial"
+import EditMaterial from "../components/material/EditMaterial"
 
 
 function Material() {
@@ -22,6 +23,9 @@ function Material() {
           return <MaterialList />
       } else if (currentPath.includes("/add-material")) {
           return <AddMaterial />
+    }
+    else if (currentPath.includes("/edit-material")) {
+          return <EditMaterial />
       }
     return <MaterialList /> // Default fallback
   }

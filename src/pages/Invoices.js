@@ -6,6 +6,7 @@ import Sidebar from "../components/Sidebar"
 import { Box, useMediaQuery, useTheme, Container } from "@mui/material"
 import InvoicesList from "../components/invoices/InvoicesList"
 import AddInvoices from "../components/invoices/AddInvoices"
+import EditInvoice from "../components/invoices/EditInvoice"
 
 
 function Invoices() {
@@ -22,6 +23,9 @@ function Invoices() {
           return <InvoicesList />
       } else if (currentPath.includes("/add-invoice")) {
           return <AddInvoices />
+    }
+    else if (currentPath.includes("/edit-invoice")) {
+          return <EditInvoice />
       }
     return <InvoicesList /> // Default fallback
   }

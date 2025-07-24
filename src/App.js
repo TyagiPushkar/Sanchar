@@ -87,9 +87,11 @@ function App() {
 
             <Route path="/material-supplied" element={<PrivateRoute element={Material} />} />
             <Route path="/add-material" element={<PrivateRoute element={Material} />} />
+            <Route path="/edit-material" element={<PrivateRoute element={Material} />} />
 
             <Route path="/invoices" element={<PrivateRoute element={Invoices} />} />
             <Route path="/add-invoice" element={<PrivateRoute element={Invoices} />} />
+            <Route path="/edit-invoice" element={<PrivateRoute element={Invoices} />} />
 
             <Route path="/amc-work" element={<PrivateRoute element={AMCWork} />} />
             <Route path="/add-amc-work" element={<PrivateRoute element={AMCWork} />} />

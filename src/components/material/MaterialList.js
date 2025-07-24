@@ -157,6 +157,7 @@ function MaterialList() {
               {allCheckpointIds.map(checkpointId => (
                 <th key={checkpointId}>{getCheckpointDescription(checkpointId)}</th>
               ))}
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -169,7 +170,19 @@ function MaterialList() {
                       {getTransactionValue(record, checkpointId)}
                     </td>
                   ))}
-                  
+                  <td>
+  <button 
+    className="edit-button"
+    onClick={() => navigate("/edit-material", { 
+      state: { 
+        transaction: record, 
+        checkpoints 
+      } 
+    })}
+  >
+    ✏️
+  </button>
+</td>
                 </tr>
               ))
             ) : (
