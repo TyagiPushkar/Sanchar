@@ -116,15 +116,16 @@ function Summary() {
       return "Complete";
     }
     
+      if (warrantyEndDate && warrantyEndDate > today) {
+      return "Under Warranty";
+    }
     // Check installation
     if (installationDate && installationDate > today) {
       return "Under Installation";
     }
     
     // Check warranty
-    if (warrantyEndDate && warrantyEndDate > today) {
-      return "Under Warranty";
-    }
+    
     
     // If installation date passed and warranty expired
     if ((!installationDate || installationDate <= today) && 

@@ -60,18 +60,19 @@ function AMCWorkList() {
   };
 
   const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearchTerm(value);
-    
-    const filtered = transactions.filter(transaction => {
-      return transaction.Details.some(detail => {
-        return detail.Value.toLowerCase().includes(value);
-      });
+  const value = e.target.value.toLowerCase();
+  setSearchTerm(value);
+  
+  const filtered = transactions.filter(transaction => {
+    return transaction.Details.some(detail => {
+      // Check if detail.Value exists before calling toLowerCase()
+      return detail.Value && detail.Value.toString().toLowerCase().includes(value);
     });
-    
-    setFilteredRecords(filtered);
-    setPage(0);
-  };
+  });
+  
+  setFilteredRecords(filtered);
+  setPage(0);
+};
 
   const handleViewDetails = (transaction) => {
     navigate("/details", { state: { transaction, checkpoints } });
