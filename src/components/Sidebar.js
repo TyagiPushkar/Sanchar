@@ -28,7 +28,7 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import SummarizeIcon from "@mui/icons-material/Summarize";
-
+import AssessmentIcon from '@mui/icons-material/Assessment';
 function Sidebar() {
   const location = useLocation()
   const { user } = useAuth()
@@ -44,7 +44,8 @@ function Sidebar() {
 
   // Default routes visible to everyone
   const defaultRoutes = [
-  { path: "/summary", name: "Summary", icon: <SummarizeIcon /> },
+    { path: "/summary", name: "Summary", icon: <SummarizeIcon /> },
+    { path: "/report", name: "Report", icon: <AssessmentIcon /> },
     { path: "/tender", name: "Tender", icon: <DynamicFormIcon /> },
     { path: "/buyer", name: "Buyers", icon: <Person /> },
     { path: "/directory", name: "Directory", icon: <ContactPhoneIcon /> },

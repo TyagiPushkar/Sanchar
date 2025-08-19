@@ -4,9 +4,10 @@ import React from "react"
 import Navbar from "../components/Navbar"
 import Sidebar from "../components/Sidebar"
 import { Box, useMediaQuery, useTheme, Container } from "@mui/material"
-import FullReport from "../components/report/FullReport"
+import Summary from "../components/report/Summary"
 
-function Report() {
+
+function SummaryReport() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"))
   const isTablet = useMediaQuery(theme.breakpoints.down("md"))
@@ -17,10 +18,10 @@ function Report() {
   // Determine which component to render based on the URL
   const renderContent = () => {
       if (currentPath.includes("/summary")) {
-          return <FullReport />
+          return <Summary />
       } 
    
-    return <FullReport /> // Default fallback
+    return <Summary /> // Default fallback
   }
 
   // Calculate sidebar width based on state and screen size
@@ -80,4 +81,4 @@ function Report() {
   )
 }
 
-export default Report
+export default SummaryReport

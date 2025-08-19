@@ -26,6 +26,7 @@ import Material from './pages/Material';
 import Invoices from './pages/Invoices';
 import AMCWork from './pages/AMCWork';
 import Report from './pages/Report';
+import SummaryReport from './pages/Summary';
 function App() {
    useEffect(() => {
         const handleRightClick = (event) => {
@@ -55,7 +56,8 @@ function App() {
             <Route path="/leave" element={<PrivateRoute element={Leave} />} />
             <Route path="/profile" element={<PrivateRoute element={User} />} />
 
-            <Route path="/summary" element={<PrivateRoute element={Report} />} />
+            <Route path="/summary" element={<PrivateRoute element={SummaryReport} />} />
+            <Route path="/report" element={<PrivateRoute element={Report} />} />
 
 
             <Route path="/tender" element={<PrivateRoute element={Tender} />} />

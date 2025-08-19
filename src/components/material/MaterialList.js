@@ -13,7 +13,7 @@ function MaterialList() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
     const fetchData = async () => {
       try {

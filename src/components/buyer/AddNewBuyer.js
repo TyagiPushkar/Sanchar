@@ -30,6 +30,7 @@ function AddNewBuyer() {
     StationID: "",
     StationName: "",
     StationAddress: "",
+    LOA:""
   })
 
   const [buyerData, setBuyerData] = useState([])
@@ -184,7 +185,8 @@ function AddNewBuyer() {
       !form.DivisionName ||
       !form.SectionName ||
       !form.StationID ||
-      !form.StationName
+      !form.StationName ||
+      !form.LOA
     ) {
       setErrorMsg("Please fill all required fields.")
       setLoading(false)
@@ -233,6 +235,24 @@ function AddNewBuyer() {
         </Typography>
 
         <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <TextField
+              name="LOA"
+              label="LOA"
+              value={form.LOA}
+              onChange={handleChange}
+              fullWidth
+              required
+              sx={{
+                "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#F69320",
+                },
+                "& .MuiInputLabel-root.Mui-focused": {
+                  color: "#F69320",
+                },
+              }}
+            />
+          </Grid>
           {/* ZONE MODE TOGGLE */}
           <Grid item xs={12}>
             <Typography variant="subtitle1" mb={1} fontWeight={500} color="#555">

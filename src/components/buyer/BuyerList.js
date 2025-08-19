@@ -102,6 +102,7 @@ const [selectedBuyer, setSelectedBuyer] = useState(null)
   <DialogContent>
     {selectedBuyer && (
       <Box mt={2} display="flex" flexDirection="column" gap={2}>
+        <TextField label="LOA" value={selectedBuyer.LOA} onChange={e => setSelectedBuyer({ ...selectedBuyer, LOA: e.target.value })} />
         <TextField label="Zone ID" value={selectedBuyer.ZoneID} onChange={e => setSelectedBuyer({ ...selectedBuyer, ZoneID: e.target.value })} />
         <TextField label="Zone Name" value={selectedBuyer.ZoneName} onChange={e => setSelectedBuyer({ ...selectedBuyer, ZoneName: e.target.value })} />
         <TextField label="Zone Address" value={selectedBuyer.ZoneAddress} onChange={e => setSelectedBuyer({ ...selectedBuyer, ZoneAddress: e.target.value })} />
@@ -211,6 +212,7 @@ const [selectedBuyer, setSelectedBuyer] = useState(null)
                     <TableCell sx={{ color: "white", fontWeight: "bold" }}>Section Name</TableCell>
                     <TableCell sx={{ color: "white", fontWeight: "bold" }}>Station ID</TableCell>
                     <TableCell sx={{ color: "white", fontWeight: "bold" }}>Station Name</TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>LOA</TableCell>
                     <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
 
                   </TableRow>
@@ -240,6 +242,7 @@ const [selectedBuyer, setSelectedBuyer] = useState(null)
                         <TableCell>{buyer.SectionName}</TableCell>
                         <TableCell>{buyer.StationID}</TableCell>
                         <TableCell>{buyer.StationName}</TableCell>
+                        <TableCell>{buyer.LOA}</TableCell>
                         <TableCell>
   <Button size="small" onClick={() => { setSelectedBuyer(buyer); setEditDialogOpen(true); }}>
     Edit
