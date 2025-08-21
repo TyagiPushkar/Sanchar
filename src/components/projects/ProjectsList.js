@@ -10,7 +10,8 @@ function ProjectList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(15);
-const navigate = useNavigate()
+  const navigate = useNavigate();
+
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -70,7 +71,9 @@ const navigate = useNavigate()
   return (
     <div className="project-list-container">
       <div className="project-list-header">
-        <h2 className="project-list-title">Project List</h2>
+        <h2 className="project-list-title">
+          LOA Awarded List ({filteredProjects.length})
+        </h2>
         <input
           type="text"
           placeholder="Search by Tender No. or Buyer"
@@ -97,22 +100,27 @@ const navigate = useNavigate()
             {currentRecords.length > 0 ? (
               currentRecords.map((project) => (
                 <tr key={project.ActivityId}>
-                  <td onClick={() => navigate(`/tender/view/${project.ActivityId}`)} style={{cursor:"pointer", fontWeight:"bold", color:"blue"}}>{project.TenderNo || "-"}</td>
+                  <td 
+                    onClick={() => navigate(`/tender/view/${project.ActivityId}`)} 
+                    style={{cursor:"pointer", fontWeight:"bold", color:"blue"}}
+                  >
+                    {project.TenderNo || "-"}
+                  </td>
                   <td>{project.LOA || "-"}</td>
                   <td>{project.BuyerName || "-"}</td>
                   <td>{formatDate(project.TenderDate)}</td>
-                      <td>
-                        {project.TenderCopy && project.TenderCopy.endsWith(".pdf") ? (
-                          <button
-                            className="project-link-button"
-                            onClick={() => openInNewTab(project.TenderCopy)}
-                          >
-                            📄 Open PDF
-                          </button>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
+                  <td>
+                    {project.TenderCopy && project.TenderCopy.endsWith(".pdf") ? (
+                      <button
+                        className="project-link-button"
+                        onClick={() => openInNewTab(project.TenderCopy)}
+                      >
+                        📄 Open PDF
+                      </button>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td>
                     <button
                       className="project-view-button"
@@ -142,7 +150,7 @@ const navigate = useNavigate()
               ))
             ) : (
               <tr>
-                <td colSpan="5" className="project-no-records">
+                <td colSpan="7" className="project-no-records">
                   No records found
                 </td>
               </tr>

@@ -1,5 +1,5 @@
 .tender-list-container {
-    padding: 10px;
+    padding: 0px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0 auto;
 }
@@ -196,3 +196,24 @@
     .search-input {
         width: 100%;
     } }
+        /* Add these styles to your existing TenderList.css */
+    
+        /* Row highlighting */
+        tr.awarded-sanchar {
+            background-color: rgba(144, 238, 144, 0.3);
+            /* Lightish green with transparency */
+        }
+    
+        tr.awarded-other {
+            background-color: rgba(255, 255, 224, 0.3);
+            /* Lightish yellow with transparency */
+        }
+    
+        /* Hover effects for better visual feedback */
+        tr.awarded-sanchar:hover {
+            background-color: rgba(144, 238, 144, 0.5);
+        }
+    
+        tr.awarded-other:hover {
+            background-color: rgba(255, 255, 224, 0.5);
+        }

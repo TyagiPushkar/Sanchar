@@ -59,6 +59,14 @@ function TenderList() {
     return `${day}/${month}/${year}`;
   };
 
+  // Function to determine row class based on awarded value
+  const getRowClass = (awardedValue) => {
+    if (awardedValue && awardedValue.toLowerCase().includes("sanchar")) {
+      return "awarded-sanchar";
+    }
+    return "awarded-other";
+  };
+
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
@@ -114,6 +122,7 @@ function TenderList() {
               <th>LOA No.</th>
               <th>Buyer</th>
               <th>Date</th>
+              <th>Awarded to</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -129,13 +138,20 @@ function TenderList() {
                 const nameEntry3 = record.chkData?.find(
                   (chk) => chk.ChkId === "60"
                 );
+                const nameEntry4 = record.chkData?.find(
+                  (chk) => chk.ChkId === "56"
+                );
+                
+                const awardedValue = nameEntry4?.Value || "";
+                const rowClass = getRowClass(awardedValue);
 
                 return (
-                  <tr key={record.ID}>
+                  <tr key={record.ID} className={rowClass}>
                     <td>{nameEntry?.Value || "-"}</td>
                     <td>{nameEntry3?.Value || "-"}</td>
                     <td>{nameEntry2?.Value || "-"}</td>
                     <td>{formatDate(record.Datetime)}</td>
+                    <td>{awardedValue}</td>
                     <td>
                       <button
                         className="view-button"
@@ -151,7 +167,7 @@ function TenderList() {
               })
             ) : (
               <tr>
-                <td colSpan="5" className="no-records">
+                <td colSpan="6" className="no-records">
                   No records found
                 </td>
               </tr>

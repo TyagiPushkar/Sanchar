@@ -44,13 +44,13 @@ function Sidebar() {
 
   // Default routes visible to everyone
   const defaultRoutes = [
-    { path: "/summary", name: "Summary", icon: <SummarizeIcon /> },
+    // { path: "/summary", name: "Summary", icon: <SummarizeIcon /> },
     { path: "/report", name: "Report", icon: <AssessmentIcon /> },
     { path: "/tender", name: "Tender", icon: <DynamicFormIcon /> },
     { path: "/buyer", name: "Buyers", icon: <Person /> },
     { path: "/directory", name: "Directory", icon: <ContactPhoneIcon /> },
     { path: "/participant", name: "Participants", icon: <Person /> },
-    { path: "/projects", name: "Projects", icon: <AccountTreeIcon /> },
+    { path: "/projects", name: "LOA Awarded", icon: <AccountTreeIcon /> },
     { path: "/employees", name: "Employees", icon: <BadgeIcon /> },
     { path: "/support-ticket", name: "Support Ticket", icon: <SupportAgentIcon /> },
     { path: "/material-supplied", name: "Material Supplied", icon: <InventoryIcon /> },
