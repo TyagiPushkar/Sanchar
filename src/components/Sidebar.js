@@ -47,7 +47,7 @@ function Sidebar() {
     // { path: "/summary", name: "Summary", icon: <SummarizeIcon /> },
     { path: "/report", name: "Report", icon: <AssessmentIcon /> },
     { path: "/tender", name: "Tender", icon: <DynamicFormIcon /> },
-    { path: "/buyer", name: "Buyers", icon: <Person /> },
+    { path: "/consignee", name: "Consignee", icon: <Person /> },
     { path: "/directory", name: "Directory", icon: <ContactPhoneIcon /> },
     { path: "/participant", name: "Participants", icon: <Person /> },
     { path: "/projects", name: "LOA Awarded", icon: <AccountTreeIcon /> },

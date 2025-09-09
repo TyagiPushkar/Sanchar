@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx"; // Import the xlsx library
 import "./AMCWorkList.css";
 
 function AMCWorkList() {
   const [transactions, setTransactions] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]= useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
@@ -60,19 +61,45 @@ function AMCWorkList() {
   };
 
   const handleSearch = (e) => {
-  const value = e.target.value.toLowerCase();
-  setSearchTerm(value);
-  
-  const filtered = transactions.filter(transaction => {
-    return transaction.Details.some(detail => {
-      // Check if detail.Value exists before calling toLowerCase()
-      return detail.Value && detail.Value.toString().toLowerCase().includes(value);
+    const value = e.target.value.toLowerCase();
+    setSearchTerm(value);
+    
+    const filtered = transactions.filter(transaction => {
+      return transaction.Details.some(detail => {
+        // Check if detail.Value exists before calling toLowerCase()
+        return detail.Value && detail.Value.toString().toLowerCase().includes(value);
+      });
     });
-  });
-  
-  setFilteredRecords(filtered);
-  setPage(0);
-};
+    
+    setFilteredRecords(filtered);
+    setPage(0);
+  };
+
+  // Function to export data to Excel
+  const exportToExcel = () => {
+    // Prepare data for export
+    const dataToExport = filteredRecords.map(record => {
+      const exportData = {};
+      
+      displayCheckpointIds.forEach(checkpointId => {
+        const detail = record.Details.find(d => d.ChkId === checkpointId);
+        const fieldName = getCheckpointDescription(checkpointId);
+        exportData[fieldName] = detail ? detail.Value : "-";
+      });
+      
+      return exportData;
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "AMC Work");
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, "amc-work.xlsx");
+  };
 
   const handleViewDetails = (transaction) => {
     navigate("/details", { state: { transaction, checkpoints } });
@@ -99,7 +126,7 @@ function AMCWorkList() {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
-        <p>Loading materials...</p>
+        <p>Loading AMC work...</p>
       </div>
     );
   }
@@ -119,6 +146,17 @@ function AMCWorkList() {
             />
             <span className="search-icon">🔍</span>
           </div>
+          
+          {/* Export to Excel Button */}
+          <button
+            onClick={exportToExcel}
+            className="action-button"
+            style={{ backgroundColor: "#F69320" }}
+            title="Export to Excel"
+          >
+            📊 Export to Excel
+          </button>
+          
           {isAdmin && (
             <button
               className="action-button new-material-button"

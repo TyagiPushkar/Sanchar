@@ -198,7 +198,7 @@ function AddNewBuyer() {
 
       if (response.data.success) {
         setSuccessMsg("Buyer added successfully!")
-        setTimeout(() => navigate("/buyer"), 1000)
+        setTimeout(() => navigate("/consignee"), 1000)
       } else {
         setErrorMsg(response.data.message || "Failed to add buyer.")
       }

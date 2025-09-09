@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx"; // Import the xlsx library
 import "./TenderList.css"; // You would need to create this CSS file
 
 function TenderList() {
@@ -67,6 +68,36 @@ function TenderList() {
     return "awarded-other";
   };
 
+  // Function to export data to Excel
+  const exportToExcel = () => {
+    // Prepare data for export
+    const dataToExport = filteredRecords.map((record) => {
+      const tenderNo = record.chkData?.find((chk) => chk.ChkId === "4")?.Value || "-";
+      const loaNo = record.chkData?.find((chk) => chk.ChkId === "60")?.Value || "-";
+      const buyer = record.chkData?.find((chk) => chk.ChkId === "7")?.Value || "-";
+      const date = formatDate(record.Datetime);
+      const awardedTo = record.chkData?.find((chk) => chk.ChkId === "56")?.Value || "-";
+      
+      return {
+        "Tender No.": tenderNo,
+        "LOA No.": loaNo,
+        "Buyer": buyer,
+        "Date": date,
+        "Awarded to": awardedTo
+      };
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tenders");
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, "tenders.xlsx");
+  };
+
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
@@ -97,6 +128,14 @@ function TenderList() {
             />
             <span className="search-icon">🔍</span>
           </div>
+          <button
+            onClick={exportToExcel}
+            className="action-button"
+            style={{ backgroundColor: "#F69320" }}
+            title="Export to Excel"
+          >
+            📊 Export to Excel
+          </button>
           <button
             className="action-button draft-button"
             onClick={() => navigate("/draft")}

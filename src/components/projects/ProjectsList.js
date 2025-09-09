@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./ProjectList.css";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx"; 
 
 function ProjectList() {
   const [projects, setProjects] = useState([]);
@@ -59,6 +60,29 @@ function ProjectList() {
     window.open(url, "noopener,noreferrer");
   };
 
+
+   const exportToExcel = () => {
+    // Prepare data for export
+    const dataToExport = filteredProjects.map((buyer) => {
+      return {
+        "Tender No": buyer.TenderNo,
+        "LOA No": buyer.LOA,
+        "Buyer": buyer.BuyerName,
+        "Date": buyer.TenderDate ? formatDate(buyer.TenderDate) : "-",
+      };
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Buyers");
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, "LOA_Awarded.xlsx");
+  };
+
   if (loading) {
     return (
       <div className="project-loading-container">
@@ -81,6 +105,14 @@ function ProjectList() {
           onChange={handleSearch}
           className="project-search-input"
         />
+        <button
+            onClick={exportToExcel}
+            className="action-button"
+            style={{ backgroundColor: "#F69320" }}
+            title="Export to Excel"
+          >
+            📊 Export to Excel
+          </button>
       </div>
 
       <div className="project-table-container">

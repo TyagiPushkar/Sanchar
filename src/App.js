@@ -68,8 +68,8 @@ function App() {
             <Route path="/loa/view/:activityId" element={<PrivateRoute element={ViewLOA} />} />
 
 
-            <Route path="/buyer" element={<PrivateRoute element={Buyer} />} />
-            <Route path="/new-buyer" element={<PrivateRoute element={Buyer} />} />
+            <Route path="/consignee" element={<PrivateRoute element={Buyer} />} />
+            <Route path="/new-consignee" element={<PrivateRoute element={Buyer} />} />
             <Route path="/contact" element={<PrivateRoute element={Buyer} />} />
             <Route path="/directory" element={<PrivateRoute element={Buyer} />} />
             

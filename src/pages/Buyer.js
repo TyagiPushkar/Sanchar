@@ -19,9 +19,9 @@ function Buyer() {
   
   // Determine which component to render based on the URL
   const renderContent = () => {
-    if (currentPath.includes("/buyer") && !currentPath.includes("/new-buyer")) {
+    if (currentPath.includes("/consignee") && !currentPath.includes("/new-consignee")) {
       return <BuyerList />
-    } else if (currentPath.includes("/new-buyer")) {
+    } else if (currentPath.includes("/new-consignee")) {
       return <AddNewBuyer />
     } else if (currentPath.includes("/contact")) {
       return <AddContactStation />

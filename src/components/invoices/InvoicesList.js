@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx"; // Import the xlsx library
 import "./InvoicesList.css";
 
 function InvoicesList() {
@@ -118,6 +119,32 @@ function InvoicesList() {
     return detail.Value;
   };
 
+  // Function to export data to Excel
+  const exportToExcel = () => {
+    // Prepare data for export
+    const dataToExport = filteredRecords.map(record => {
+      const exportData = {};
+      
+      allCheckpointIds.forEach(checkpointId => {
+        const detail = record.Details.find(d => d.ChkId === checkpointId);
+        const fieldName = getCheckpointDescription(checkpointId);
+        exportData[fieldName] = detail ? detail.Value : "-";
+      });
+      
+      return exportData;
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, "invoices.xlsx");
+  };
+
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
@@ -128,7 +155,7 @@ function InvoicesList() {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
-        <p>Loading materials...</p>
+        <p>Loading invoices...</p>
       </div>
     );
   }
@@ -149,6 +176,17 @@ function InvoicesList() {
             />
             <span className="search-icon">🔍</span>
           </div>
+          
+          {/* Export to Excel Button */}
+          <button
+            onClick={exportToExcel}
+            className="action-button"
+            style={{ backgroundColor: "#F69320" }}
+            title="Export to Excel"
+          >
+            📊 Export to Excel
+          </button>
+          
           <button
             className="action-button new-material-button"
             onClick={() => navigate("/add-invoice")}
@@ -164,7 +202,6 @@ function InvoicesList() {
         <table className="material-table">
           <thead>
             <tr>
-             
               {allCheckpointIds.map(checkpointId => (
                 <th key={checkpointId}>{getCheckpointDescription(checkpointId)}</th>
               ))}
@@ -175,30 +212,29 @@ function InvoicesList() {
             {currentRecords.length > 0 ? (
               currentRecords.map((record) => (
                 <tr key={record.ActivityId}>
-                 
                   {allCheckpointIds.map(checkpointId => (
                     <td key={`${record.ActivityId}-${checkpointId}`}>
                       {getTransactionValue(record, checkpointId)}
                     </td>
                   ))}
                   <td>
-  <button 
-    className="edit-button"
-    onClick={() => navigate("/edit-invoice", { 
-      state: { 
-        transaction: record, 
-        checkpoints 
-      } 
-    })}
-  >
-    ✏️
-  </button>
-</td>
+                    <button 
+                      className="edit-button"
+                      onClick={() => navigate("/edit-invoice", { 
+                        state: { 
+                          transaction: record, 
+                          checkpoints 
+                        } 
+                      })}
+                    >
+                      ✏️
+                    </button>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={allCheckpointIds.length + 2} className="no-records">
+                <td colSpan={allCheckpointIds.length + 1} className="no-records">
                   No records found
                 </td>
               </tr>

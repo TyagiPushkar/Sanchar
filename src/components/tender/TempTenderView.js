@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
+import * as XLSX from "xlsx"; // Import the xlsx library
 import {
   FileText,
   ImageIcon,
@@ -24,6 +25,7 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
+  Download,
 } from "lucide-react"
 import logo from "../../assets/images (1).png"
 
@@ -629,6 +631,28 @@ function TempTenderView() {
     setFieldVariant(variants[nextIndex])
   }
 
+  // Function to export data to Excel
+  const exportToExcel = () => {
+    // Prepare data for export
+    const dataToExport = details.map((record) => {
+      return {
+        "Checkpoint ID": record.ChkId,
+        "Field Name": checkpoints[record.ChkId] || `Checkpoint #${record.ChkId}`,
+        "Value": record.Value,
+      };
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tender Details");
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, `tender-details-${activityId}.xlsx`);
+  };
+
   // Save changes
   const saveChanges = async () => {
     if (!isAdmin) {
@@ -922,84 +946,89 @@ function TempTenderView() {
   }
 
   const renderSection = (title, checkpointIds) => {
-    const sectionData = details.filter((item) => {
-      const baseId = Number.parseInt(item.ChkId.toString().split("_")[0])
-      return checkpointIds.includes(baseId)
-    })
+  const sectionData = details.filter((item) => {
+    const baseId = Number.parseInt(item.ChkId.toString().split("_")[0])
+    return checkpointIds.includes(baseId) && item.Value !== null && item.Value !== "";
+  });
 
-    if (sectionData.length === 0) return null
+  if (sectionData.length === 0) return null
 
-    const getLabel = (chkId) => {
-      if (chkId.includes("_")) {
-        const [parentId, childId] = chkId.split("_")
-        const parentLabel = checkpoints[parentId] || `Checkpoint #${parentId}`
-        const childLabel = checkpoints[childId] || `Checkpoint #${childId}`
-        return `${childLabel} (${parentLabel})`
-      } else {
-        return checkpoints[chkId] || `Checkpoint #${chkId}`
-      }
-    }
-
-    const isCollapsed = collapsedSections[title]
-    const itemCount = sectionData.length
-
-    // Get icon based on section title
-    let sectionIcon
-    if (title.toLowerCase().includes("published")) {
-      sectionIcon = <FileText size={20} color="white" />
-    } else if (title.toLowerCase().includes("participated")) {
-      sectionIcon = <Briefcase size={20} color="white" />
-    } else if (title.toLowerCase().includes("opened")) {
-      sectionIcon = <FileCheck size={20} color="white" />
-    } else if (title.toLowerCase().includes("awarded")) {
-      sectionIcon = <Award size={20} color="white" />
+  const getLabel = (chkId) => {
+    if (chkId.includes("_")) {
+      const [parentId, childId] = chkId.split("_")
+      const parentLabel = checkpoints[parentId] || `Checkpoint #${parentId}`
+      const childLabel = checkpoints[childId] || `Checkpoint #${childId}`
+      return `${childLabel} (${parentLabel})`
     } else {
-      sectionIcon = <FileCheck size={20} color="white" />
+      return checkpoints[chkId] || `Checkpoint #${chkId}`
     }
+  }
 
-    return (
-      <div key={title} style={{ marginBottom: "25px" }}>
-        <StyledSectionHeader
-          title={title}
-          icon={sectionIcon}
-          onToggle={() => toggleSectionCollapse(title)}
-          isCollapsed={isCollapsed}
-          count={itemCount}
-        />
+  const isCollapsed = collapsedSections[title]
+  const itemCount = sectionData.length
 
-        {!isCollapsed && (
+  // Get icon based on section title
+  let sectionIcon
+  if (title.toLowerCase().includes("published")) {
+    sectionIcon = <FileText size={20} color="white" />
+  } else if (title.toLowerCase().includes("participated")) {
+    sectionIcon = <Briefcase size={20} color="white" />
+  } else if (title.toLowerCase().includes("opened")) {
+    sectionIcon = <FileCheck size={20} color="white" />
+  } else if (title.toLowerCase().includes("awarded")) {
+    sectionIcon = <Award size={20} color="white" />
+  } else {
+    sectionIcon = <FileCheck size={20} color="white" />
+  }
+
+  return (
+    <div key={title} style={{ marginBottom: "25px" }}>
+      <StyledSectionHeader
+        title={title}
+        icon={sectionIcon}
+        onToggle={() => toggleSectionCollapse(title)}
+        isCollapsed={isCollapsed}
+        count={itemCount}
+      />
+
+      {!isCollapsed && (
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            borderRadius: "10px",
+            padding: "20px",
+            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.05)",
+            border: "1px solid #f0f0f0",
+          }}
+        >
+          {/* Single grid for all items - no grouping */}
           <div
             style={{
-              backgroundColor: "#ffffff",
-              borderRadius: "10px",
-              padding: "20px",
-              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.05)",
-              border: "1px solid #f0f0f0",
+              display: "grid",
+              gridTemplateColumns: getGridColumns(),
+              gap: "15px",
+              width: "100%",
             }}
           >
-            {/* Single grid for all items - no grouping */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: getGridColumns(),
-                gap: "15px",
-                width: "100%",
-              }}
-            >
-              {sectionData.map((item, index) => {
-                const isImage = isImageUrl(item.Value)
-                const isPdf = isPdfUrl(item.Value)
-                const isPriceField = priceCheckpoints.includes(Number(item.ChkId));
-                if (isPriceField) {
-                  const field = {
-                    id: item.ChkId,
-                    label: getLabel(item.ChkId),
-                    value: item.Value
-                  };
-                  return renderPriceField(field, isEditing);
-                }
-                return (
-                  <StyledFieldBox
+            {sectionData.map((item, index) => {
+              const isImage = isImageUrl(item.Value)
+              const isPdf = isPdfUrl(item.Value)
+              const isPriceField = priceCheckpoints.includes(Number(item.ChkId));
+              
+              // Skip rendering if value is null or empty
+              if (!item.Value || item.Value === "") return null;
+              
+              if (isPriceField) {
+                const field = {
+                  id: item.ChkId,
+                  label: getLabel(item.ChkId),
+                  value: item.Value
+                };
+                return renderPriceField(field, isEditing);
+              }
+              
+              return (
+                <StyledFieldBox
                   key={`${item.ChkId}-${index}`}
                   isEditing={isEditing}
                   variant={fieldVariant}
@@ -1042,71 +1071,71 @@ function TempTenderView() {
                         />
                       )}
                     </>
-                    ) : isImage ? (
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                        <div style={{ position: "relative", marginBottom: "10px" }}>
-                          <img
-                            src={item.Value || "/placeholder.svg"}
-                            alt={getLabel(item.ChkId)}
-                            style={{
-                              width: "100px",
-                              height: "100px",
-                              objectFit: "cover",
-                              borderRadius: "8px",
-                              border: "2px solid white",
-                              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                            }}
-                          />
-                          <StyledIconButton onClick={() => openFileInNewTab(item.Value)}>
-                            <Eye size={16} />
-                          </StyledIconButton>
-                        </div>
-                        <StyledButton
-                          style={{ padding: "6px 12px", fontSize: "12px" }}
-                          onClick={() => openFileInNewTab(item.Value)}
-                        >
-                          <ExternalLink size={14} style={{ marginRight: "5px" }} />
-                          Open Image
-                        </StyledButton>
-                      </div>
-                    ) : isPdf ? (
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                        <div
+                  ) : isImage ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                      <div style={{ position: "relative", marginBottom: "10px" }}>
+                        <img
+                          src={item.Value || "/placeholder.svg"}
+                          alt={getLabel(item.ChkId)}
                           style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            padding: "4px 8px",
-                            borderRadius: "4px",
-                            fontSize: "12px",
-                            fontWeight: "600",
-                            color: "#F69320",
-                            backgroundColor: "rgba(246, 147, 32, 0.1)",
-                            marginBottom: "10px",
+                            width: "100px",
+                            height: "100px",
+                            objectFit: "cover",
+                            borderRadius: "8px",
+                            border: "2px solid white",
+                            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
                           }}
-                        >
-                          <FileText size={12} style={{ marginRight: "5px" }} />
-                          PDF Document
-                        </div>
-                        <StyledButton
-                          style={{ padding: "6px 12px", fontSize: "12px" }}
-                          onClick={() => openFileInNewTab(item.Value)}
-                        >
-                          <ExternalLink size={14} style={{ marginRight: "5px" }} />
-                          Open PDF
-                        </StyledButton>
+                        />
+                        <StyledIconButton onClick={() => openFileInNewTab(item.Value)}>
+                          <Eye size={16} />
+                        </StyledIconButton>
                       </div>
-                    ) : (
-                      <StyledFieldValue>{item.Value || "—"}</StyledFieldValue>
-                    )}
-                  </StyledFieldBox>
-                )
-              })}
-            </div>
+                      <StyledButton
+                        style={{ padding: "6px 12px", fontSize: "12px" }}
+                        onClick={() => openFileInNewTab(item.Value)}
+                      >
+                        <ExternalLink size={14} style={{ marginRight: "5px" }} />
+                        Open Image
+                      </StyledButton>
+                    </div>
+                  ) : isPdf ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#F69320',
+                          backgroundColor: 'rgula(246, 147, 32, 0.1)',
+                          marginBottom: '10px'
+                        }}
+                      >
+                        <FileText size={12} style={{ marginRight: '5px' }} />
+                        PDF Document
+                      </div>
+                      <StyledButton
+                        style={{ padding: "6px 12px", fontSize: "12px" }}
+                        onClick={() => openFileInNewTab(item.Value)}
+                      >
+                        <ExternalLink size={14} style={{ marginRight: "5px" }} />
+                        Open PDF
+                      </StyledButton>
+                    </div>
+                  ) : (
+                    <StyledFieldValue>{item.Value || "—"}</StyledFieldValue>
+                  )}
+                </StyledFieldBox>
+              )
+            })}
           </div>
-        )}
-      </div>
-    )
-  }
+        </div>
+      )}
+    </div>
+  )
+}
 
   // Utility function to calculate GST (18%)
 const calculateGST = (amount) => {
@@ -1337,6 +1366,18 @@ const calculateGST = (amount) => {
             <Filter size={16} />
             Style: {fieldVariant.charAt(0).toUpperCase() + fieldVariant.slice(1)}
           </StyledButton>
+          
+          {/* Add Export to Excel button */}
+          <StyledButton 
+            onClick={exportToExcel} 
+            primary
+            style={{ backgroundColor: "#F69320", display: "flex", alignItems: "center", gap: "5px" }}
+            title="Export to Excel"
+          >
+            <Download size={16} />
+            Export to Excel
+          </StyledButton>
+          
           <div style={{ position: "relative" }}>
             <img
               src={logo || "/placeholder.svg"}

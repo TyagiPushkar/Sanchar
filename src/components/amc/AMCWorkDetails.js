@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import * as XLSX from "xlsx"; // Import the xlsx library
 import "./AMCWorkList.css";
 
 function AMCWorkDetails() {
@@ -18,6 +19,29 @@ function AMCWorkDetails() {
       }
     }
   }, []);
+
+  // Function to export data to Excel
+  const exportToExcel = () => {
+    if (!transaction) return;
+    
+    // Prepare data for export
+    const dataToExport = transaction.Details.map(detail => {
+      return {
+        "Field": getCheckpointDescription(detail.ChkId),
+        "Value": detail.Value
+      };
+    });
+
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "AMC Work Details");
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, `amc-work-details-${transaction.ActivityId}.xlsx`);
+  };
 
   if (!transaction) {
     return (
@@ -79,6 +103,17 @@ function AMCWorkDetails() {
           >
             Back to List
           </button>
+          
+          {/* Export to Excel Button */}
+          <button
+            onClick={exportToExcel}
+            className="action-button"
+            style={{ backgroundColor: "#F69320" }}
+            title="Export to Excel"
+          >
+            📊 Export to Excel
+          </button>
+          
           {isAdmin && (
             <button
               className="action-button edit-button"
