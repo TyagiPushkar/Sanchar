@@ -8,6 +8,7 @@ import * as XLSX from "xlsx"
 function FullReport() {
   const [transactions, setTransactions] = useState([])
   const [statusData, setStatusData] = useState([])
+  const [loaData, setLoaData] = useState([]) // New state for menuId=1 data
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -30,10 +31,16 @@ function FullReport() {
           "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=10",
         )
 
-        if (transactionsResponse.data.success && statusResponse.data.success) {
+        // Fetch LOA data (menuId=1) - NEW
+        const loaResponse = await axios.get(
+          "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=1",
+        )
+
+        if (transactionsResponse.data.success && statusResponse.data.success && loaResponse.data.success) {
           setTransactions(transactionsResponse.data.data)
           setFilteredRecords(transactionsResponse.data.data)
           setStatusData(statusResponse.data.data)
+          setLoaData(loaResponse.data.data) // Set LOA data
         } else {
           setError("Failed to fetch data from one or more sources.")
         }
@@ -74,6 +81,12 @@ function FullReport() {
   const getStatusValue = (loaNumber, checkpointId) => {
     const statusRecord = statusData.find((record) => getTransactionValue(record, "589") === loaNumber)
     return getTransactionValue(statusRecord, checkpointId)
+  }
+
+  // NEW: Get value from LOA data (menuId=1) for a specific LOA and checkpoint
+  const getLoaValue = (loaNumber, checkpointId) => {
+    const loaRecord = loaData.find((record) => getTransactionValue(record, "60") === loaNumber)
+    return getTransactionValue(loaRecord, checkpointId)
   }
 
   // Calculate pending invoice amount for a given LOA
@@ -196,40 +209,50 @@ function FullReport() {
     return { transmitterTotal, receiverTotal }
   }
 
-  // Add this helper function to calculate the warranty period
   const calculateWarrantyPeriod = (loaNumber) => {
-    const statusRecord = statusData.find((record) => getTransactionValue(record, "589") === loaNumber)
+  const statusRecord = statusData.find((record) => getTransactionValue(record, "589") === loaNumber)
 
-    if (!statusRecord) return "-"
+  if (!statusRecord) return "-"
 
-    const startDate = getDateFromValue(getStatusValue(loaNumber, "591"))
-    const endDate = getDateFromValue(getStatusValue(loaNumber, "592"))
+  const startDate = getDateFromValue(getStatusValue(loaNumber, "591"))
+  const endDate = getDateFromValue(getStatusValue(loaNumber, "592"))
 
-    if (!startDate || !endDate) return "-"
+  if (!startDate || !endDate) return "-"
 
-    // Calculate difference in months
-    let months = (endDate.getFullYear() - startDate.getFullYear()) * 12
-    months -= startDate.getMonth()
-    months += endDate.getMonth()
+  // Calculate difference in months
+  let months = (endDate.getFullYear() - startDate.getFullYear()) * 12
+  months -= startDate.getMonth()
+  months += endDate.getMonth()
 
-    // If end day is earlier than start day, subtract one month
-    if (endDate.getDate() < startDate.getDate()) {
-      months--
-    }
-
-    // Calculate years and remaining months
-    const years = Math.floor(months / 12)
-    const remainingMonths = months % 12
-
-    // Format the result
-    if (years === 0) {
-      return `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
-    } else if (remainingMonths === 0) {
-      return `${years} year${years !== 1 ? "s" : ""}`
-    } else {
-      return `${years} year${years !== 1 ? "s" : ""} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
-    }
+  // If end day is earlier than start day, subtract one month
+  if (endDate.getDate() < startDate.getDate()) {
+    months--
   }
+
+  // Handle edge case: if it's exactly 11 months but spans a full year period
+  // (e.g., 1st Sep 2024 to 31st Aug 2025 should be considered as 1 year)
+  const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24))
+  const isFullYear = daysDiff >= 365 && daysDiff <= 366
+
+  if (isFullYear && months === 11) {
+    months = 12
+  }
+
+  // Calculate years and remaining months
+  const years = Math.floor(months / 12)
+  const remainingMonths = months % 12
+
+  // Format the result
+  if (years === 0 && remainingMonths === 0) {
+    return "Nil"
+  } else if (years === 0) {
+    return `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
+  } else if (remainingMonths === 0) {
+    return `${years} year${years !== 1 ? "s" : ""}`
+  } else {
+    return `${years} year${years !== 1 ? "s" : ""} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
+  }
+}
 
   const exportToExcel = () => {
     // Prepare data for export
@@ -237,10 +260,13 @@ function FullReport() {
       const loaNumber = getTransactionValue(record, "574")
       return {
         "LOA Number": loaNumber,
-        "Value Of Order": "",
-        "WPC Work": "",
-        "Transmitter QTY": getTransactionValue(record, "575"),
-        "RX Receiver QTY": getTransactionValue(record, "576"),
+        "LOA Date": getLoaValue(loaNumber, "126"), // NEW
+        "LOA File No.": getLoaValue(loaNumber, "651"), // NEW
+        "Tender No.": getLoaValue(loaNumber, "4"), // NEW
+        "Value Of Order": getLoaValue(loaNumber, "72"), // UPDATED
+        "WPC Work": getLoaValue(loaNumber, "69"), // UPDATED
+        "Transmitter QTY": getLoaValue(loaNumber, "61"), // UPDATED
+        "RX Receiver QTY": getLoaValue(loaNumber, "63"), // UPDATED
         "Date Of Work Start": getTransactionValue(record, "649"),
         "Project Status": getProjectStatus(loaNumber),
         "Handover Date of System": getStatusValue(loaNumber, "590"),
@@ -281,10 +307,13 @@ function FullReport() {
     const { transmitterTotal, receiverTotal } = calculateTotals()
     exportData.push({
       "LOA Number": "TOTAL",
-      "Value Of Order": "",
-      "WPC Work": "",
-      "Transmitter QTY": transmitterTotal,
-      "RX Receiver QTY": receiverTotal,
+      "LOA Date": "", // NEW
+      "LOA File No.": "", // NEW
+      "Tender No.": "", // NEW
+      "Value Of Order": "", // UPDATED
+      "WPC Work": "", // UPDATED
+      "Transmitter QTY": transmitterTotal, // UPDATED
+      "RX Receiver QTY": receiverTotal, // UPDATED
       "Date Of Work Start": "",
       "Project Status": "",
       "Handover Date of System": "",
@@ -321,7 +350,7 @@ function FullReport() {
     const ws = XLSX.utils.json_to_sheet(exportData)
 
     // Set column widths
-    const colWidths = Array(34).fill({ wch: 15 })
+    const colWidths = Array(38).fill({ wch: 15 }) // Updated to 38 columns
     ws["!cols"] = colWidths
 
     // Add worksheet to workbook
@@ -396,15 +425,20 @@ function FullReport() {
           <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
             <tr>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA Number</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA Date</th> {/* NEW */}
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA File No.</th> {/* NEW */}
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Tender No.</th> {/* NEW */}
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Value Of Order</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>WPC Work</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Transmitter QTY</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>RX Receiver QTY</th>
               <th style={{ border: "1px solid #ddd", minWidth: "140px" }}>Date Of Work Start</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Project Status</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>Handover Date of System</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>e-MB Date</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Warranty Period</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Total Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Good Bill Raised Date</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Goods Bill Invoice No.</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Invoice Amount</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Payment Status</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Billing Cycle</th>
               <th style={{ border: "1px solid #ddd", minWidth: "140px" }}>Amount Per Cycle</th>
@@ -440,20 +474,26 @@ function FullReport() {
                 return (
                   <tr key={record.ActivityId}>
                     <td style={{ border: "1px solid #ddd" }}>{loaNumber}</td>
-                    <td style={{ border: "1px solid #ddd" }}></td>
-                    <td style={{ border: "1px solid #ddd" }}></td>
-                    <td style={{ border: "1px solid #ddd" }}>{getTransactionValue(record, "575")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getTransactionValue(record, "576")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "126")}</td> {/* NEW */}
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "651")}</td> {/* NEW */}
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "4")}</td> {/* NEW */}
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "72")}</td> {/* UPDATED */}
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "69")}</td> {/* UPDATED */}
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "61")}</td> {/* UPDATED */}
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "63")}</td> {/* UPDATED */}
                     <td style={{ border: "1px solid #ddd" }}>{getTransactionValue(record, "649")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getProjectStatus(loaNumber)}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "590")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{calculateWarrantyPeriod(loaNumber)}</td>
-                    <td style={{ border: "1px solid #ddd" }}>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "652")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "653")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "656")}</td>
+                    {/* <td style={{ border: "1px solid #ddd" }}>
                       {Number(getStatusValue(loaNumber, "596")) +
                         Number(getStatusValue(loaNumber, "606")) +
                         Number(getStatusValue(loaNumber, "616")) +
                         Number(getStatusValue(loaNumber, "626"))}
-                    </td>
+                    </td> */}
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "627")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "594")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "596")}</td>
@@ -485,25 +525,11 @@ function FullReport() {
               })
             ) : (
               <tr>
-                <td colSpan={34} className="no-records" style={{ border: "1px solid #ddd" }}>
+                <td colSpan={38} className="no-records" style={{ border: "1px solid #ddd" }}> {/* Updated to 38 columns */}
                   No records found
                 </td>
               </tr>
             )}
-            {/* <tr className="totals-row" style={{ backgroundColor: "#f8f9fa", fontWeight: "bold" }}>
-              <td style={{ border: "1px solid #ddd" }}>
-                <strong>Total</strong>
-              </td>
-              <td style={{ border: "1px solid #ddd" }}></td>
-              <td style={{ border: "1px solid #ddd" }}></td>
-              <td style={{ border: "1px solid #ddd" }}>
-                <strong>{transmitterTotal}</strong>
-              </td>
-              <td style={{ border: "1px solid #ddd" }}>
-                <strong>{receiverTotal}</strong>
-              </td>
-              <td style={{ border: "1px solid #ddd" }} colSpan={29}></td>
-            </tr> */}
           </tbody>
         </table>
       </div>

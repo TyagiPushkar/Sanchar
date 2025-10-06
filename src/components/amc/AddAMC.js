@@ -32,11 +32,18 @@ function AddAMC() {
   const [visibleDependents, setVisibleDependents] = useState({})
   const [loading, setLoading] = useState(true)
   const [loadingError, setLoadingError] = useState("")
+  const [loaData, setLoaData] = useState([]) // For menuId=1 data
+  const [transactionsData, setTransactionsData] = useState([]) // For menuId=8 data
   const navigate = useNavigate()
 
   // Amount fields configuration
   const amountFieldIds = [62, 64, 66, 70];
   const totalFieldId = 72 // Field to display total
+
+  // AMC calculation fields
+  const amcAmountFields = [596, 606, 616, 626]; // AMC installment amounts
+  const goodsBillAmountField = 656; // Goods Bill Invoice Amount
+  const numberOfCyclesField = 655; // Number of Cycles
 
   // Format currency helper
   const formatCurrency = (value) => {
@@ -48,6 +55,92 @@ function AddAMC() {
       maximumFractionDigits: 2
     }).format(num)
   }
+
+  // Get value from transaction details by checkpoint ID
+  const getTransactionValue = (transaction, checkpointId) => {
+    if (!transaction || !transaction.Details) return "-"
+    const detail = transaction.Details.find((d) => d.ChkId === checkpointId)
+    return detail ? detail.Value : "-"
+  }
+
+  // Get value from LOA data (menuId=1) for a specific LOA and checkpoint
+  const getLoaValue = (loaNumber, checkpointId) => {
+    const loaRecord = loaData.find((record) => getTransactionValue(record, "60") === loaNumber)
+    return getTransactionValue(loaRecord, checkpointId)
+  }
+
+  // Get value from transactions data (menuId=8) for a specific LOA and checkpoint
+  const getTransactionsValue = (loaNumber, checkpointId) => {
+    const transactionRecord = transactionsData.find((record) => getTransactionValue(record, "581") === loaNumber)
+    return getTransactionValue(transactionRecord, checkpointId)
+  }
+
+  // Calculate AMC amounts when LOA number or number of cycles changes
+  // Calculate AMC amounts when LOA number or number of cycles changes
+useEffect(() => {
+  const calculateAMCAmounts = async () => {
+    const loaNumber = formData[589]; // LOA Number from menuId=10
+    
+    if (!loaNumber) {
+      // Reset AMC amounts if no LOA number
+      amcAmountFields.forEach(fieldId => {
+        handleChange(fieldId, "0.00");
+      });
+      return;
+    }
+
+    try {
+      // Get total bid value from menuId=1 (chkid=72)
+      const totalBidValue = parseFloat(getLoaValue(loaNumber, "72")) || 0;
+      console.log("Total Bid Value:", totalBidValue);
+      
+      // Get goods bill amount from CURRENT FORM FIELD (chkid=656)
+      const goodsBillAmount = parseFloat(formData[656]) || 0;
+      console.log("Goods Bill Amount:", goodsBillAmount);
+      
+      // Calculate remaining amount
+      const remainingAmount = totalBidValue - goodsBillAmount;
+      console.log("Remaining Amount:", remainingAmount);
+      
+      // Get number of cycles from form data (limited to 1,2,3,4)
+      const numberOfCycles = parseInt(formData[numberOfCyclesField]) || 1;
+      console.log("Number of Cycles:", numberOfCycles);
+      
+      if (remainingAmount > 0 && numberOfCycles > 0) {
+        // Calculate amount per cycle
+        const amountPerCycle = remainingAmount / numberOfCycles;
+        console.log("Amount per cycle:", amountPerCycle);
+        
+        // Reset all AMC fields first
+        amcAmountFields.forEach(fieldId => {
+          handleChange(fieldId, "0.00");
+        });
+        
+        // Distribute amounts across the AMC fields based on number of cycles
+        for (let i = 0; i < numberOfCycles; i++) {
+          if (i < amcAmountFields.length) {
+            const fieldId = amcAmountFields[i];
+            handleChange(fieldId, amountPerCycle.toFixed(2));
+            console.log(`Setting field ${fieldId} to:`, amountPerCycle.toFixed(2));
+          }
+        }
+      } else {
+        // Reset AMC amounts if calculation fails
+        amcAmountFields.forEach(fieldId => {
+          handleChange(fieldId, "0.00");
+        });
+      }
+    } catch (error) {
+      console.error("Error calculating AMC amounts:", error);
+      // Reset AMC amounts on error
+      amcAmountFields.forEach(fieldId => {
+        handleChange(fieldId, "0.00");
+      });
+    }
+  };
+
+  calculateAMCAmounts();
+}, [formData[589], formData[656], formData[numberOfCyclesField], loaData]); // Added formData[656] to dependencies
 
   // Calculate total bid value whenever any amount field changes
   useEffect(() => {
@@ -149,6 +242,12 @@ function AddAMC() {
         const menuRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_menu.php")
         const checkpointRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php")
         const typeRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_types.php")
+        
+        // Fetch LOA data (menuId=1)
+        const loaRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=1")
+        
+        // Fetch transactions data (menuId=8)
+        const transactionsRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=8")
 
         const checkpointIds = menuRes.data.data[9].CheckpointId.split(";").map((p) =>
           p.split(",").map((id) => Number.parseInt(id)),
@@ -157,6 +256,8 @@ function AddAMC() {
         setPages(checkpointIds)
         setCheckpoints(checkpointRes.data.data)
         setTypes(typeRes.data.data)
+        setLoaData(loaRes.data.data)
+        setTransactionsData(transactionsRes.data.data)
       } catch (error) {
         console.error("Error fetching data:", error)
         setLoadingError("Failed to load form data. Please try again later.")
@@ -179,7 +280,114 @@ function AddAMC() {
     return type ? type.Type.trim() : "Unknown"
   }
 
+  // Custom render for LOA Number field with autocomplete
+  const renderLOAField = (cp) => {
+    const value = formData[cp.CheckpointId] || ""
+    const error = errors[cp.CheckpointId]
+    const editable = cp.Editable === 1
+    const isMandatory = cp.Mandatory === 1
+
+    // Get unique LOA numbers from menuId=1 data
+    const loaNumbers = [...new Set(loaData.map(record => getTransactionValue(record, "60")).filter(loa => loa && loa !== "-"))]
+
+    return (
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={4}>
+          <Typography sx={{ fontWeight: 500, color: "#555" }}>
+            {cp.Description}
+            {isMandatory && <span style={{ color: "red", marginLeft: "4px" }}>*</span>}
+          </Typography>
+        </Grid>
+        <Grid item xs={8}>
+          <Autocomplete
+            fullWidth
+            freeSolo
+            options={loaNumbers}
+            value={value}
+            onChange={(event, newValue) => {
+              handleChange(cp.CheckpointId, newValue || "")
+            }}
+            onInputChange={(event, newInputValue) => {
+              handleChange(cp.CheckpointId, newInputValue)
+            }}
+            disabled={!editable}
+            size="small"
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select or type LOA Number"
+                error={error}
+                helperText={error ? "This field is required" : ""}
+                sx={{
+                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#F69320",
+                  },
+                }}
+              />
+            )}
+          />
+        </Grid>
+      </Grid>
+    )
+  }
+
+  // Custom render for Number of Cycles field (limited to 1,2,3,4)
+  const renderNumberOfCyclesField = (cp) => {
+    const value = formData[cp.CheckpointId] || ""
+    const error = errors[cp.CheckpointId]
+    const editable = cp.Editable === 1
+    const isMandatory = cp.Mandatory === 1
+
+    const cycleOptions = ["1", "2", "3", "4"];
+
+    return (
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={4}>
+          <Typography sx={{ fontWeight: 500, color: "#555" }}>
+            {cp.Description}
+            {isMandatory && <span style={{ color: "red", marginLeft: "4px" }}>*</span>}
+          </Typography>
+        </Grid>
+        <Grid item xs={8}>
+          <Autocomplete
+            fullWidth
+            options={cycleOptions}
+            value={value}
+            onChange={(event, newValue) => {
+              handleChange(cp.CheckpointId, newValue || "")
+            }}
+            disabled={!editable}
+            size="small"
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Select Number of Cycles"
+                error={error}
+                helperText={error ? "This field is required" : ""}
+                sx={{
+                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                    borderColor: "#F69320",
+                  },
+                }}
+              />
+            )}
+          />
+        </Grid>
+      </Grid>
+    )
+  }
+
   const renderField = (cp) => {
+    // Special handling for LOA Number field (chkid=589)
+    if (cp.CheckpointId === 589) {
+      return renderLOAField(cp);
+    }
+
+    // Special handling for Number of Cycles field (chkid=655)
+    if (cp.CheckpointId === numberOfCyclesField) {
+      return renderNumberOfCyclesField(cp);
+    }
+
     const type = getType(cp.TypeId).trim()
     const options = cp.Options ? cp.Options.split(",").map((opt) => opt.trim()) : []
     const value = formData[cp.CheckpointId] || ""
@@ -188,6 +396,39 @@ function AddAMC() {
     const isMandatory = cp.Mandatory === 1
 
     if (cp.CheckpointId === totalFieldId) {
+      return (
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={4}>
+            <Typography sx={{ fontWeight: 500, color: "#555" }}>
+              {cp.Description}
+              {isMandatory && <span style={{ color: "red", marginLeft: "4px" }}>*</span>}
+            </Typography>
+          </Grid>
+          <Grid item xs={8}>
+            <TextField
+              fullWidth
+              value={formatCurrency(value || "0")}
+              InputProps={{
+                readOnly: true,
+                startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#f5f5f5",
+                  "& input": {
+                    fontWeight: "bold",
+                    color: "#2e7d32",
+                  }
+                },
+              }}
+            />
+          </Grid>
+        </Grid>
+      )
+    }
+
+    // AMC amount fields - make them read-only since they're auto-calculated
+    if (amcAmountFields.includes(cp.CheckpointId)) {
       return (
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={4}>
