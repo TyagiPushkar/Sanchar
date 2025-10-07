@@ -8,7 +8,7 @@ import * as XLSX from "xlsx"
 function FullReport() {
   const [transactions, setTransactions] = useState([])
   const [statusData, setStatusData] = useState([])
-  const [loaData, setLoaData] = useState([]) // New state for menuId=1 data
+  const [loaData, setLoaData] = useState([]) // Primary data source
   const [filteredRecords, setFilteredRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -31,16 +31,16 @@ function FullReport() {
           "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=10",
         )
 
-        // Fetch LOA data (menuId=1) - NEW
+        // Fetch LOA data (menuId=1) - PRIMARY DATA SOURCE
         const loaResponse = await axios.get(
           "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=1",
         )
 
         if (transactionsResponse.data.success && statusResponse.data.success && loaResponse.data.success) {
           setTransactions(transactionsResponse.data.data)
-          setFilteredRecords(transactionsResponse.data.data)
           setStatusData(statusResponse.data.data)
-          setLoaData(loaResponse.data.data) // Set LOA data
+          setLoaData(loaResponse.data.data)
+          setFilteredRecords(loaResponse.data.data) // Set LOA data as filtered records
         } else {
           setError("Failed to fetch data from one or more sources.")
         }
@@ -55,22 +55,34 @@ function FullReport() {
   }, [])
 
   // Filter records based on search term and status filter
-  useEffect(() => {
-    const filtered = transactions.filter((transaction) => {
-      const loaNumber = getTransactionValue(transaction, "574")
-      const matchesSearch = loaNumber.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter records based on search term and status filter
+useEffect(() => {
+  const filtered = loaData.filter((loaRecord) => {
+    const loaNumber = getLoaValueDirect(loaRecord, "60") // Get LOA number directly from LOA data
+    
+    // Add null check for loaNumber
+    if (!loaNumber || loaNumber === "-") return false
+    
+    const matchesSearch = loaNumber.toLowerCase().includes(searchTerm.toLowerCase())
 
-      if (statusFilter === "all") return matchesSearch
+    if (statusFilter === "all") return matchesSearch
 
-      const status = getProjectStatus(loaNumber)
-      return matchesSearch && status === statusFilter
-    })
+    const status = getProjectStatus(loaNumber)
+    return matchesSearch && status === statusFilter
+  })
 
-    setFilteredRecords(filtered)
-    setPage(0) // Reset to first page when filters change
-  }, [transactions, searchTerm, statusFilter])
+  setFilteredRecords(filtered)
+  setPage(0) // Reset to first page when filters change
+}, [loaData, searchTerm, statusFilter])
 
-  // Get value from transaction details by checkpoint ID
+  // Get value directly from LOA record
+  const getLoaValueDirect = (loaRecord, checkpointId) => {
+    if (!loaRecord || !loaRecord.Details) return "-"
+    const detail = loaRecord.Details.find((d) => d.ChkId === checkpointId)
+    return detail ? detail.Value : "-"
+  }
+
+  // Get value from transaction details by checkpoint ID (for menuId=8 data)
   const getTransactionValue = (transaction, checkpointId) => {
     if (!transaction || !transaction.Details) return "-"
     const detail = transaction.Details.find((d) => d.ChkId === checkpointId)
@@ -83,10 +95,10 @@ function FullReport() {
     return getTransactionValue(statusRecord, checkpointId)
   }
 
-  // NEW: Get value from LOA data (menuId=1) for a specific LOA and checkpoint
+  // Get value from LOA data for a specific LOA and checkpoint
   const getLoaValue = (loaNumber, checkpointId) => {
-    const loaRecord = loaData.find((record) => getTransactionValue(record, "60") === loaNumber)
-    return getTransactionValue(loaRecord, checkpointId)
+    const loaRecord = loaData.find((record) => getLoaValueDirect(record, "60") === loaNumber)
+    return getLoaValueDirect(loaRecord, checkpointId)
   }
 
   // Calculate pending invoice amount for a given LOA
@@ -199,8 +211,8 @@ function FullReport() {
     let receiverTotal = 0
 
     filteredRecords.forEach((record) => {
-      const txQty = Number.parseFloat(getTransactionValue(record, "575")) || 0
-      const rxQty = Number.parseFloat(getTransactionValue(record, "576")) || 0
+      const txQty = Number.parseFloat(getLoaValueDirect(record, "61")) || 0
+      const rxQty = Number.parseFloat(getLoaValueDirect(record, "63")) || 0
 
       transmitterTotal += txQty
       receiverTotal += rxQty
@@ -210,64 +222,67 @@ function FullReport() {
   }
 
   const calculateWarrantyPeriod = (loaNumber) => {
-  const statusRecord = statusData.find((record) => getTransactionValue(record, "589") === loaNumber)
+    const statusRecord = statusData.find((record) => getTransactionValue(record, "589") === loaNumber)
 
-  if (!statusRecord) return "-"
+    if (!statusRecord) return "-"
 
-  const startDate = getDateFromValue(getStatusValue(loaNumber, "591"))
-  const endDate = getDateFromValue(getStatusValue(loaNumber, "592"))
+    const startDate = getDateFromValue(getStatusValue(loaNumber, "591"))
+    const endDate = getDateFromValue(getStatusValue(loaNumber, "592"))
 
-  if (!startDate || !endDate) return "-"
+    if (!startDate || !endDate) return "-"
 
-  // Calculate difference in months
-  let months = (endDate.getFullYear() - startDate.getFullYear()) * 12
-  months -= startDate.getMonth()
-  months += endDate.getMonth()
+    // Calculate difference in months
+    let months = (endDate.getFullYear() - startDate.getFullYear()) * 12
+    months -= startDate.getMonth()
+    months += endDate.getMonth()
 
-  // If end day is earlier than start day, subtract one month
-  if (endDate.getDate() < startDate.getDate()) {
-    months--
+    // If end day is earlier than start day, subtract one month
+    if (endDate.getDate() < startDate.getDate()) {
+      months--
+    }
+
+    // Handle edge case: if it's exactly 11 months but spans a full year period
+    // (e.g., 1st Sep 2024 to 31st Aug 2025 should be considered as 1 year)
+    const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24))
+    const isFullYear = daysDiff >= 365 && daysDiff <= 366
+
+    if (isFullYear && months === 11) {
+      months = 12
+    }
+
+    // Calculate years and remaining months
+    const years = Math.floor(months / 12)
+    const remainingMonths = months % 12
+
+    // Format the result
+    if (years === 0 && remainingMonths === 0) {
+      return "Nil"
+    } else if (years === 0) {
+      return `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
+    } else if (remainingMonths === 0) {
+      return `${years} year${years !== 1 ? "s" : ""}`
+    } else {
+      return `${years} year${years !== 1 ? "s" : ""} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
+    }
   }
-
-  // Handle edge case: if it's exactly 11 months but spans a full year period
-  // (e.g., 1st Sep 2024 to 31st Aug 2025 should be considered as 1 year)
-  const daysDiff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24))
-  const isFullYear = daysDiff >= 365 && daysDiff <= 366
-
-  if (isFullYear && months === 11) {
-    months = 12
-  }
-
-  // Calculate years and remaining months
-  const years = Math.floor(months / 12)
-  const remainingMonths = months % 12
-
-  // Format the result
-  if (years === 0 && remainingMonths === 0) {
-    return "Nil"
-  } else if (years === 0) {
-    return `${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
-  } else if (remainingMonths === 0) {
-    return `${years} year${years !== 1 ? "s" : ""}`
-  } else {
-    return `${years} year${years !== 1 ? "s" : ""} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
-  }
-}
 
   const exportToExcel = () => {
     // Prepare data for export
     const exportData = filteredRecords.map((record) => {
-      const loaNumber = getTransactionValue(record, "574")
+      const loaNumber = getLoaValueDirect(record, "60")
       return {
         "LOA Number": loaNumber,
-        "LOA Date": getLoaValue(loaNumber, "126"), // NEW
-        "LOA File No.": getLoaValue(loaNumber, "651"), // NEW
-        "Tender No.": getLoaValue(loaNumber, "4"), // NEW
-        "Value Of Order": getLoaValue(loaNumber, "72"), // UPDATED
-        "WPC Work": getLoaValue(loaNumber, "69"), // UPDATED
-        "Transmitter QTY": getLoaValue(loaNumber, "61"), // UPDATED
-        "RX Receiver QTY": getLoaValue(loaNumber, "63"), // UPDATED
-        "Date Of Work Start": getTransactionValue(record, "649"),
+        "LOA Date": getLoaValueDirect(record, "126"),
+        "LOA File No.": getLoaValueDirect(record, "651"),
+        "Tender No.": getLoaValueDirect(record, "4"),
+        "Value Of Order": getLoaValueDirect(record, "72"),
+        "WPC Work": getLoaValueDirect(record, "69"),
+        "Transmitter QTY": getLoaValueDirect(record, "61"),
+        "RX Receiver QTY": getLoaValueDirect(record, "63"),
+        "Date Of Work Start": getTransactionValue(
+          transactions.find((t) => getTransactionValue(t, "574") === loaNumber),
+          "649"
+        ),
         "Project Status": getProjectStatus(loaNumber),
         "Handover Date of System": getStatusValue(loaNumber, "590"),
         "Warranty Period": calculateWarrantyPeriod(loaNumber),
@@ -307,13 +322,13 @@ function FullReport() {
     const { transmitterTotal, receiverTotal } = calculateTotals()
     exportData.push({
       "LOA Number": "TOTAL",
-      "LOA Date": "", // NEW
-      "LOA File No.": "", // NEW
-      "Tender No.": "", // NEW
-      "Value Of Order": "", // UPDATED
-      "WPC Work": "", // UPDATED
-      "Transmitter QTY": transmitterTotal, // UPDATED
-      "RX Receiver QTY": receiverTotal, // UPDATED
+      "LOA Date": "",
+      "LOA File No.": "",
+      "Tender No.": "",
+      "Value Of Order": "",
+      "WPC Work": "",
+      "Transmitter QTY": transmitterTotal,
+      "RX Receiver QTY": receiverTotal,
       "Date Of Work Start": "",
       "Project Status": "",
       "Handover Date of System": "",
@@ -350,7 +365,7 @@ function FullReport() {
     const ws = XLSX.utils.json_to_sheet(exportData)
 
     // Set column widths
-    const colWidths = Array(38).fill({ wch: 15 }) // Updated to 38 columns
+    const colWidths = Array(38).fill({ wch: 15 })
     ws["!cols"] = colWidths
 
     // Add worksheet to workbook
@@ -425,9 +440,9 @@ function FullReport() {
           <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
             <tr>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA Number</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA Date</th> {/* NEW */}
-              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA File No.</th> {/* NEW */}
-              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Tender No.</th> {/* NEW */}
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA Date</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>LOA File No.</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Tender No.</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Value Of Order</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>WPC Work</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Transmitter QTY</th>
@@ -468,32 +483,28 @@ function FullReport() {
           <tbody>
             {currentRecords.length > 0 ? (
               currentRecords.map((record) => {
-                const loaNumber = getTransactionValue(record, "574")
-                const statusRecord = statusData.find((record) => getTransactionValue(record, "589") === loaNumber)
+                const loaNumber = getLoaValueDirect(record, "60")
+                const correspondingTransaction = transactions.find((t) => getTransactionValue(t, "574") === loaNumber)
 
                 return (
                   <tr key={record.ActivityId}>
                     <td style={{ border: "1px solid #ddd" }}>{loaNumber}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "126")}</td> {/* NEW */}
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "651")}</td> {/* NEW */}
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "4")}</td> {/* NEW */}
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "72")}</td> {/* UPDATED */}
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "69")}</td> {/* UPDATED */}
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "61")}</td> {/* UPDATED */}
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValue(loaNumber, "63")}</td> {/* UPDATED */}
-                    <td style={{ border: "1px solid #ddd" }}>{getTransactionValue(record, "649")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "126")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "651")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "4")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "72")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "69")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "61")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "63")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>
+                      {correspondingTransaction ? getTransactionValue(correspondingTransaction, "649") : "-"}
+                    </td>
                     <td style={{ border: "1px solid #ddd" }}>{getProjectStatus(loaNumber)}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "590")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{calculateWarrantyPeriod(loaNumber)}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "652")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "653")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "656")}</td>
-                    {/* <td style={{ border: "1px solid #ddd" }}>
-                      {Number(getStatusValue(loaNumber, "596")) +
-                        Number(getStatusValue(loaNumber, "606")) +
-                        Number(getStatusValue(loaNumber, "616")) +
-                        Number(getStatusValue(loaNumber, "626"))}
-                    </td> */}
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "627")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "594")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "596")}</td>
@@ -525,7 +536,7 @@ function FullReport() {
               })
             ) : (
               <tr>
-                <td colSpan={38} className="no-records" style={{ border: "1px solid #ddd" }}> {/* Updated to 38 columns */}
+                <td colSpan={38} className="no-records" style={{ border: "1px solid #ddd" }}>
                   No records found
                 </td>
               </tr>
