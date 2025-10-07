@@ -497,7 +497,7 @@ useEffect(() => {
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "61")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "63")}</td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {correspondingTransaction ? getTransactionValue(correspondingTransaction, "649") : "-"}
+                      {getStatusValue ? getStatusValue(loaNumber, "649") : "-"}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>{getProjectStatus(loaNumber)}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "590")}</td>
