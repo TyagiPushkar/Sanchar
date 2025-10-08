@@ -55,25 +55,38 @@ function FullReport() {
   }, [])
 
   // Filter records based on search term and status filter
-  // Filter records based on search term and status filter
-useEffect(() => {
-  const filtered = loaData.filter((loaRecord) => {
-    const loaNumber = getLoaValueDirect(loaRecord, "60") // Get LOA number directly from LOA data
+  useEffect(() => {
+    const filtered = loaData.filter((loaRecord) => {
+      const loaNumber = getLoaValueDirect(loaRecord, "60") // Get LOA number directly from LOA data
+      
+      // Add null check for loaNumber
+      if (!loaNumber || loaNumber === "-") return false
+      
+      const matchesSearch = loaNumber.toLowerCase().includes(searchTerm.toLowerCase())
+
+      if (statusFilter === "all") return matchesSearch
+
+      const status = getProjectStatus(loaNumber)
+      return matchesSearch && status === statusFilter
+    })
+
+    setFilteredRecords(filtered)
+    setPage(0) // Reset to first page when filters change
+  }, [loaData, searchTerm, statusFilter])
+
+  // Format date to dd-mm-yyyy
+  const formatDate = (dateValue) => {
+    if (!dateValue || dateValue === "-") return "-"
     
-    // Add null check for loaNumber
-    if (!loaNumber || loaNumber === "-") return false
+    const date = getDateFromValue(dateValue)
+    if (!date) return "-"
     
-    const matchesSearch = loaNumber.toLowerCase().includes(searchTerm.toLowerCase())
-
-    if (statusFilter === "all") return matchesSearch
-
-    const status = getProjectStatus(loaNumber)
-    return matchesSearch && status === statusFilter
-  })
-
-  setFilteredRecords(filtered)
-  setPage(0) // Reset to first page when filters change
-}, [loaData, searchTerm, statusFilter])
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    
+    return `${day}-${month}-${year}`
+  }
 
   // Get value directly from LOA record
   const getLoaValueDirect = (loaRecord, checkpointId) => {
@@ -171,6 +184,7 @@ useEffect(() => {
     const dateFormats = [
       /^(\d{2})\/(\d{2})\/(\d{4})$/, // DD/MM/YYYY
       /^(\d{4})-(\d{2})-(\d{2})$/, // YYYY-MM-DD
+      /^(\d{2})-(\d{2})-(\d{4})$/, // DD-MM-YYYY
     ]
 
     for (const format of dateFormats) {
@@ -182,11 +196,17 @@ useEffect(() => {
           const month = Number.parseInt(match[2], 10) - 1
           const year = Number.parseInt(match[3], 10)
           return new Date(year, month, day)
-        } else {
+        } else if (format === dateFormats[1]) {
           // YYYY-MM-DD
           const year = Number.parseInt(match[1], 10)
           const month = Number.parseInt(match[2], 10) - 1
           const day = Number.parseInt(match[3], 10)
+          return new Date(year, month, day)
+        } else if (format === dateFormats[2]) {
+          // DD-MM-YYYY
+          const day = Number.parseInt(match[1], 10)
+          const month = Number.parseInt(match[2], 10) - 1
+          const year = Number.parseInt(match[3], 10)
           return new Date(year, month, day)
         }
       }
@@ -205,20 +225,31 @@ useEffect(() => {
 
   const handleChangePage = (newPage) => setPage(newPage)
 
-  // Calculate totals for transmitter and receiver quantities
+  // Calculate totals for ALL filtered records (not just current page)
   const calculateTotals = () => {
     let transmitterTotal = 0
     let receiverTotal = 0
+    let totalAmount = 0
+    let pendingInvoiceTotal = 0
 
     filteredRecords.forEach((record) => {
+      const loaNumber = getLoaValueDirect(record, "60")
       const txQty = Number.parseFloat(getLoaValueDirect(record, "61")) || 0
       const rxQty = Number.parseFloat(getLoaValueDirect(record, "63")) || 0
-
+      
+      // Calculate total amount for this LOA
+      const amount1 = Number.parseFloat(getStatusValue(loaNumber, "596")) || 0
+      const amount2 = Number.parseFloat(getStatusValue(loaNumber, "606")) || 0
+      const amount3 = Number.parseFloat(getStatusValue(loaNumber, "616")) || 0
+      const amount4 = Number.parseFloat(getStatusValue(loaNumber, "626")) || 0
+      
       transmitterTotal += txQty
       receiverTotal += rxQty
+      totalAmount += (amount1 + amount2 + amount3 + amount4)
+      pendingInvoiceTotal += calculatePendingAmount(loaNumber)
     })
 
-    return { transmitterTotal, receiverTotal }
+    return { transmitterTotal, receiverTotal, totalAmount, pendingInvoiceTotal }
   }
 
   const calculateWarrantyPeriod = (loaNumber) => {
@@ -272,19 +303,19 @@ useEffect(() => {
       const loaNumber = getLoaValueDirect(record, "60")
       return {
         "LOA Number": loaNumber,
-        "LOA Date": getLoaValueDirect(record, "126"),
+        "LOA Date": formatDate(getLoaValueDirect(record, "126")),
         "LOA File No.": getLoaValueDirect(record, "651"),
         "Tender No.": getLoaValueDirect(record, "4"),
         "Value Of Order": getLoaValueDirect(record, "72"),
         "WPC Work": getLoaValueDirect(record, "69"),
         "Transmitter QTY": getLoaValueDirect(record, "61"),
         "RX Receiver QTY": getLoaValueDirect(record, "63"),
-        "Date Of Work Start": getTransactionValue(
+        "Date Of Work Start": formatDate(getTransactionValue(
           transactions.find((t) => getTransactionValue(t, "574") === loaNumber),
           "649"
-        ),
+        )),
         "Project Status": getProjectStatus(loaNumber),
-        "Handover Date of System": getStatusValue(loaNumber, "590"),
+        "Handover Date of System": formatDate(getStatusValue(loaNumber, "590")),
         "Warranty Period": calculateWarrantyPeriod(loaNumber),
         "Total Amount":
           Number(getStatusValue(loaNumber, "596")) +
@@ -295,31 +326,31 @@ useEffect(() => {
         "Billing Cycle": getStatusValue(loaNumber, "594"),
         "Amount Per Cycle": getStatusValue(loaNumber, "596"),
         "Pending Invoice Amount": calculatePendingAmount(loaNumber),
-        "First ARC Start Date": getStatusValue(loaNumber, "595"),
+        "First ARC Start Date": formatDate(getStatusValue(loaNumber, "595")),
         "First Bill No.": getStatusValue(loaNumber, "601"),
-        "First Bill Date": getStatusValue(loaNumber, "602"),
+        "First Bill Date": formatDate(getStatusValue(loaNumber, "602")),
         "First Amount": getStatusValue(loaNumber, "596"),
         "First Payment Status Remarks": getStatusValue(loaNumber, "604"),
-        "Second ARC Start Date": getStatusValue(loaNumber, "605"),
+        "Second ARC Start Date": formatDate(getStatusValue(loaNumber, "605")),
         "Second Bill No.": getStatusValue(loaNumber, "611"),
-        "Second Bill Date": getStatusValue(loaNumber, "612"),
+        "Second Bill Date": formatDate(getStatusValue(loaNumber, "612")),
         "Second Amount": getStatusValue(loaNumber, "606"),
         "Second Payment Status Remarks": getStatusValue(loaNumber, "614"),
-        "Third ARC Start Date": getStatusValue(loaNumber, "615"),
+        "Third ARC Start Date": formatDate(getStatusValue(loaNumber, "615")),
         "Third Bill No.": getStatusValue(loaNumber, "621"),
-        "Third Bill Date": getStatusValue(loaNumber, "622"),
+        "Third Bill Date": formatDate(getStatusValue(loaNumber, "622")),
         "Third Amount": getStatusValue(loaNumber, "616"),
         "Third Payment Status Remarks": getStatusValue(loaNumber, "624"),
-        "Fourth ARC Start Date": getStatusValue(loaNumber, "625"),
+        "Fourth ARC Start Date": formatDate(getStatusValue(loaNumber, "625")),
         "Fourth Bill No.": getStatusValue(loaNumber, "631"),
-        "Fourth Bill Date": getStatusValue(loaNumber, "632"),
+        "Fourth Bill Date": formatDate(getStatusValue(loaNumber, "632")),
         "Fourth Amount": getStatusValue(loaNumber, "626"),
         "Fourth Payment Status Remarks": getStatusValue(loaNumber, "634"),
       }
     })
 
     // Add totals row
-    const { transmitterTotal, receiverTotal } = calculateTotals()
+    const { transmitterTotal, receiverTotal, totalAmount, pendingInvoiceTotal } = calculateTotals()
     exportData.push({
       "LOA Number": "TOTAL",
       "LOA Date": "",
@@ -333,11 +364,11 @@ useEffect(() => {
       "Project Status": "",
       "Handover Date of System": "",
       "Warranty Period": "",
-      "Total Amount": "",
+      "Total Amount": totalAmount,
       "Payment Status": "",
       "Billing Cycle": "",
       "Amount Per Cycle": "",
-      "Pending Invoice Amount": "",
+      "Pending Invoice Amount": pendingInvoiceTotal,
       "First ARC Start Date": "",
       "First Bill No.": "",
       "First Bill Date": "",
@@ -380,7 +411,7 @@ useEffect(() => {
     XLSX.writeFile(wb, filename)
   }
 
-  const { transmitterTotal, receiverTotal } = calculateTotals()
+  const { transmitterTotal, receiverTotal, totalAmount, pendingInvoiceTotal } = calculateTotals()
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage)
   const startIndex = page * rowsPerPage
   const endIndex = startIndex + rowsPerPage
@@ -435,6 +466,35 @@ useEffect(() => {
 
       {error && <div className="error-message">{error}</div>}
 
+      {/* Totals Display - Show totals for ALL filtered data */}
+      <div className="totals-container" style={{ 
+        marginBottom: '15px', 
+        padding: '10px', 
+        backgroundColor: '#f8f9fa', 
+        border: '1px solid #dee2e6',
+        borderRadius: '4px'
+      }}>
+        <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>Total Summary (All Filtered Records)</h4>
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <strong>Total Transmitter QTY:</strong>
+            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>{transmitterTotal}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <strong>Total Receiver QTY:</strong>
+            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>{receiverTotal}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <strong>Total Amount:</strong>
+            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>₹{totalAmount.toLocaleString('en-IN')}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <strong>Total Pending Invoice:</strong>
+            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>₹{pendingInvoiceTotal.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="table-container" style={{ maxHeight: "70vh", overflowY: "auto" }}>
         <table className="material-table" style={{ border: "1px solid #ddd" }}>
           <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
@@ -454,7 +514,7 @@ useEffect(() => {
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Good Bill Raised Date</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Goods Bill Invoice No.</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Invoice Amount</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Payment Status</th>
+              {/* <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Payment Status</th> */}
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Billing Cycle</th>
               <th style={{ border: "1px solid #ddd", minWidth: "140px" }}>Amount Per Cycle</th>
               <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>Pending Invoice Amount</th>
@@ -489,7 +549,7 @@ useEffect(() => {
                 return (
                   <tr key={record.ActivityId}>
                     <td style={{ border: "1px solid #ddd" }}>{loaNumber}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "126")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getLoaValueDirect(record, "126"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "651")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "4")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "72")}</td>
@@ -497,38 +557,38 @@ useEffect(() => {
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "61")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "63")}</td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue ? getStatusValue(loaNumber, "649") : "-"}
+                      {formatDate(getStatusValue(loaNumber, "649"))}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>{getProjectStatus(loaNumber)}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "590")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "590"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{calculateWarrantyPeriod(loaNumber)}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "652")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "652"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "653")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "656")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "627")}</td>
+                    {/* <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "627")}</td> */}
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "594")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "596")}</td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {calculatePendingAmount(loaNumber).toLocaleString("en-IN")}
                     </td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "595")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "595"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "601")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "602")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "602"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "596")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "604")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "605")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "605"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "611")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "612")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "612"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "606")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "614")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "615")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "615"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "621")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "622")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "622"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "616")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "624")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "625")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "625"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "631")}</td>
-                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "632")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "632"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "626")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "634")}</td>
                   </tr>
