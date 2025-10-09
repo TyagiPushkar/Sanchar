@@ -310,10 +310,7 @@ function FullReport() {
         "WPC Work": getLoaValueDirect(record, "69"),
         "Transmitter QTY": getLoaValueDirect(record, "61"),
         "RX Receiver QTY": getLoaValueDirect(record, "63"),
-        "Date Of Work Start": formatDate(getTransactionValue(
-          transactions.find((t) => getTransactionValue(t, "574") === loaNumber),
-          "649"
-        )),
+        "Date Of Work Start": formatDate(getStatusValue(loaNumber, "649")),
         "Project Status": getProjectStatus(loaNumber),
         "Handover Date of System": formatDate(getStatusValue(loaNumber, "590")),
         "Warranty Period": calculateWarrantyPeriod(loaNumber),
