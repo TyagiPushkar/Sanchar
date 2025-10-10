@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx"; // Import the xlsx library
+import * as XLSX from "xlsx";
 import "./AMCWorkList.css";
 
 function AMCWorkDetails() {
@@ -24,11 +24,14 @@ function AMCWorkDetails() {
   const exportToExcel = () => {
     if (!transaction) return;
     
-    // Prepare data for export
-    const dataToExport = transaction.Details.map(detail => {
+    // Prepare data for export in the specified sequence
+    const dataToExport = fieldSequence.map(fieldName => {
+      const checkpointId = getCheckpointIdByDescription(fieldName);
+      const detail = checkpointId ? findTransactionDetail(checkpointId) : null;
+      
       return {
-        "Field": getCheckpointDescription(detail.ChkId),
-        "Value": detail.Value
+        "Field": fieldName,
+        "Value": detail ? detail.Value : "-"
       };
     });
 
@@ -57,27 +60,136 @@ function AMCWorkDetails() {
     );
   }
 
-  const getCheckpointDescription = (checkpointId) => {
-    // Convert both to strings for consistent comparison
-    const checkpoint = checkpoints.find(cp => 
-      cp.CheckpointId.toString() === checkpointId.toString()
-    );
-    return checkpoint ? checkpoint.Description : `Field ${checkpointId}`;
+  // Define the field sequence
+  const fieldSequence = [
+    "LOA Number",
+    "PDF LOA Copy",
+    "Date Of Work Start",
+    "e-MB Date",
+    "e-MB Attachment",
+    "Warranty Start Date",
+    "Warranty End date",
+    "AMC Start Date",
+    "Billing Cycle of AMC",
+    "Number of Cycle",
+    "1st Year AMC Bill Start Date:-",
+    "1st Year AMC Bill Amount With GST:-",
+    "1st Year AMC Bill Status",
+    "1st Year AMC Final MB Done Date:-",
+    "1st Year AMC Invoice Amount with GST:-",
+    "1st Year AMC Deduction",
+    "1st Year AMC Invoice No:-",
+    "1st Year AMC Invoice Date:-",
+    "1st Year AMC Payment Amount Received",
+    "1st Year AMC Payment Received Date",
+    "1st Year AMC Remarks",
+    "2nd Year AMC Bill Start Date:-",
+    "2nd Year AMC Bill Amount with GST:-",
+    "2nd Year AMC Bill Status",
+    "2nd Year AMC Final MB Done Date:-",
+    "2nd Year AMC Invoice Amount with GST:-",
+    "2nd Year AMC Deduction",
+    "2nd Year AMC Invoice No:-",
+    "2nd Year AMC Invoice Date:-",
+    "2nd Year AMC Payment Amount Received",
+    "2nd Year AMC Payment Received Date",
+    "2nd Year AMC Remarks",
+    "3rd Year AMC Bill Start Date:-",
+    "3rd Year AMC Bill Amount with GST:-",
+    "3rd Year AMC Bill Status",
+    "3rd Year AMC Final MB Done Date:-",
+    "3rd Year AMC Invoice Amount with GST:-",
+    "3rd Year AMC Deduction",
+    "3rd Year AMC Invoice No:-",
+    "3rd Year AMC Invoice Date:-",
+    "3rd Year AMC Payment Amount Received",
+    "3rd Year AMC Payment Received Date",
+    "3rd Year AMC Remarks",
+    "4th Year AMC Bill Start Date:-",
+    "4th Year AMC Bill Amount with GST:-",
+    "4th Year AMC Bill Status",
+    "4th Year AMC Final MB Done Date:-",
+    "4th Year AMC Invoice Amount with GST:-",
+    "4th Year AMC Deduction",
+    "4th Year AMC Invoice No:-",
+    "4th Year AMC Invoice Date:-",
+    "4th Year AMC Payment Amount Received",
+    "4th Year AMC Payment Received Date",
+    "4th Year AMC Remarks",
+    "First Supply Good Bill Raised Date",
+    "First Supply Goods Bill Invoice No.",
+    "First Supply Goods Bill Invoice Amount",
+    "First Supply Goods Bill Received Amount",
+    "First Supply Good Paymemt Date",
+    "1st Year AMC Final MB Copy Photo/PDF",
+    "1st Year AMC Invoice Copy Photo/PDF",
+    "2nd Year AMC Final MB Copy Photo/PDF",
+    "2nd Year AMC Invoice Copy Photo/PDF",
+    "3rd Year AMC Final MB Copy Photo/PDF",
+    "3rd Year AMC Invoice Copy Photo/PDF",
+    "4th Year AMC Final MB Copy Photo/PDF",
+    "4th Year AMC Invoice Copy Photo/PDF",
+    "First Supply Goods Bill Invoice Attachment"
+  ];
+
+  // Create a mapping of checkpoint descriptions to IDs for easier lookup
+  const createCheckpointMap = () => {
+    const map = {};
+    if (checkpoints) {
+      checkpoints.forEach(cp => {
+        // Normalize the description by trimming and handling case sensitivity
+        const normalizedDesc = cp.Description.trim();
+        map[normalizedDesc] = cp.CheckpointId;
+        
+        // Also log for debugging
+        console.log(`Checkpoint: "${cp.Description}" -> ID: ${cp.CheckpointId}`);
+      });
+    }
+    return map;
+  };
+
+  const checkpointMap = createCheckpointMap();
+
+  const getCheckpointIdByDescription = (description) => {
+    // Normalize the search description too
+    const normalizedSearch = description.trim();
+    return checkpointMap[normalizedSearch];
+  };
+
+  const findTransactionDetail = (checkpointId) => {
+    if (!checkpointId) return null;
+    
+    // Convert both to string for consistent comparison
+    const checkpointIdStr = checkpointId.toString();
+    
+    const detail = transaction.Details.find(d => {
+      const detailChkIdStr = d.ChkId ? d.ChkId.toString() : null;
+      return detailChkIdStr === checkpointIdStr;
+    });
+    
+    console.log(`Looking for checkpoint ${checkpointIdStr}:`, detail ? `Found value: "${detail.Value}"` : "Not found");
+    return detail;
   };
 
   const getTransactionValue = (checkpointId) => {
-    const detail = transaction.Details.find(d => d.ChkId === checkpointId);
+    if (!checkpointId) return "-";
     
-    if (!detail) return "-";
+    const detail = findTransactionDetail(checkpointId);
     
-    if (["599", "603", "609","613","619","623","629","633"].includes(checkpointId)) {
+    if (!detail || detail.Value === null || detail.Value === undefined || detail.Value === "") {
+      return "-";
+    }
+    
+    // Check if this is a document field that should show a view button
+    const documentCheckpointIds = ["599", "603", "609", "613", "619", "623", "629", "633"];
+    if (documentCheckpointIds.includes(checkpointId.toString()) && detail.Value) {
       return (
         <button 
           className="view-button"
           onClick={() => window.open(detail.Value, "_blank")}
           title="View Document"
         >
-          <span className="view-icon">👁️</span> 
+          <span className="view-icon">👁️</span> View Document
         </button>
       );
     }
@@ -89,7 +201,6 @@ function AMCWorkDetails() {
     navigate("/edit-amc-work", { state: { transaction, checkpoints } });
   };
 
-  const allCheckpointIds = [...new Set(transaction.Details.map(detail => detail.ChkId))];
   const isAdmin = user?.role === "Admin";
 
   return (
@@ -104,7 +215,6 @@ function AMCWorkDetails() {
             Back to List
           </button>
           
-          {/* Export to Excel Button */}
           <button
             onClick={exportToExcel}
             className="action-button"
@@ -129,20 +239,39 @@ function AMCWorkDetails() {
         <table className="material-table">
           <thead>
             <tr>
-              <th>Field</th>
+              <th>Field Name</th>
               <th>Value</th>
+              {/* <th>Checkpoint ID</th> */}
+              {/* <th>Status</th> */}
             </tr>
           </thead>
           <tbody>
-            {allCheckpointIds.map(checkpointId => (
-              <tr key={checkpointId}>
-                <td>{getCheckpointDescription(checkpointId)}</td>
-                <td>{getTransactionValue(checkpointId)}</td>
-              </tr>
-            ))}
+            {fieldSequence.map(fieldName => {
+              const checkpointId = getCheckpointIdByDescription(fieldName);
+              const detail = checkpointId ? findTransactionDetail(checkpointId) : null;
+              const value = getTransactionValue(checkpointId);
+              const status = checkpointId ? (detail ? "Data Found" : "No Data") : "Checkpoint Not Found";
+              
+              return (
+                <tr key={fieldName}>
+                  <td>{fieldName}</td>
+                  <td>{value}</td>
+                  {/* <td>{checkpointId || "Not found"}</td> */}
+                  {/* <td style={{ 
+                    color: status === "Data Found" ? "green" : 
+                           status === "No Data" ? "orange" : "red",
+                    fontWeight: "bold"
+                  }}>
+                    {status}
+                  </td> */}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      
     </div>
   );
 }
