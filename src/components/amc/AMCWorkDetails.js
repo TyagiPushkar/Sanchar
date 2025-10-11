@@ -20,6 +20,45 @@ function AMCWorkDetails() {
     }
   }, []);
 
+  // Function to format date to dd-mm-yyyy
+  const formatDate = (dateString) => {
+    if (!dateString) return "-";
+    
+    try {
+      // Handle different date formats that might come from the database
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return dateString; // Return original if not a valid date
+      }
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateString; // Return original if formatting fails
+    }
+  };
+
+  // Function to check if a field is a date field based on its description
+  const isDateField = (fieldName) => {
+    const dateKeywords = [
+      'date', 'Date', 'DATE',
+      'start', 'Start', 'START',
+      'end', 'End', 'END',
+      'done', 'Done', 'DONE',
+      'raised', 'Raised', 'RAISED',
+      'recd', 'Recd', 'RECD',
+      'payment', 'Payment', 'PAYMENT'
+    ];
+    
+    return dateKeywords.some(keyword => fieldName.includes(keyword));
+  };
+
   // Function to export data to Excel
   const exportToExcel = () => {
     if (!transaction) return;
@@ -28,10 +67,16 @@ function AMCWorkDetails() {
     const dataToExport = fieldSequence.map(fieldName => {
       const checkpointId = getCheckpointIdByDescription(fieldName);
       const detail = checkpointId ? findTransactionDetail(checkpointId) : null;
+      let value = detail ? detail.Value : "-";
+      
+      // Format date values for Excel export too
+      if (detail && detail.Value && isDateField(fieldName)) {
+        value = formatDate(detail.Value);
+      }
       
       return {
         "Field": fieldName,
-        "Value": detail ? detail.Value : "-"
+        "Value": value
       };
     });
 
@@ -140,9 +185,6 @@ function AMCWorkDetails() {
         // Normalize the description by trimming and handling case sensitivity
         const normalizedDesc = cp.Description.trim();
         map[normalizedDesc] = cp.CheckpointId;
-        
-        // Also log for debugging
-        console.log(`Checkpoint: "${cp.Description}" -> ID: ${cp.CheckpointId}`);
       });
     }
     return map;
@@ -167,11 +209,10 @@ function AMCWorkDetails() {
       return detailChkIdStr === checkpointIdStr;
     });
     
-    console.log(`Looking for checkpoint ${checkpointIdStr}:`, detail ? `Found value: "${detail.Value}"` : "Not found");
     return detail;
   };
 
-  const getTransactionValue = (checkpointId) => {
+  const getTransactionValue = (checkpointId, fieldName) => {
     if (!checkpointId) return "-";
     
     const detail = findTransactionDetail(checkpointId);
@@ -192,6 +233,11 @@ function AMCWorkDetails() {
           <span className="view-icon">👁️</span> View Document
         </button>
       );
+    }
+    
+    // Format date fields to dd-mm-yyyy
+    if (isDateField(fieldName) && detail.Value) {
+      return formatDate(detail.Value);
     }
     
     return detail.Value;
@@ -241,37 +287,23 @@ function AMCWorkDetails() {
             <tr>
               <th>Field Name</th>
               <th>Value</th>
-              {/* <th>Checkpoint ID</th> */}
-              {/* <th>Status</th> */}
             </tr>
           </thead>
           <tbody>
             {fieldSequence.map(fieldName => {
               const checkpointId = getCheckpointIdByDescription(fieldName);
-              const detail = checkpointId ? findTransactionDetail(checkpointId) : null;
-              const value = getTransactionValue(checkpointId);
-              const status = checkpointId ? (detail ? "Data Found" : "No Data") : "Checkpoint Not Found";
+              const value = getTransactionValue(checkpointId, fieldName);
               
               return (
                 <tr key={fieldName}>
                   <td>{fieldName}</td>
                   <td>{value}</td>
-                  {/* <td>{checkpointId || "Not found"}</td> */}
-                  {/* <td style={{ 
-                    color: status === "Data Found" ? "green" : 
-                           status === "No Data" ? "orange" : "red",
-                    fontWeight: "bold"
-                  }}>
-                    {status}
-                  </td> */}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-
-      
     </div>
   );
 }
