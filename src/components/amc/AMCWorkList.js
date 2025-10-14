@@ -157,14 +157,14 @@ function AMCWorkList() {
             📊 Export to Excel
           </button>
           
-          {isAdmin && (
+         
             <button
               className="action-button new-material-button"
               onClick={() => navigate("/add-amc-work")}
             >
               Add Work
             </button>
-          )}
+          
         </div>
       </div>
 
@@ -197,14 +197,14 @@ function AMCWorkList() {
                       >
                         👁️
                       </button>
-                      {isAdmin && (
+                     
                         <button 
                           className="edit-button"
                           onClick={() => handleEdit(record)}
                         >
                           ✏️
                         </button>
-                      )}
+                     
                     </div>
                   </td>
                 </tr>
