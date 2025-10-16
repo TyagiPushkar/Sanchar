@@ -288,7 +288,13 @@ useEffect(() => {
     const isMandatory = cp.Mandatory === 1
 
     // Get unique LOA numbers from menuId=1 data
-    const loaNumbers = [...new Set(loaData.map(record => getTransactionValue(record, "60")).filter(loa => loa && loa !== "-"))]
+const loaNumbers = [
+  ...new Set(
+    loaData
+      .map(record => getTransactionValue(record, "60")) // get Value for ChkId 60
+      .filter(loa => loa != null && loa !== "-" && loa !== "") // remove null/undefined/"-"/""
+  )
+];
 
     return (
       <Grid container spacing={2} alignItems="center">
