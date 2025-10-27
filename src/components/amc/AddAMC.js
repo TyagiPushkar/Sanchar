@@ -32,8 +32,6 @@ function AddAMC() {
   const [visibleDependents, setVisibleDependents] = useState({})
   const [loading, setLoading] = useState(true)
   const [loadingError, setLoadingError] = useState("")
-  const [loaData, setLoaData] = useState([]) // For menuId=1 data
-  const [transactionsData, setTransactionsData] = useState([]) // For menuId=8 data
   const navigate = useNavigate()
 
   // Amount fields configuration
@@ -56,91 +54,58 @@ function AddAMC() {
     }).format(num)
   }
 
-  // Get value from transaction details by checkpoint ID
-  const getTransactionValue = (transaction, checkpointId) => {
-    if (!transaction || !transaction.Details) return "-"
-    const detail = transaction.Details.find((d) => d.ChkId === checkpointId)
-    return detail ? detail.Value : "-"
-  }
-
-  // Get value from LOA data (menuId=1) for a specific LOA and checkpoint
-  const getLoaValue = (loaNumber, checkpointId) => {
-    const loaRecord = loaData.find((record) => getTransactionValue(record, "60") === loaNumber)
-    return getTransactionValue(loaRecord, checkpointId)
-  }
-
-  // Get value from transactions data (menuId=8) for a specific LOA and checkpoint
-  const getTransactionsValue = (loaNumber, checkpointId) => {
-    const transactionRecord = transactionsData.find((record) => getTransactionValue(record, "581") === loaNumber)
-    return getTransactionValue(transactionRecord, checkpointId)
-  }
-
   // Calculate AMC amounts when LOA number or number of cycles changes
-  // Calculate AMC amounts when LOA number or number of cycles changes
-useEffect(() => {
-  const calculateAMCAmounts = async () => {
-    const loaNumber = formData[589]; // LOA Number from menuId=10
-    
-    if (!loaNumber) {
-      // Reset AMC amounts if no LOA number
-      amcAmountFields.forEach(fieldId => {
-        handleChange(fieldId, "0.00");
-      });
-      return;
-    }
-
-    try {
-      // Get total bid value from menuId=1 (chkid=72)
-      const totalBidValue = parseFloat(getLoaValue(loaNumber, "72")) || 0;
-      console.log("Total Bid Value:", totalBidValue);
+  useEffect(() => {
+    const calculateAMCAmounts = async () => {
+      const loaNumber = formData[589]; // LOA Number from menuId=10
       
-      // Get goods bill amount from CURRENT FORM FIELD (chkid=656)
-      const goodsBillAmount = parseFloat(formData[656]) || 0;
-      console.log("Goods Bill Amount:", goodsBillAmount);
-      
-      // Calculate remaining amount
-      const remainingAmount = totalBidValue - goodsBillAmount;
-      console.log("Remaining Amount:", remainingAmount);
-      
-      // Get number of cycles from form data (limited to 1,2,3,4)
-      const numberOfCycles = parseInt(formData[numberOfCyclesField]) || 1;
-      console.log("Number of Cycles:", numberOfCycles);
-      
-      if (remainingAmount > 0 && numberOfCycles > 0) {
-        // Calculate amount per cycle
-        const amountPerCycle = remainingAmount / numberOfCycles;
-        console.log("Amount per cycle:", amountPerCycle);
-        
-        // Reset all AMC fields first
+      if (!loaNumber) {
+        // Reset AMC amounts if no LOA number
         amcAmountFields.forEach(fieldId => {
           handleChange(fieldId, "0.00");
         });
+        return;
+      }
+
+      try {
+        // For now, we'll use a simple calculation
+        // You can modify this based on your actual business logic
+        const goodsBillAmount = parseFloat(formData[656]) || 0;
+        const numberOfCycles = parseInt(formData[numberOfCyclesField]) || 1;
         
-        // Distribute amounts across the AMC fields based on number of cycles
-        for (let i = 0; i < numberOfCycles; i++) {
-          if (i < amcAmountFields.length) {
-            const fieldId = amcAmountFields[i];
-            handleChange(fieldId, amountPerCycle.toFixed(2));
-            console.log(`Setting field ${fieldId} to:`, amountPerCycle.toFixed(2));
+        if (goodsBillAmount > 0 && numberOfCycles > 0) {
+          // Simple calculation - you can replace this with your actual logic
+          const amountPerCycle = goodsBillAmount / numberOfCycles;
+          
+          // Reset all AMC fields first
+          amcAmountFields.forEach(fieldId => {
+            handleChange(fieldId, "0.00");
+          });
+          
+          // Distribute amounts across the AMC fields based on number of cycles
+          for (let i = 0; i < numberOfCycles; i++) {
+            if (i < amcAmountFields.length) {
+              const fieldId = amcAmountFields[i];
+              handleChange(fieldId, amountPerCycle.toFixed(2));
+            }
           }
+        } else {
+          // Reset AMC amounts if calculation fails
+          amcAmountFields.forEach(fieldId => {
+            handleChange(fieldId, "0.00");
+          });
         }
-      } else {
-        // Reset AMC amounts if calculation fails
+      } catch (error) {
+        console.error("Error calculating AMC amounts:", error);
+        // Reset AMC amounts on error
         amcAmountFields.forEach(fieldId => {
           handleChange(fieldId, "0.00");
         });
       }
-    } catch (error) {
-      console.error("Error calculating AMC amounts:", error);
-      // Reset AMC amounts on error
-      amcAmountFields.forEach(fieldId => {
-        handleChange(fieldId, "0.00");
-      });
-    }
-  };
+    };
 
-  calculateAMCAmounts();
-}, [formData[589], formData[656], formData[numberOfCyclesField], loaData]); // Added formData[656] to dependencies
+    calculateAMCAmounts();
+  }, [formData[589], formData[656], formData[numberOfCyclesField]]);
 
   // Calculate total bid value whenever any amount field changes
   useEffect(() => {
@@ -242,12 +207,6 @@ useEffect(() => {
         const menuRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_menu.php")
         const checkpointRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php")
         const typeRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_types.php")
-        
-        // Fetch LOA data (menuId=1)
-        const loaRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=1")
-        
-        // Fetch transactions data (menuId=8)
-        const transactionsRes = await axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=8")
 
         const checkpointIds = menuRes.data.data[9].CheckpointId.split(";").map((p) =>
           p.split(",").map((id) => Number.parseInt(id)),
@@ -256,8 +215,6 @@ useEffect(() => {
         setPages(checkpointIds)
         setCheckpoints(checkpointRes.data.data)
         setTypes(typeRes.data.data)
-        setLoaData(loaRes.data.data)
-        setTransactionsData(transactionsRes.data.data)
       } catch (error) {
         console.error("Error fetching data:", error)
         setLoadingError("Failed to load form data. Please try again later.")
@@ -287,14 +244,8 @@ useEffect(() => {
     const editable = cp.Editable === 1
     const isMandatory = cp.Mandatory === 1
 
-    // Get unique LOA numbers from menuId=1 data
-const loaNumbers = [
-  ...new Set(
-    loaData
-      .map(record => getTransactionValue(record, "60")) // get Value for ChkId 60
-      .filter(loa => loa != null && loa !== "-" && loa !== "") // remove null/undefined/"-"/""
-  )
-];
+    // Get LOA numbers from the checkpoint options if available
+    const loaOptions = cp.Options ? cp.Options.split(",").map(opt => opt.trim()).filter(opt => opt !== "") : [];
 
     return (
       <Grid container spacing={2} alignItems="center">
@@ -308,7 +259,7 @@ const loaNumbers = [
           <Autocomplete
             fullWidth
             freeSolo
-            options={loaNumbers}
+            options={loaOptions}
             value={value}
             onChange={(event, newValue) => {
               handleChange(cp.CheckpointId, newValue || "")
