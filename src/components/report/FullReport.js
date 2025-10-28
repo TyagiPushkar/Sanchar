@@ -298,115 +298,216 @@ function FullReport() {
   }
 
   const exportToExcel = () => {
-    // Prepare data for export
-    const exportData = filteredRecords.map((record) => {
-      const loaNumber = getLoaValueDirect(record, "60")
-      return {
-        "LOA Number": loaNumber,
-        "LOA Date": formatDate(getLoaValueDirect(record, "126")),
-        "LOA File No.": getLoaValueDirect(record, "651"),
-        "Tender No.": getLoaValueDirect(record, "4"),
-        "Value Of Order": getLoaValueDirect(record, "72"),
-        "WPC Work": getLoaValueDirect(record, "69"),
-        "Transmitter QTY": getLoaValueDirect(record, "61"),
-        "RX Receiver QTY": getLoaValueDirect(record, "63"),
-        "Date Of Work Start": formatDate(getStatusValue(loaNumber, "649")),
-        "Project Status": getProjectStatus(loaNumber),
-        "Handover Date of System": formatDate(getStatusValue(loaNumber, "590")),
-        "Warranty Period": calculateWarrantyPeriod(loaNumber),
-        "Total Amount":
-          Number(getStatusValue(loaNumber, "596")) +
-          Number(getStatusValue(loaNumber, "606")) +
-          Number(getStatusValue(loaNumber, "616")) +
-          Number(getStatusValue(loaNumber, "626")),
-        "Payment Status": getStatusValue(loaNumber, "627"),
-        "Billing Cycle": getStatusValue(loaNumber, "594"),
-        "Amount Per Cycle": getStatusValue(loaNumber, "596"),
-        "Pending Invoice Amount": calculatePendingAmount(loaNumber),
-        "First ARC Start Date": formatDate(getStatusValue(loaNumber, "595")),
-        "First Bill No.": getStatusValue(loaNumber, "601"),
-        "First Bill Date": formatDate(getStatusValue(loaNumber, "602")),
-        "First Amount": getStatusValue(loaNumber, "596"),
-        "First Payment Status Remarks": getStatusValue(loaNumber, "604"),
-        "Second ARC Start Date": formatDate(getStatusValue(loaNumber, "605")),
-        "Second Bill No.": getStatusValue(loaNumber, "611"),
-        "Second Bill Date": formatDate(getStatusValue(loaNumber, "612")),
-        "Second Amount": getStatusValue(loaNumber, "606"),
-        "Second Payment Status Remarks": getStatusValue(loaNumber, "614"),
-        "Third ARC Start Date": formatDate(getStatusValue(loaNumber, "615")),
-        "Third Bill No.": getStatusValue(loaNumber, "621"),
-        "Third Bill Date": formatDate(getStatusValue(loaNumber, "622")),
-        "Third Amount": getStatusValue(loaNumber, "616"),
-        "Third Payment Status Remarks": getStatusValue(loaNumber, "624"),
-        "Fourth ARC Start Date": formatDate(getStatusValue(loaNumber, "625")),
-        "Fourth Bill No.": getStatusValue(loaNumber, "631"),
-        "Fourth Bill Date": formatDate(getStatusValue(loaNumber, "632")),
-        "Fourth Amount": getStatusValue(loaNumber, "626"),
-        "Fourth Payment Status Remarks": getStatusValue(loaNumber, "634"),
-      }
-    })
+  // Prepare data for export - match exactly with table columns
+  const exportData = filteredRecords.map((record) => {
+    const loaNumber = getLoaValueDirect(record, "60")
+    const goodsReceivedAmount = Number(getStatusValue(loaNumber, "656")) || 0
+    // Calculate amounts for difference columns
+    const firstAmount = Number(getStatusValue(loaNumber, "596")) || 0
+    const firstReceived = Number(getStatusValue(loaNumber, "660")) || 0
+    const firstDifference = firstAmount - firstReceived
+    
+    const secondAmount = Number(getStatusValue(loaNumber, "606")) || 0
+    const secondReceived = Number(getStatusValue(loaNumber, "663")) || 0
+    const secondDifference = secondAmount - secondReceived
+    
+    const thirdAmount = Number(getStatusValue(loaNumber, "616")) || 0
+    const thirdReceived = Number(getStatusValue(loaNumber, "666")) || 0
+    const thirdDifference = thirdAmount - thirdReceived
+    
+    const fourthAmount = Number(getStatusValue(loaNumber, "626")) || 0
+    const fourthReceived = Number(getStatusValue(loaNumber, "669")) || 0
+    const fourthDifference = fourthAmount - fourthReceived
 
-    // Add totals row
-    const { transmitterTotal, receiverTotal, totalAmount, pendingInvoiceTotal } = calculateTotals()
-    exportData.push({
-      "LOA Number": "TOTAL",
-      "LOA Date": "",
-      "LOA File No.": "",
-      "Tender No.": "",
-      "Value Of Order": "",
-      "WPC Work": "",
-      "Transmitter QTY": transmitterTotal,
-      "RX Receiver QTY": receiverTotal,
-      "Date Of Work Start": "",
-      "Project Status": "",
-      "Handover Date of System": "",
-      "Warranty Period": "",
-      "Total Amount": totalAmount,
-      "Payment Status": "",
-      "Billing Cycle": "",
-      "Amount Per Cycle": "",
-      "Pending Invoice Amount": pendingInvoiceTotal,
-      "First ARC Start Date": "",
-      "First Bill No.": "",
-      "First Bill Date": "",
-      "First Amount": "",
-      "First Payment Status Remarks": "",
-      "Second ARC Start Date": "",
-      "Second Bill No.": "",
-      "Second Bill Date": "",
-      "Second Amount": "",
-      "Second Payment Status Remarks": "",
-      "Third ARC Start Date": "",
-      "Third Bill No.": "",
-      "Third Bill Date": "",
-      "Third Amount": "",
-      "Third Payment Status Remarks": "",
-      "Fourth ARC Start Date": "",
-      "Fourth Bill No.": "",
-      "Fourth Bill Date": "",
-      "Fourth Amount": "",
-      "Fourth Payment Status Remarks": "",
-    })
+    // Calculate pending amount (similar to table column)
+    const totalOrderValue = Number(getLoaValueDirect(record, "72")) || 0
+    const totalReceived = firstReceived + secondReceived + thirdReceived + fourthReceived
+    const pendingAmount = totalOrderValue - goodsReceivedAmount - totalReceived
 
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new()
-    const ws = XLSX.utils.json_to_sheet(exportData)
+    return {
+      "LOA Number": loaNumber,
+      "LOA Date": formatDate(getLoaValueDirect(record, "126")),
+      "LOA File No.": getLoaValueDirect(record, "651"),
+      "Tender No.": getLoaValueDirect(record, "4"),
+      "Value Of Order": getLoaValueDirect(record, "72"),
+      "WPC Work": getLoaValueDirect(record, "69"),
+      "Transmitter QTY": getLoaValueDirect(record, "61"),
+      "RX Receiver QTY": getLoaValueDirect(record, "63"),
+      "Pending Amount": pendingAmount,
+      "Date Of Work Start": formatDate(getStatusValue(loaNumber, "649")),
+      "Project Status": getProjectStatus(loaNumber),
+      "e-MB Date": formatDate(getStatusValue(loaNumber, "590")),
+      "Warranty Period": calculateWarrantyPeriod(loaNumber),
+      "Good Bill Raised Date": formatDate(getStatusValue(loaNumber, "652")),
+      "Goods Bill Invoice No.": getStatusValue(loaNumber, "653"),
+      "Invoice Amount": getStatusValue(loaNumber, "656"),
+      "Billing Cycle": getStatusValue(loaNumber, "594"),
+      "Amount Per Cycle": getStatusValue(loaNumber, "596"),
+      "Pending Invoice Amount": calculatePendingAmount(loaNumber),
+      
+      // First AMC Cycle
+      "First AMC Start Date": formatDate(getStatusValue(loaNumber, "595")),
+      "First Bill No.": getStatusValue(loaNumber, "601"),
+      "First Bill Date": formatDate(getStatusValue(loaNumber, "602")),
+      "First Invoice Amount": getStatusValue(loaNumber, "596"),
+      "First Amount Received": getStatusValue(loaNumber, "660"),
+      "First Amount Difference": firstDifference,
+      "First Payment Status Remarks": getStatusValue(loaNumber, "604"),
+      
+      // Second AMC Cycle
+      "Second AMC Start Date": formatDate(getStatusValue(loaNumber, "605")),
+      "Second Bill No.": getStatusValue(loaNumber, "611"),
+      "Second Bill Date": formatDate(getStatusValue(loaNumber, "612")),
+      "Second Invoice Amount": getStatusValue(loaNumber, "606"),
+      "Second Amount Received": getStatusValue(loaNumber, "663"),
+      "Second Amount Difference": secondDifference,
+      "Second Payment Status Remarks": getStatusValue(loaNumber, "614"),
+      
+      // Third AMC Cycle
+      "Third AMC Start Date": formatDate(getStatusValue(loaNumber, "615")),
+      "Third Bill No.": getStatusValue(loaNumber, "621"),
+      "Third Bill Date": formatDate(getStatusValue(loaNumber, "622")),
+      "Third Invoice Amount": getStatusValue(loaNumber, "616"),
+      "Third Amount Received": getStatusValue(loaNumber, "666"),
+      "Third Amount Difference": thirdDifference,
+      "Third Payment Status Remarks": getStatusValue(loaNumber, "624"),
+      
+      // Fourth AMC Cycle
+      "Fourth AMC Start Date": formatDate(getStatusValue(loaNumber, "625")),
+      "Fourth Bill No.": getStatusValue(loaNumber, "631"),
+      "Fourth Bill Date": formatDate(getStatusValue(loaNumber, "632")),
+      "Fourth Invoice Amount": getStatusValue(loaNumber, "626"),
+      "Fourth Amount Received": getStatusValue(loaNumber, "669"),
+      "Fourth Amount Difference": fourthDifference,
+      "Fourth Payment Status Remarks": getStatusValue(loaNumber, "634"),
+    }
+  })
 
-    // Set column widths
-    const colWidths = Array(38).fill({ wch: 15 })
-    ws["!cols"] = colWidths
+  // Add totals row
+  const { transmitterTotal, receiverTotal, totalAmount, pendingInvoiceTotal } = calculateTotals()
+  
+  // Calculate total pending amount for all records
+  const totalPendingAmount = filteredRecords.reduce((sum, record) => {
+    const loaNumber = getLoaValueDirect(record, "60")
+    const totalOrderValue = Number(getLoaValueDirect(record, "72")) || 0
+    const firstReceived = Number(getStatusValue(loaNumber, "660")) || 0
+    const secondReceived = Number(getStatusValue(loaNumber, "663")) || 0
+    const thirdReceived = Number(getStatusValue(loaNumber, "666")) || 0
+    const fourthReceived = Number(getStatusValue(loaNumber, "669")) || 0
+    const totalReceived = firstReceived + secondReceived + thirdReceived + fourthReceived
+    return sum + (totalOrderValue - totalReceived)
+  }, 0)
 
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Full Report")
+  exportData.push({
+    "LOA Number": "TOTAL",
+    "LOA Date": "",
+    "LOA File No.": "",
+    "Tender No.": "",
+    "Value Of Order": "",
+    "WPC Work": "",
+    "Transmitter QTY": transmitterTotal,
+    "RX Receiver QTY": receiverTotal,
+    "Pending Amount": totalPendingAmount,
+    "Date Of Work Start": "",
+    "Project Status": "",
+    "e-MB Date": "",
+    "Warranty Period": "",
+    "Good Bill Raised Date": "",
+    "Goods Bill Invoice No.": "",
+    "Invoice Amount": "",
+    "Billing Cycle": "",
+    "Amount Per Cycle": "",
+    "Pending Invoice Amount": pendingInvoiceTotal,
+    
+    // First AMC Cycle totals
+    "First AMC Start Date": "",
+    "First Bill No.": "",
+    "First Bill Date": "",
+    "First Invoice Amount": "",
+    "First Amount Received": "",
+    "First Amount Difference": "",
+    "First Payment Status Remarks": "",
+    
+    // Second AMC Cycle totals
+    "Second AMC Start Date": "",
+    "Second Bill No.": "",
+    "Second Bill Date": "",
+    "Second Invoice Amount": "",
+    "Second Amount Received": "",
+    "Second Amount Difference": "",
+    "Second Payment Status Remarks": "",
+    
+    // Third AMC Cycle totals
+    "Third AMC Start Date": "",
+    "Third Bill No.": "",
+    "Third Bill Date": "",
+    "Third Invoice Amount": "",
+    "Third Amount Received": "",
+    "Third Amount Difference": "",
+    "Third Payment Status Remarks": "",
+    
+    // Fourth AMC Cycle totals
+    "Fourth AMC Start Date": "",
+    "Fourth Bill No.": "",
+    "Fourth Bill Date": "",
+    "Fourth Invoice Amount": "",
+    "Fourth Amount Received": "",
+    "Fourth Amount Difference": "",
+    "Fourth Payment Status Remarks": "",
+  })
 
-    // Generate filename with current date
-    const today = new Date()
-    const dateStr = today.toISOString().split("T")[0]
-    const filename = `Full_Report_${dateStr}.xlsx`
+  // Create workbook and worksheet
+  const wb = XLSX.utils.book_new()
+  const ws = XLSX.utils.json_to_sheet(exportData)
 
-    // Save file
-    XLSX.writeFile(wb, filename)
-  }
+  // Set column widths - adjust based on the number of columns (now 38 columns)
+  const colWidths = [
+    { wch: 15 }, // LOA Number
+    { wch: 12 }, // LOA Date
+    { wch: 15 }, // LOA File No.
+    { wch: 15 }, // Tender No.
+    { wch: 15 }, // Value Of Order
+    { wch: 12 }, // WPC Work
+    { wch: 15 }, // Transmitter QTY
+    { wch: 15 }, // RX Receiver QTY
+    { wch: 15 }, // Pending Amount
+    { wch: 15 }, // Date Of Work Start
+    { wch: 15 }, // Project Status
+    { wch: 12 }, // e-MB Date
+    { wch: 15 }, // Warranty Period
+    { wch: 18 }, // Good Bill Raised Date
+    { wch: 20 }, // Goods Bill Invoice No.
+    { wch: 15 }, // Invoice Amount
+    { wch: 12 }, // Billing Cycle
+    { wch: 15 }, // Amount Per Cycle
+    { wch: 20 }, // Pending Invoice Amount
+    
+    // First AMC Cycle (7 columns)
+    { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 20 },
+    
+    // Second AMC Cycle (7 columns)
+    { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 20 },
+    
+    // Third AMC Cycle (7 columns)
+    { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 20 },
+    
+    // Fourth AMC Cycle (7 columns)
+    { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 20 },
+  ]
+  
+  ws["!cols"] = colWidths
+
+  // Add worksheet to workbook
+  XLSX.utils.book_append_sheet(wb, ws, "Full Report")
+
+  // Generate filename with current date
+  const today = new Date()
+  const dateStr = today.toISOString().split("T")[0]
+  const filename = `Full_Report_${dateStr}.xlsx`
+
+  // Save file
+  XLSX.writeFile(wb, filename)
+}
 
   const { transmitterTotal, receiverTotal, totalAmount, pendingInvoiceTotal } = calculateTotals()
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage)
@@ -463,34 +564,7 @@ function FullReport() {
 
       {error && <div className="error-message">{error}</div>}
 
-      {/* Totals Display - Show totals for ALL filtered data */}
-      <div className="totals-container" style={{ 
-        marginBottom: '15px', 
-        padding: '10px', 
-        backgroundColor: '#f8f9fa', 
-        border: '1px solid #dee2e6',
-        borderRadius: '4px'
-      }}>
-        <h4 style={{ margin: '0 0 10px 0', color: '#495057' }}>Total Summary (All Filtered Records)</h4>
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <strong>Total Transmitter QTY:</strong>
-            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>{transmitterTotal}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <strong>Total Receiver QTY:</strong>
-            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>{receiverTotal}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <strong>Total Amount:</strong>
-            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>₹{totalAmount.toLocaleString('en-IN')}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <strong>Total Pending Invoice:</strong>
-            <span style={{ color: '#dc3545', fontWeight: 'bold' }}>₹{pendingInvoiceTotal.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-      </div>
+      
 
       <div className="table-container" style={{ maxHeight: "70vh", overflowY: "auto" }}>
         <table className="material-table" style={{ border: "1px solid #ddd" }}>
@@ -504,6 +578,7 @@ function FullReport() {
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>WPC Work</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Transmitter QTY</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>RX Receiver QTY</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Pending Amount</th>
               <th style={{ border: "1px solid #ddd", minWidth: "140px" }}>Date Of Work Start</th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>Project Status</th>
               <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>e-MB Date</th>
@@ -518,22 +593,30 @@ function FullReport() {
               <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>First AMC Start Date</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill No.</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill Date</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Invoice Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Received</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Diffrence</th>
               <th style={{ border: "1px solid #ddd", minWidth: "180px" }}>Payment Status Remarks</th>
               <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>Second AMC Start Date</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill No.</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill Date</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Invoice Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Received</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Diffrence</th>
               <th style={{ border: "1px solid #ddd", minWidth: "180px" }}>Payment Status Remarks</th>
               <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>Third AMC Start Date</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill No.</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill Date</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Invoice Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Received</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Diffrence</th>
               <th style={{ border: "1px solid #ddd", minWidth: "180px" }}>Payment Status Remarks</th>
               <th style={{ border: "1px solid #ddd", minWidth: "160px" }}>Fourth AMC Start Date</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill No.</th>
               <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Bill Date</th>
-              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Invoice Amount</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Received</th>
+              <th style={{ border: "1px solid #ddd", minWidth: "100px" }}>Amount Diffrence</th>
               <th style={{ border: "1px solid #ddd", minWidth: "180px" }}>Payment Status Remarks</th>
             </tr>
           </thead>
@@ -553,6 +636,7 @@ function FullReport() {
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "69")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "61")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getLoaValueDirect(record, "63")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{(getLoaValueDirect(record, "72")-getStatusValue(loaNumber, "656")-getStatusValue(loaNumber, "660")- getStatusValue(loaNumber, "663")-getStatusValue(loaNumber, "666")-getStatusValue(loaNumber, "669"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {formatDate(getStatusValue(loaNumber, "649"))}
                     </td>
@@ -572,21 +656,29 @@ function FullReport() {
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "601")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "602"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "596")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "660")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "596") - getStatusValue(loaNumber, "660")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "604")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "605"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "611")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "612"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "606")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "663")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "606") - getStatusValue(loaNumber, "663")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "614")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "615"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "621")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "622"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "616")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "666")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "616") - getStatusValue(loaNumber, "666")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "624")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "625"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "631")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{formatDate(getStatusValue(loaNumber, "632"))}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "626")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "669")}</td>
+                    <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "626") - getStatusValue(loaNumber, "669")}</td>
                     <td style={{ border: "1px solid #ddd" }}>{getStatusValue(loaNumber, "634")}</td>
                   </tr>
                 )
