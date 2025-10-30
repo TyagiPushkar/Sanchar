@@ -220,7 +220,7 @@ function BuyerList() {
           <Button
             variant="contained"
             startIcon={<Plus size={18} />}
-            onClick={() => navigate("/new-buyer")}
+            onClick={() => navigate("/new-consignee")}
             sx={{
               backgroundColor: "#F69320",
               "&:hover": {
