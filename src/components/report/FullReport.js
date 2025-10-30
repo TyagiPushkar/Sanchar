@@ -42,7 +42,12 @@ function FullReport() {
           setLoaData(loaResponse.data.data)
           setFilteredRecords(loaResponse.data.data) // Set LOA data as filtered records
         } else {
-          setError("Failed to fetch data from one or more sources.")
+          // setError("Failed to fetch data from one or more sources.")
+          setTransactions(transactionsResponse.data.data)
+          setStatusData(statusResponse.data.data)
+          setLoaData(loaResponse.data.data)
+          setFilteredRecords(loaResponse.data.data)
+          setLoading(false)
         }
       } catch (err) {
         setError("Failed to connect to the server.")
