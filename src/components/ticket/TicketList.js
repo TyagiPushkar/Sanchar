@@ -24,9 +24,10 @@ import {
   InputLabel,
   Select
 } from '@mui/material';
-import { Search, Add, Visibility, FilterList, Clear } from '@mui/icons-material';
+import { Search, Add, Visibility, FilterList, Clear, GetApp } from '@mui/icons-material';
 import CreateTicketDialog from './CreateTicketDialog';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 const TicketList = () => {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ const TicketList = () => {
   const [page, setPage] = useState(1);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [error, setError] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);
   
   // Column filter states
   const [columnFilters, setColumnFilters] = useState({
@@ -180,12 +182,122 @@ const TicketList = () => {
     return values.sort();
   };
 
+  // Export to Excel function
+  const exportToExcel = () => {
+    setExportLoading(true);
+    
+    try {
+      // Prepare data for export
+      const exportData = filtered.map(ticket => ({
+        'Ticket ID': ticket.Id,
+        'LOA': ticket.LOA,
+        'Technician': ticket.EmpName,
+        'Station': ticket.Station,
+        'Contact Person': ticket.ContactPerson,
+        'Contact Number': ticket.ContactNumber,
+        'Status': ticket.Status,
+        'Assign Date': new Date(ticket.Date).toLocaleDateString('en-GB'),
+        'Action Date': new Date(ticket.UpdateDateTime).toLocaleDateString('en-GB')
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths
+      const colWidths = [
+        { wch: 10 }, // Ticket ID
+        { wch: 15 }, // LOA
+        { wch: 20 }, // Technician
+        { wch: 25 }, // Station
+        { wch: 20 }, // Contact Person
+        { wch: 15 }, // Contact Number
+        { wch: 12 }, // Status
+        { wch: 12 }, // Assign Date
+        { wch: 12 }, // Action Date
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Support Tickets');
+
+      // Generate file name with timestamp
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const fileName = `support_tickets_${timestamp}.xlsx`;
+
+      // Export the file
+      XLSX.writeFile(wb, fileName);
+      
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      setError('Failed to export data to Excel');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Export all data to Excel (ignoring filters)
+  const exportAllToExcel = () => {
+    setExportLoading(true);
+    
+    try {
+      // Prepare all data for export
+      const exportData = tickets.map(ticket => ({
+        'Ticket ID': ticket.Id,
+        'LOA': ticket.LOA,
+        'Technician': ticket.EmpName,
+        'Station': ticket.Station,
+        'Contact Person': ticket.ContactPerson,
+        'Contact Number': ticket.ContactNumber,
+        'Status': ticket.Status,
+        'Assign Date': new Date(ticket.Date).toLocaleDateString('en-GB'),
+        'Action Date': new Date(ticket.UpdateDateTime).toLocaleDateString('en-GB')
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths
+      const colWidths = [
+        { wch: 10 }, // Ticket ID
+        { wch: 15 }, // LOA
+        { wch: 20 }, // Technician
+        { wch: 25 }, // Station
+        { wch: 20 }, // Contact Person
+        { wch: 15 }, // Contact Number
+        { wch: 12 }, // Status
+        { wch: 12 }, // Assign Date
+        { wch: 12 }, // Action Date
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'All Support Tickets');
+
+      // Generate file name with timestamp
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const fileName = `all_support_tickets_${timestamp}.xlsx`;
+
+      // Export the file
+      XLSX.writeFile(wb, fileName);
+      
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      setError('Failed to export data to Excel');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const totalPages = Math.ceil(filtered.length / rowsPerPage);
   const startIndex = (page - 1) * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
   const paginatedTickets = filtered.slice(startIndex, endIndex);
 
   const hasActiveFilters = Object.values(columnFilters).some(filter => filter !== '') || searchTerm !== '';
+  const hasFilteredData = filtered.length > 0;
+  const hasAnyData = tickets.length > 0;
 
   return (
     <Box sx={{ p: 0 }}>
@@ -217,7 +329,18 @@ const TicketList = () => {
               onClick={clearAllFilters}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              Clear Filters
+              Clear
+            </Button>
+          )}
+          {hasAnyData && (
+            <Button
+              variant="outlined"
+              
+              onClick={exportToExcel}
+              disabled={exportLoading || !hasFilteredData}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              <GetApp />
             </Button>
           )}
           <Button
@@ -231,9 +354,12 @@ const TicketList = () => {
         </Stack>
       </Box>
 
+      {/* Export All Button - Only show when there are active filters */}
+     
+
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
@@ -367,7 +493,6 @@ const TicketList = () => {
 
                   <TableCell sx={{ color: "#fff" }}><strong>Assign Date</strong></TableCell>
                   <TableCell sx={{ color: "#fff" }}><strong>Action Date</strong></TableCell>
-                  {/* <TableCell sx={{ color: "#fff" }}><strong>Actions</strong></TableCell> */}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -380,17 +505,16 @@ const TicketList = () => {
                         </Typography>
                       </TableCell>
                       <TableCell
-  onClick={() => handleViewTicket(ticket.Id)}
-  sx={{
-    cursor: "pointer",
-    "&:hover": {
-      color: "#4020f6ff",
-    },
-  }}
->
-  {ticket.LOA}
-</TableCell>
-
+                        onClick={() => handleViewTicket(ticket.Id)}
+                        sx={{
+                          cursor: "pointer",
+                          "&:hover": {
+                            color: "#4020f6ff",
+                          },
+                        }}
+                      >
+                        {ticket.LOA}
+                      </TableCell>
                       <TableCell>{ticket.EmpName}</TableCell>
                       <TableCell>{ticket.Station}</TableCell>
                       <TableCell>{ticket.ContactPerson}</TableCell>
@@ -408,20 +532,11 @@ const TicketList = () => {
                       <TableCell>
                         {new Date(ticket.UpdateDateTime).toLocaleDateString('en-GB')}
                       </TableCell>
-                      {/* <TableCell>
-                        <IconButton 
-                          onClick={() => handleViewTicket(ticket.Id)}
-                          color="primary"
-                          aria-label="view ticket"
-                        >
-                          <Visibility />
-                        </IconButton>
-                      </TableCell> */}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">
                         No tickets found. {hasActiveFilters && 'Try clearing some filters.'}
                       </Typography>
@@ -481,6 +596,7 @@ const TicketList = () => {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 Showing {startIndex + 1} to {Math.min(endIndex, filtered.length)} of {filtered.length} tickets
+                {hasActiveFilters && ` (Filtered from ${tickets.length} total)`}
               </Typography>
               <Pagination
                 count={totalPages}
