@@ -17,9 +17,14 @@ import {
   InputAdornment,
   Stack,
   Alert,
-  IconButton
+  IconButton,
+  Popover,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
-import { Search, Add, Visibility } from '@mui/icons-material';
+import { Search, Add, Visibility, FilterList, Clear } from '@mui/icons-material';
 import CreateTicketDialog from './CreateTicketDialog';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,11 +37,29 @@ const TicketList = () => {
   const [page, setPage] = useState(1);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [error, setError] = useState('');
+  
+  // Column filter states
+  const [columnFilters, setColumnFilters] = useState({
+    LOA: '',
+    EmpName: '',
+    Station: '',
+    ContactPerson: '',
+    ContactNumber: '',
+    Status: ''
+  });
+  
+  const [filterAnchorEl, setFilterAnchorEl] = useState(null);
+  const [currentFilterColumn, setCurrentFilterColumn] = useState('');
+  
   const rowsPerPage = 10;
 
   useEffect(() => {
     fetchTickets();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [tickets, searchTerm, columnFilters]);
 
   const fetchTickets = async () => {
     try {
@@ -47,38 +70,88 @@ const TicketList = () => {
 
       if (data.success) {
         setTickets(data.data);
-        setFiltered(data.data);
       } else {
         setTickets([]);
-        setFiltered([]);
         setError('Failed to fetch tickets');
       }
     } catch (err) {
       console.error('Error fetching tickets:', err);
       setError('Network error occurred while fetching tickets');
       setTickets([]);
-      setFiltered([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const applyFilters = () => {
+    let filteredTickets = [...tickets];
+
+    // Apply global search
+    if (searchTerm) {
+      filteredTickets = filteredTickets.filter(
+        (ticket) =>
+          ticket.Station?.toLowerCase().includes(searchTerm) ||
+          ticket.EmpName?.toLowerCase().includes(searchTerm) ||
+          ticket.ContactPerson?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    // Apply column filters
+    Object.keys(columnFilters).forEach(column => {
+      const filterValue = columnFilters[column];
+      if (filterValue) {
+        filteredTickets = filteredTickets.filter(ticket => 
+          String(ticket[column] || '').toLowerCase().includes(filterValue.toLowerCase())
+        );
+      }
+    });
+
+    setFiltered(filteredTickets);
+    setPage(1);
+  };
+
+  const handleColumnFilterChange = (column, value) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [column]: value
+    }));
+  };
+
+  const clearColumnFilter = (column) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [column]: ''
+    }));
+  };
+
+  const clearAllFilters = () => {
+    setColumnFilters({
+      LOA: '',
+      EmpName: '',
+      Station: '',
+      ContactPerson: '',
+      ContactNumber: '',
+      Status: ''
+    });
+    setSearchTerm('');
+  };
+
+  const handleFilterClick = (event, column) => {
+    setFilterAnchorEl(event.currentTarget);
+    setCurrentFilterColumn(column);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+    setCurrentFilterColumn('');
+  };
+
   const handleViewTicket = (ticketId) => {
-    // Navigate to ticket detail page with the ticket ID
     navigate(`/tickets/${ticketId}`);
   };
 
   const handleSearch = (event) => {
-    const val = event.target.value.toLowerCase();
-    setSearchTerm(val);
-    const filteredList = tickets.filter(
-      (ticket) =>
-        ticket.Station?.toLowerCase().includes(val) ||
-        ticket.EmpName?.toLowerCase().includes(val) ||
-        ticket.ContactPerson?.toLowerCase().includes(val)
-    );
-    setFiltered(filteredList);
-    setPage(1);
+    setSearchTerm(event.target.value.toLowerCase());
   };
 
   const handleTicketCreated = () => {
@@ -88,11 +161,11 @@ const TicketList = () => {
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'assigned':
+      case 'complete':
         return 'primary';
       case 'in progress':
         return 'warning';
-      case 'complete':
+      case 'closed':
         return 'success';
       case 'wip':
         return 'error';
@@ -101,10 +174,18 @@ const TicketList = () => {
     }
   };
 
+  // Get unique values for dropdown filters
+  const getUniqueValues = (column) => {
+    const values = [...new Set(tickets.map(ticket => ticket[column]).filter(Boolean))];
+    return values.sort();
+  };
+
   const totalPages = Math.ceil(filtered.length / rowsPerPage);
   const startIndex = (page - 1) * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
   const paginatedTickets = filtered.slice(startIndex, endIndex);
+
+  const hasActiveFilters = Object.values(columnFilters).some(filter => filter !== '') || searchTerm !== '';
 
   return (
     <Box sx={{ p: 0 }}>
@@ -129,6 +210,16 @@ const TicketList = () => {
               ),
             }}
           />
+          {hasActiveFilters && (
+            <Button
+              variant="outlined"
+              startIcon={<Clear />}
+              onClick={clearAllFilters}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              Clear Filters
+            </Button>
+          )}
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -160,16 +251,123 @@ const TicketList = () => {
             <Table>
               <TableHead>
                 <TableRow sx={{ backgroundColor: '#F69320', color: '#fff' }}>
-                    <TableCell sx={{ color: "#fff" }}><strong>ID</strong></TableCell>
-                    <TableCell sx={{color:"#fff"}}><strong>LOA</strong></TableCell>
-                  <TableCell sx={{color:"#fff"}}><strong>Technician</strong></TableCell>
-                  <TableCell sx={{color:"#fff"}}><strong>Station</strong></TableCell>
-                  <TableCell sx={{color:"#fff"}}><strong>Contact Person</strong></TableCell>
-                  <TableCell sx={{color:"#fff"}}><strong>Contact Number</strong></TableCell>
-                  <TableCell sx={{color:"#fff"}}><strong>Status</strong></TableCell>
+                  <TableCell sx={{ color: "#fff" }}><strong>ID</strong></TableCell>
+                  
+                  {/* LOA Column with Filter */}
+                  <TableCell sx={{ color: "#fff" }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <strong>LOA</strong>
+                      <IconButton 
+                        size="small" 
+                        sx={{ color: '#fff' }}
+                        onClick={(e) => handleFilterClick(e, 'LOA')}
+                      >
+                        <FilterList fontSize="small" />
+                      </IconButton>
+                      {columnFilters.LOA && (
+                        <Chip 
+                          label={columnFilters.LOA} 
+                          size="small" 
+                          onDelete={() => clearColumnFilter('LOA')}
+                          sx={{ backgroundColor: '#fff', color: '#F69320' }}
+                        />
+                      )}
+                    </Box>
+                  </TableCell>
+
+                  {/* Technician Column with Filter */}
+                  <TableCell sx={{ color: "#fff" }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <strong>Technician</strong>
+                      <IconButton 
+                        size="small" 
+                        sx={{ color: '#fff' }}
+                        onClick={(e) => handleFilterClick(e, 'EmpName')}
+                      >
+                        <FilterList fontSize="small" />
+                      </IconButton>
+                      {columnFilters.EmpName && (
+                        <Chip 
+                          label={columnFilters.EmpName} 
+                          size="small" 
+                          onDelete={() => clearColumnFilter('EmpName')}
+                          sx={{ backgroundColor: '#fff', color: '#F69320' }}
+                        />
+                      )}
+                    </Box>
+                  </TableCell>
+
+                  {/* Station Column with Filter */}
+                  <TableCell sx={{ color: "#fff" }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <strong>Station</strong>
+                      <IconButton 
+                        size="small" 
+                        sx={{ color: '#fff' }}
+                        onClick={(e) => handleFilterClick(e, 'Station')}
+                      >
+                        <FilterList fontSize="small" />
+                      </IconButton>
+                      {columnFilters.Station && (
+                        <Chip 
+                          label={columnFilters.Station} 
+                          size="small" 
+                          onDelete={() => clearColumnFilter('Station')}
+                          sx={{ backgroundColor: '#fff', color: '#F69320' }}
+                        />
+                      )}
+                    </Box>
+                  </TableCell>
+
+                  {/* Contact Person Column with Filter */}
+                  <TableCell sx={{ color: "#fff" }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <strong>Contact Person</strong>
+                      <IconButton 
+                        size="small" 
+                        sx={{ color: '#fff' }}
+                        onClick={(e) => handleFilterClick(e, 'ContactPerson')}
+                      >
+                        <FilterList fontSize="small" />
+                      </IconButton>
+                      {columnFilters.ContactPerson && (
+                        <Chip 
+                          label={columnFilters.ContactPerson} 
+                          size="small" 
+                          onDelete={() => clearColumnFilter('ContactPerson')}
+                          sx={{ backgroundColor: '#fff', color: '#F69320' }}
+                        />
+                      )}
+                    </Box>
+                  </TableCell>
+
+                  <TableCell sx={{ color: "#fff" }}><strong>Contact Number</strong></TableCell>
+
+                  {/* Status Column with Filter */}
+                  <TableCell sx={{ color: "#fff" }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <strong>Status</strong>
+                      <IconButton 
+                        size="small" 
+                        sx={{ color: '#fff' }}
+                        onClick={(e) => handleFilterClick(e, 'Status')}
+                      >
+                        <FilterList fontSize="small" />
+                      </IconButton>
+                      {columnFilters.Status && (
+                        <Chip 
+                          label={columnFilters.Status} 
+                          size="small" 
+                          onDelete={() => clearColumnFilter('Status')}
+                          sx={{ backgroundColor: '#fff', color: '#F69320' }}
+                        />
+                      )}
+                    </Box>
+                  </TableCell>
+
                   <TableCell sx={{ color: "#fff" }}><strong>Assign Date</strong></TableCell>
-                  <TableCell sx={{color:"#fff"}}><strong>Completion Date</strong></TableCell>
-                  <TableCell sx={{color:"#fff"}}><strong>Actions</strong></TableCell>
+                  <TableCell sx={{ color: "#fff" }}><strong>Action Date</strong></TableCell>
+                  {/* <TableCell sx={{ color: "#fff" }}><strong>Actions</strong></TableCell> */}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -181,7 +379,18 @@ const TicketList = () => {
                           {ticket.Id}
                         </Typography>
                       </TableCell>
-                      <TableCell>{ticket.LOA}</TableCell>
+                      <TableCell
+  onClick={() => handleViewTicket(ticket.Id)}
+  sx={{
+    cursor: "pointer",
+    "&:hover": {
+      color: "#4020f6ff",
+    },
+  }}
+>
+  {ticket.LOA}
+</TableCell>
+
                       <TableCell>{ticket.EmpName}</TableCell>
                       <TableCell>{ticket.Station}</TableCell>
                       <TableCell>{ticket.ContactPerson}</TableCell>
@@ -197,9 +406,9 @@ const TicketList = () => {
                         {new Date(ticket.Date).toLocaleDateString('en-GB')}
                       </TableCell>
                       <TableCell>
-                        {(ticket.UpdateDateTime)}
+                        {new Date(ticket.UpdateDateTime).toLocaleDateString('en-GB')}
                       </TableCell>
-                      <TableCell>
+                      {/* <TableCell>
                         <IconButton 
                           onClick={() => handleViewTicket(ticket.Id)}
                           color="primary"
@@ -207,14 +416,14 @@ const TicketList = () => {
                         >
                           <Visibility />
                         </IconButton>
-                      </TableCell>
+                      </TableCell> */}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">
-                        No tickets found.
+                        No tickets found. {hasActiveFilters && 'Try clearing some filters.'}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -222,6 +431,50 @@ const TicketList = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* Filter Popover */}
+          <Popover
+            open={Boolean(filterAnchorEl)}
+            anchorEl={filterAnchorEl}
+            onClose={handleFilterClose}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+          >
+            <Box sx={{ p: 2, minWidth: 200 }}>
+              {currentFilterColumn === 'Status' ? (
+                <FormControl fullWidth size="small">
+                  <InputLabel>Select Status</InputLabel>
+                  <Select
+                    value={columnFilters.Status}
+                    label="Select Status"
+                    onChange={(e) => handleColumnFilterChange('Status', e.target.value)}
+                  >
+                    <MenuItem value="">All Statuses</MenuItem>
+                    {getUniqueValues('Status').map(status => (
+                      <MenuItem key={status} value={status}>
+                        {status}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <TextField
+                  label={`Filter ${currentFilterColumn}`}
+                  value={columnFilters[currentFilterColumn] || ''}
+                  onChange={(e) => handleColumnFilterChange(currentFilterColumn, e.target.value)}
+                  size="small"
+                  fullWidth
+                  autoFocus
+                />
+              )}
+            </Box>
+          </Popover>
 
           {/* Pagination */}
           {totalPages > 1 && (

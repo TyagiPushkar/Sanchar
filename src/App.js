@@ -73,6 +73,7 @@ function App() {
             <Route path="/contact" element={<PrivateRoute element={Buyer} />} />
             <Route path="/directory" element={<PrivateRoute element={Buyer} />} />
             
+            
             <Route path="/participant" element={<PrivateRoute element={Participant} />} />
             <Route path="/new-participant" element={<PrivateRoute element={Participant} />} />
             
