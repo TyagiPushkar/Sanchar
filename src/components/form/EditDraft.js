@@ -22,51 +22,105 @@ import {
   CircularProgress,
   Container,
 } from "@mui/material"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useLocation } from "react-router-dom"
 
 function EditDraft() {
+  
+  const location = useLocation()
   const { ActivityId } = useParams()
   console.log("Activity ID:", ActivityId)
+  
   const [pages, setPages] = useState([])
   const [checkpoints, setCheckpoints] = useState([])
   const [types, setTypes] = useState([])
-  const [currentPage, setCurrentPage] = useState(0)
+  const [currentPage, setCurrentPage] = useState(() => {
+    // Get step from URL query parameters
+    const queryParams = new URLSearchParams(location.search)
+    const stepParam = queryParams.get('step')
+    
+    if (stepParam !== null) {
+      const step = parseInt(stepParam, 10)
+      // Validate step is within bounds (0-3 for 4 steps)
+      if (!isNaN(step) && step >= 0 && step <= 3) {
+        return step
+      }
+    }
+    
+    return 0 // Default to step 0
+  })
+  
   const [formData, setFormData] = useState({})
+  const [originalFormData, setOriginalFormData] = useState({}) // Track original data
   const [errors, setErrors] = useState({})
   const [visibleDependents, setVisibleDependents] = useState({})
   const [changedFiles, setChangedFiles] = useState({}) // Track which files have been changed
   const [loading, setLoading] = useState(true)
   const [loadingError, setLoadingError] = useState("")
+  const [hasChanges, setHasChanges] = useState(false) // Track if any field has been changed
   const navigate = useNavigate()
 
-  // Function to calculate sum of specified checkpoint values
- // Function to calculate total bid value using the formula: (61*62 + 63*64 + 65*66 + 69*70)
-const calculateSum = () => {
-  const field61 = parseFloat(formData[61]) || 0;  // Quantity 1
-  const field62 = parseFloat(formData[62]) || 0;  // Rate 1
-  const field63 = parseFloat(formData[63]) || 0;  // Quantity 2
-  const field64 = parseFloat(formData[64]) || 0;  // Rate 2
-  const field65 = parseFloat(formData[65]) || 0;  // Quantity 3
-  const field66 = parseFloat(formData[66]) || 0;  // Rate 3
-  const field69 = parseFloat(formData[69]) || 0;  // Quantity 4
-  const field70 = parseFloat(formData[70]) || 0;  // Rate 4
+  // Function to calculate total bid value using the formula: (61*62 + 63*64 + 65*66 + 69*70)
+  const calculateSum = () => {
+    const field61 = parseFloat(formData[61]) || 0;  // Quantity 1
+    const field62 = parseFloat(formData[62]) || 0;  // Rate 1
+    const field63 = parseFloat(formData[63]) || 0;  // Quantity 2
+    const field64 = parseFloat(formData[64]) || 0;  // Rate 2
+    const field65 = parseFloat(formData[65]) || 0;  // Quantity 3
+    const field66 = parseFloat(formData[66]) || 0;  // Rate 3
+    const field69 = parseFloat(formData[69]) || 0;  // Quantity 4
+    const field70 = parseFloat(formData[70]) || 0;  // Rate 4
 
-  // Calculate the total using the formula
-  const total = (field61 * field62) + 
-                (field63 * field64) + 
-                (field65 * field66) + 
-                (field69 * field70);
+    // Calculate the total using the formula
+    const total = (field61 * field62) + 
+                  (field63 * field64) + 
+                  (field65 * field66) + 
+                  (field69 * field70);
 
-  return total;
-}
+    return total;
+  }
 
-  // Update the sum whenever relevant fields change
- // Update the total whenever any of the formula fields change
-useEffect(() => {
-  const total = calculateSum();
-  setFormData(prev => ({ ...prev, 72: total.toString() }));
-}, [formData[61], formData[62], formData[63], formData[64], 
-    formData[65], formData[66], formData[69], formData[70]]);
+  // Update the total whenever any of the formula fields change
+  useEffect(() => {
+    const total = calculateSum();
+    setFormData(prev => ({ ...prev, 72: total.toString() }));
+  }, [formData[61], formData[62], formData[63], formData[64], 
+      formData[65], formData[66], formData[69], formData[70]]);
+
+  // Track changes when formData changes
+  useEffect(() => {
+    if (Object.keys(originalFormData).length > 0) {
+      const hasChanges = checkForChanges();
+      setHasChanges(hasChanges);
+    }
+  }, [formData, originalFormData]);
+
+  // Function to check if there are any changes
+  const checkForChanges = () => {
+    // Check if any field in formData differs from originalFormData
+    for (const [key, value] of Object.entries(formData)) {
+      const originalValue = originalFormData[key];
+      
+      if (Array.isArray(value) && Array.isArray(originalValue)) {
+        if (JSON.stringify(value.sort()) !== JSON.stringify(originalValue.sort())) {
+          return true;
+        }
+      } else if (typeof value === "object" && value instanceof File) {
+        // File object means it's a new/changed file
+        return true;
+      } else if (value !== originalValue) {
+        return true;
+      }
+    }
+    
+    // Check if any original field was removed
+    for (const key of Object.keys(originalFormData)) {
+      if (!(key in formData)) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
 
   const handleChange = (id, value) => {
     console.log(`Handling change for field ${id} with value:`, value)
@@ -286,6 +340,7 @@ useEffect(() => {
           }
 
           setFormData(existingData)
+          setOriginalFormData({...existingData}) // Store original data
 
           // Set up visible dependents based on existing data
           if (Object.keys(dependentData).length > 0) {
@@ -314,7 +369,7 @@ useEffect(() => {
     }
 
     fetchData()
-  }, [ActivityId])
+  }, [ActivityId, location.search])
 
   // Initialize dependencies when form data or checkpoints change
   useEffect(() => {
@@ -339,54 +394,52 @@ useEffect(() => {
     })
   }
 
-  const handleSubmit = async (isDraft = false) => {
-    // Only validate required fields on final submission, not for drafts
-    if (!isDraft) {
-      // Validate all fields across all pages
-      const newErrors = {}
-      let hasErrors = false
-
-      // Check all pages for required fields
-      pages.forEach((pageCheckpoints) => {
-        pageCheckpoints.forEach((id) => {
-          const cp = checkpoints.find((c) => c.CheckpointId === id)
-          const value = formData[id]
-          if (!cp) return
-
-          const type = getType(cp.TypeId).toLowerCase()
-          if (type.includes("header") || type.includes("description")) return
-
-          if (
-            cp.Mandatory === 1 &&
-            (value === undefined ||
-              value === null ||
-              (typeof value === "string" && value.trim() === "") ||
-              (Array.isArray(value) && value.length === 0))
-          ) {
-            newErrors[id] = true
-            hasErrors = true
-          }
-        })
-      })
-
-      if (hasErrors) {
-        setErrors(newErrors)
-        Swal.fire({
-          icon: "error",
-          title: "Missing Required Fields",
-          text: "Please fill all mandatory fields before submitting.",
-          confirmButtonColor: "#F69320",
-        })
-        return
+  // Function to get changed fields only
+  const getChangedFields = () => {
+    const changedFields = {}
+    
+    // Check all fields in formData
+    Object.entries(formData).forEach(([key, value]) => {
+      const originalValue = originalFormData[key]
+      
+      // Check if value has changed
+      let hasChanged = false
+      
+      if (Array.isArray(value) && Array.isArray(originalValue)) {
+        // Compare arrays
+        hasChanged = JSON.stringify(value.sort()) !== JSON.stringify(originalValue.sort())
+      } else if (typeof value === "object" && value instanceof File) {
+        // File object means it's a new/changed file
+        hasChanged = true
+      } else if (value !== originalValue) {
+        // Simple comparison for other types
+        hasChanged = true
       }
-    }
+      
+      if (hasChanged) {
+        changedFields[key] = value
+      }
+    })
+    
+    // Also check if any original fields were deleted
+    Object.keys(originalFormData).forEach(key => {
+      if (!(key in formData)) {
+        changedFields[key] = null // Field was removed
+      }
+    })
+    
+    console.log("Changed fields detected:", Object.keys(changedFields))
+    return changedFields
+  }
 
+  // Common submission logic for both save and submit
+  const submitForm = async (isDraft = true) => {
     // Clear any previous errors
     setErrors({})
 
     // Show loading indicator
     Swal.fire({
-      title: isDraft ? "Saving draft..." : "Submitting form...",
+      title: isDraft ? "Saving..." : "Submitting...",
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading()
@@ -398,41 +451,50 @@ useEffect(() => {
     const dateTime = date.toISOString().slice(0, 19).replace("T", " ")
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         const latLong = `${pos.coords.latitude}, ${pos.coords.longitude}`
 
-        const submitData = async () => {
+        try {
+          // Get only changed fields
+          const changedFields = getChangedFields()
+          
+          if (Object.keys(changedFields).length === 0) {
+            Swal.fire({
+              icon: "info",
+              title: "No Changes",
+              text: "No changes were made to save.",
+              confirmButtonColor: "#F69320",
+            })
+            return
+          }
+
           const textData = {}
           const imageData = {}
 
-          // First, collect all form data keys to process
-          const formDataKeys = Object.keys(formData)
-
-          console.log("All form data keys before submission:", formDataKeys)
-
-          // Process all form data entries
-          for (const key of formDataKeys) {
-            const value = formData[key]
+          // Process only changed fields
+          for (const [key, value] of Object.entries(changedFields)) {
+            console.log(`Processing changed field ${key} with value:`, value)
 
             // Check if this is a dependent field (format: parentId_dependentId)
             if (key.includes("_")) {
-              console.log(`Processing dependent field ${key} with value:`, value)
-
               // For dependent fields with image type
               if (value && typeof value === "object" && value instanceof File) {
                 const base64 = await convertToBase64(value)
                 imageData[key] = base64
                 console.log(`Added dependent image field ${key} to imageData`)
-              } else {
+              } else if (value !== undefined && value !== null) {
                 // For text-based dependent fields
+                // Convert array to string if needed
                 textData[key] = Array.isArray(value) ? value.join(",") : value
                 console.log(`Added dependent text field ${key} to textData with value:`, textData[key])
+              } else if (value === null) {
+                // Send null explicitly if field was removed
+                textData[key] = null
               }
-
               continue
             }
 
-            // For regular fields, find the checkpoint to determine type
+            // For regular fields
             const cpId = Number.parseInt(key)
             const cp = checkpoints.find((c) => c.CheckpointId === cpId)
 
@@ -449,80 +511,183 @@ useEffect(() => {
                 const base64 = await convertToBase64(value)
                 imageData[key] = base64
                 console.log(`Added regular image field ${key} to imageData`)
+              } else if (value === null) {
+                // Send null for removed image fields
+                textData[key] = null
               }
-              // Do NOT include existing image data that hasn't changed
             } else {
               // For text-based fields
-              if (
-                value === undefined ||
-                value === null ||
-                (typeof value === "string" && value.trim() === "") ||
-                (Array.isArray(value) && value.length === 0)
-              ) {
-                textData[key] = null
-              } else {
+              if (value !== undefined && value !== null) {
+                // Convert array to string if needed
                 textData[key] = Array.isArray(value) ? value.join(",") : value
+                console.log(`Added regular text field ${key} to textData with value:`, textData[key])
+              } else if (value === null) {
+                // Send null explicitly if field was removed
+                textData[key] = null
               }
-              console.log(`Added regular text field ${key} to textData with value:`, textData[key])
             }
           }
 
-          try {
-            console.log("Sending text data to API:", textData)
+          console.log("Sending text data to API:", textData)
+          console.log("Sending image data to API:", Object.keys(imageData))
 
-            // Use update_transaction.php instead of add_transaction.php
-            await axios.post("https://namami-infotech.com/SANCHAR/src/menu/update_transaction.php", {
+          // Use update_transaction.php to update existing record
+          await axios.post("https://namami-infotech.com/SANCHAR/src/menu/update_transaction.php", {
+            menuId,
+            ActivityId,
+            LatLong: latLong,
+            Draft: isDraft ? 1 : 0,
+            data: textData,
+          })
+
+          // Only send image data if there are actually new/changed images
+          if (Object.keys(imageData).length > 0) {
+            console.log("Sending updated image data:", Object.keys(imageData))
+            await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_image.php", {
               menuId,
               ActivityId,
               LatLong: latLong,
-              Draft: isDraft ? 1 : 0,
-              data: textData,
+              data: imageData,
             })
+          } else {
+            console.log("No image data changes to send")
+          }
 
-            // Only send image data if there are actually new/changed images
-            if (Object.keys(imageData).length > 0) {
-              console.log("Sending updated image data:", Object.keys(imageData))
-              await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_image.php", {
-                menuId,
-                ActivityId,
-                LatLong: latLong,
-                data: imageData,
-              })
-            } else {
-              console.log("No image data changes to send")
-            }
+          // Update original form data to reflect saved state
+          setOriginalFormData({...formData})
+          setHasChanges(false)
 
+          if (isDraft) {
             Swal.fire({
               icon: "success",
-              title: isDraft ? "Draft Updated" : "Form Updated",
-              text: isDraft ? "Your draft has been updated successfully!" : "Your form has been updated successfully!",
+              title: "Saved Successfully",
+              text: "Your changes have been saved successfully!",
+              confirmButtonColor: "#F69320",
+            })
+          } else {
+            Swal.fire({
+              icon: "success",
+              title: "Form Submitted",
+              text: "Your form has been submitted successfully!",
               confirmButtonColor: "#F69320",
             }).then(() => {
               navigate("/tender")
             })
-          } catch (error) {
-            console.error("Update error:", error)
-            Swal.fire({
-              icon: "error",
-              title: "Update Failed",
-              text: "There was an error processing your request. Please try again.",
-              confirmButtonColor: "#F69320",
-            })
           }
+        } catch (error) {
+          console.error("Save error:", error)
+          Swal.fire({
+            icon: "error",
+            title: isDraft ? "Save Failed" : "Submission Failed",
+            text: isDraft 
+              ? "There was an error saving your data. Please try again."
+              : "There was an error processing your request. Please try again.",
+            confirmButtonColor: "#F69320",
+          })
         }
-
-        submitData() // call the async inner function
       },
       (error) => {
         Swal.fire({
           icon: "error",
           title: "Location Access Denied",
-          text: "Please allow location access to submit the form.",
+          text: "Please allow location access to save the form.",
           confirmButtonColor: "#F69320",
         })
       },
       { timeout: 10000, enableHighAccuracy: true },
     )
+  }
+
+  // Function to save the form (draft)
+  const handleSave = async () => {
+    // Validate required fields for the current page only when saving
+    const pageCheckpoints = pages[currentPage] || []
+    const newErrors = {}
+    let hasErrors = false
+
+    pageCheckpoints.forEach((id) => {
+      const cp = checkpoints.find((c) => c.CheckpointId === id)
+      if (!cp) return
+
+      const type = getType(cp.TypeId).toLowerCase()
+      if (type.includes("header") || type.includes("description")) return
+
+      // Check if field is a dependent
+      const parentId = getParentId(cp.CheckpointId)
+      const fieldId = parentId ? `${parentId}_${cp.CheckpointId}` : cp.CheckpointId.toString()
+      const value = formData[fieldId]
+
+      if (
+        cp.Mandatory === 1 &&
+        (value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === "") ||
+          (Array.isArray(value) && value.length === 0))
+      ) {
+        newErrors[cp.CheckpointId] = true
+        hasErrors = true
+      }
+    })
+
+    if (hasErrors) {
+      setErrors(newErrors)
+      Swal.fire({
+        icon: "error",
+        title: "Missing Required Fields",
+        text: "Please fill all mandatory fields on this page before saving.",
+        confirmButtonColor: "#F69320",
+      })
+      return
+    }
+
+    await submitForm(true)
+  }
+
+  // Function to submit the form (final submission)
+  const handleSubmit = async () => {
+    // Validate all required fields on final submission
+    const newErrors = {}
+    let hasErrors = false
+
+    // Check all pages for required fields
+    pages.forEach((pageCheckpoints) => {
+      pageCheckpoints.forEach((id) => {
+        const cp = checkpoints.find((c) => c.CheckpointId === id)
+        if (!cp) return
+
+        const type = getType(cp.TypeId).toLowerCase()
+        if (type.includes("header") || type.includes("description")) return
+
+        // Check if field is a dependent
+        const parentId = getParentId(cp.CheckpointId)
+        const fieldId = parentId ? `${parentId}_${cp.CheckpointId}` : cp.CheckpointId.toString()
+        const value = formData[fieldId]
+
+        if (
+          cp.Mandatory === 1 &&
+          (value === undefined ||
+            value === null ||
+            (typeof value === "string" && value.trim() === "") ||
+            (Array.isArray(value) && value.length === 0))
+        ) {
+          newErrors[cp.CheckpointId] = true
+          hasErrors = true
+        }
+      })
+    })
+
+    if (hasErrors) {
+      setErrors(newErrors)
+      Swal.fire({
+        icon: "error",
+        title: "Missing Required Fields",
+        text: "Please fill all mandatory fields before submitting.",
+        confirmButtonColor: "#F69320",
+      })
+      return
+    }
+
+    await submitForm(false)
   }
 
   const renderField = (cp) => {
@@ -570,7 +735,7 @@ useEffect(() => {
                   <TextField
                     fullWidth
                     type="text"
-                    value={value}
+                    value={value || ""}
                     onChange={(e) => handleChange(actualId, e.target.value)}
                     error={error}
                     helperText={error ? "This field is required" : ""}
@@ -588,7 +753,7 @@ useEffect(() => {
                   <TextField
                     fullWidth
                     type="email"
-                    value={value}
+                    value={value || ""}
                     onChange={(e) => handleChange(actualId, e.target.value)}
                     error={error}
                     helperText={error ? "This field is required" : ""}
@@ -606,7 +771,7 @@ useEffect(() => {
                   <TextField
                     fullWidth
                     type="number"
-                    value={value}
+                    value={value || ""}
                     onChange={(e) => handleChange(actualId, e.target.value)}
                     error={error}
                     helperText={error ? "This field is required" : ""}
@@ -624,7 +789,7 @@ useEffect(() => {
                   <TextField
                     fullWidth
                     type="number"
-                    value={value}
+                    value={value || ""}
                     onChange={(e) => handleChange(actualId, e.target.value)}
                     error={error}
                     helperText={error ? "This field is required" : ""}
@@ -643,7 +808,7 @@ useEffect(() => {
                     fullWidth
                     multiline
                     rows={4}
-                    value={value}
+                    value={value || ""}
                     onChange={(e) => handleChange(actualId, e.target.value)}
                     error={error}
                     helperText={error ? "This field is required" : ""}
@@ -662,7 +827,7 @@ useEffect(() => {
                     fullWidth
                     type="date"
                     InputLabelProps={{ shrink: true }}
-                    value={value}
+                    value={value || ""}
                     onChange={(e) => handleChange(actualId, e.target.value)}
                     error={error}
                     helperText={error ? "This field is required" : ""}
@@ -708,7 +873,7 @@ useEffect(() => {
               case "radio":
                 return (
                   <>
-                    <RadioGroup row value={value} onChange={(e) => handleChange(actualId, e.target.value)}>
+                    <RadioGroup row value={value || ""} onChange={(e) => handleChange(actualId, e.target.value)}>
                       {options.map((opt) => (
                         <FormControlLabel
                           key={opt}
@@ -934,6 +1099,8 @@ useEffect(() => {
     )
   }
 
+  const isLastPage = currentPage === pages.length - 1;
+
   return (
     <Container maxWidth="md" sx={{ mt: 2, mb: 4 }}>
       <Box
@@ -1017,38 +1184,26 @@ useEffect(() => {
           </Button>
         )}
 
-        {currentPage === pages.length - 1 ? (
-          <>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: "#757575",
-                color: "white",
-                minWidth: "120px",
-                "&:hover": {
-                  backgroundColor: "#616161",
-                },
-              }}
-              onClick={() => handleSubmit(true)} // Save Draft
-            >
-              Save Draft
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: "#F69320",
-                color: "white",
-                minWidth: "120px",
-                "&:hover": {
-                  backgroundColor: "#e08416",
-                },
-              }}
-              onClick={() => handleSubmit(false)} // Submit
-            >
-              Submit
-            </Button>
-          </>
-        ) : (
+        {/* Save button - always available, enabled only when there are changes */}
+        <Button
+          variant="contained"
+          sx={{
+            backgroundColor: "#757575",
+            color: "white",
+            minWidth: "120px",
+            "&:hover": {
+              backgroundColor: hasChanges ? "#616161" : "#757575",
+            },
+            opacity: hasChanges ? 1 : 0.7,
+          }}
+          onClick={handleSave}
+          disabled={!hasChanges}
+        >
+          Save
+        </Button>
+
+        {/* Show Next button only if NOT on last page */}
+        {!isLastPage && (
           <Button
             variant="contained"
             sx={{
@@ -1072,7 +1227,7 @@ useEffect(() => {
           Fields marked with <span style={{ color: "red" }}>*</span> are mandatory
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Your progress is saved as you navigate between steps
+          Click Save to save your progress
         </Typography>
       </Box>
     </Container>

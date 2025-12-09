@@ -20,7 +20,7 @@ function Tender() {
   // Determine which component to render based on the URL
   const renderContent = () => {
     if (currentPath.includes("/tender") && !currentPath.includes("/create-tender")) {
-      return <TenderList />
+      return <DraftList />
     } else if (currentPath.includes("/draft")) {
       return <DraftList />
     } else if (currentPath.includes("/create-tender")) {

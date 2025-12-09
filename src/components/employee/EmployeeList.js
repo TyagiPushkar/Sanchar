@@ -35,11 +35,20 @@ const useAuth = () => ({
   user: { tenent_id: "1" }, // Replace with your actual auth logic
 })
 
+// Role hierarchy order
+const ROLE_HIERARCHY = {
+  'Admin': 1,
+  'Project Manager': 2,
+  'Technician': 3,
+  'Customer Support': 4
+}
+
 function EmployeeList() {
   const { user } = useAuth()
 
   // State management
   const [employees, setEmployees] = useState([])
+  const [sortedEmployees, setSortedEmployees] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [openForm, setOpenForm] = useState(false)
   const [formMode, setFormMode] = useState("add") // 'add' or 'edit'
@@ -66,6 +75,14 @@ function EmployeeList() {
     fetchEmployees()
   }, [])
 
+  // Sort employees by role hierarchy whenever employees change
+  useEffect(() => {
+    if (employees.length > 0) {
+      const sorted = sortEmployeesByRoleHierarchy(employees)
+      setSortedEmployees(sorted)
+    }
+  }, [employees])
+
   // Clear messages after 5 seconds
   useEffect(() => {
     if (error || success) {
@@ -76,6 +93,23 @@ function EmployeeList() {
       return () => clearTimeout(timer)
     }
   }, [error, success])
+
+  // Function to sort employees by role hierarchy
+  const sortEmployeesByRoleHierarchy = (empList) => {
+    return [...empList].sort((a, b) => {
+      // Get role order (default to 999 for unknown roles)
+      const roleOrderA = ROLE_HIERARCHY[a.Role] || 999
+      const roleOrderB = ROLE_HIERARCHY[b.Role] || 999
+      
+      // First sort by role hierarchy
+      if (roleOrderA !== roleOrderB) {
+        return roleOrderA - roleOrderB
+      }
+      
+      // Then sort by name within same role
+      return a.Name?.localeCompare(b.Name)
+    })
+  }
 
   const fetchEmployees = async () => {
     try {
@@ -294,13 +328,23 @@ function EmployeeList() {
   }
 
   // Filter employees based on search term
-  const filteredEmployees = employees.filter((employee) => {
+  const filteredEmployees = sortedEmployees.filter((employee) => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase()
     return Object.keys(employee).some((key) => {
       const value = employee[key]
       return value != null && value.toString().toLowerCase().includes(lowerCaseSearchTerm)
     })
   })
+
+  // Helper function to check if this is the first employee of a new role group
+  const isFirstInRoleGroup = (index) => {
+    if (index === 0) return true;
+    
+    const currentRole = filteredEmployees[index]?.Role;
+    const previousRole = filteredEmployees[index - 1]?.Role;
+    
+    return currentRole !== previousRole;
+  };
 
   return (
     <div style={{ padding: "20px" }}>
@@ -378,50 +422,93 @@ function EmployeeList() {
                 </TableRow>
               ) : (
                 filteredEmployees
-                  .sort((a, b) => a.Name.localeCompare(b.Name))
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((employee) => (
-                    <TableRow key={employee.EmpId} hover>
-                      <TableCell style={{ fontWeight: "500" }}>{employee.EmpId}</TableCell>
-                      <TableCell>{employee.Name}</TableCell>
-                      <TableCell>{employee.Mobile}</TableCell>
-                      <TableCell>{employee.EmailId}</TableCell>
-                      <TableCell>{employee.Role}</TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          style={{
-                            color: employee.IsActive ? "#4caf50" : "#f44336",
-                            fontWeight: "500",
-                          }}
-                        >
-                          {employee.IsActive ? "Active" : "Inactive"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <IconButton
-                            color="primary"
-                            onClick={() => handleOpenForm("edit", employee)}
-                            disabled={loading}
-                            title="Edit Employee"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
+                  .map((employee, index) => {
+                    const isFirstInGroup = isFirstInRoleGroup(page * rowsPerPage + index);
+                    
+                    return (
+                      <TableRow 
+                        key={employee.EmpId} 
+                        hover
+                        style={{
+                          borderTop: isFirstInGroup ? '3px solid #e0e0e0' : 'none',
+                        }}
+                      >
+                        <TableCell style={{ fontWeight: "500" }}>{employee.EmpId}</TableCell>
+                        <TableCell>
+                          {isFirstInGroup && (
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                              <div 
+                                style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: 
+                                    employee.Role === 'Admin' ? '#d32f2f' :
+                                    employee.Role === 'Project Manager' ? '#1976d2' :
+                                    employee.Role === 'Technician' ? '#388e3c' :
+                                    employee.Role === 'Customer Support' ? '#f57c00' : '#757575',
+                                  marginRight: '8px'
+                                }}
+                              />
+                              {employee.Name}
+                            </div>
+                          )}
+                          {!isFirstInGroup && employee.Name}
+                        </TableCell>
+                        <TableCell>{employee.Mobile}</TableCell>
+                        <TableCell>{employee.EmailId}</TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="body2"
                             style={{
-                              color: employee.IsActive ? "#f44336" : "#4caf50",
+                              fontWeight: 'bold',
+                              color: 
+                                employee.Role === 'Admin' ? '#d32f2f' :
+                                employee.Role === 'Project Manager' ? '#1976d2' :
+                                employee.Role === 'Technician' ? '#388e3c' :
+                                employee.Role === 'Customer Support' ? '#f57c00' : '#757575'
                             }}
-                            onClick={() => handleToggleEmployeeStatus(employee)}
-                            disabled={loading}
-                            title={employee.IsActive ? "Disable Employee" : "Enable Employee"}
                           >
-                            {employee.IsActive ? <CloseIcon /> : <CheckCircleIcon />}
-                          </IconButton>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            {employee.Role}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="body2"
+                            style={{
+                              color: employee.IsActive ? "#4caf50" : "#f44336",
+                              fontWeight: "500",
+                            }}
+                          >
+                            {employee.IsActive ? "Active" : "Inactive"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <div style={{ display: "flex", gap: "8px" }}>
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleOpenForm("edit", employee)}
+                              disabled={loading}
+                              title="Edit Employee"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              style={{
+                                color: employee.IsActive ? "#f44336" : "#4caf50",
+                              }}
+                              onClick={() => handleToggleEmployeeStatus(employee)}
+                              disabled={loading}
+                              title={employee.IsActive ? "Disable Employee" : "Enable Employee"}
+                            >
+                              {employee.IsActive ? <CloseIcon /> : <CheckCircleIcon />}
+                            </IconButton>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
               )}
             </TableBody>
           </Table>

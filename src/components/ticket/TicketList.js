@@ -335,7 +335,6 @@ const TicketList = () => {
           {hasAnyData && (
             <Button
               variant="outlined"
-              
               onClick={exportToExcel}
               disabled={exportLoading || !hasFilteredData}
               sx={{ whiteSpace: 'nowrap' }}

@@ -37,6 +37,9 @@ function AdmissionFormLogic() {
   const [loadingError, setLoadingError] = useState("")
   const navigate = useNavigate()
 
+  // Track if any field has been filled
+  const [hasChanges, setHasChanges] = useState(false)
+
   // Amount fields configuration
   const amountFieldIds = [62, 64, 66, 70];
   const totalFieldId = 72 // Field to display total
@@ -52,35 +55,35 @@ function AdmissionFormLogic() {
     }).format(num)
   }
 
-  // Calculate sum whenever any amount field changes
- // Calculate total bid value whenever any amount field changes
-useEffect(() => {
-  // Get all the required field values
-  const field61 = parseFloat(formData[61]) || 0;  // Quantity 1
-  const field62 = parseFloat(formData[62]) || 0;  // Rate 1
-  const field63 = parseFloat(formData[63]) || 0;  // Quantity 2
-  const field64 = parseFloat(formData[64]) || 0;  // Rate 2
-  const field65 = parseFloat(formData[65]) || 0;  // Quantity 3
-  const field66 = parseFloat(formData[66]) || 0;  // Rate 3
-  const field69 = parseFloat(formData[69]) || 0;  // Quantity 4
-  const field70 = parseFloat(formData[70]) || 0;  // Rate 4
+  // Calculate total bid value whenever any amount field changes
+  useEffect(() => {
+    // Get all the required field values
+    const field61 = parseFloat(formData[61]) || 0;  // Quantity 1
+    const field62 = parseFloat(formData[62]) || 0;  // Rate 1
+    const field63 = parseFloat(formData[63]) || 0;  // Quantity 2
+    const field64 = parseFloat(formData[64]) || 0;  // Rate 2
+    const field65 = parseFloat(formData[65]) || 0;  // Quantity 3
+    const field66 = parseFloat(formData[66]) || 0;  // Rate 3
+    const field69 = parseFloat(formData[69]) || 0;  // Quantity 4
+    const field70 = parseFloat(formData[70]) || 0;  // Rate 4
 
-  // Calculate the total using the formula
-  const total = (field61 * field62) + 
-                (field63 * field64) + 
-                (field65 * field66) + 
-                (field69 * field70);
+    // Calculate the total using the formula
+    const total = (field61 * field62) + 
+                  (field63 * field64) + 
+                  (field65 * field66) + 
+                  (field69 * field70);
 
-  // Update total field if sum has changed
-  if (formData[totalFieldId] !== total.toString()) {
-    handleChange(totalFieldId, total.toFixed(2));
-  }
-}, [formData[61], formData[62], formData[63], formData[64], 
-    formData[65], formData[66], formData[69], formData[70]]);
+    // Update total field if sum has changed
+    if (formData[totalFieldId] !== total.toString()) {
+      handleChange(totalFieldId, total.toFixed(2));
+    }
+  }, [formData[61], formData[62], formData[63], formData[64], 
+      formData[65], formData[66], formData[69], formData[70]]);
 
   const handleChange = (id, value) => {
     setFormData((prev) => ({ ...prev, [id]: value }))
     setErrors((prev) => ({ ...prev, [id]: false }))
+    setHasChanges(true) // Mark that changes have been made
 
     // Handle dependencies when value changes
     updateDependentFields(id, value)
@@ -616,44 +619,7 @@ useEffect(() => {
     })
   }
 
-  const handleSubmit = async (isDraft = false) => {
-    if (!isDraft) {
-      const newErrors = {}
-      let hasErrors = false
-
-      pages.forEach((pageCheckpoints) => {
-        pageCheckpoints.forEach((id) => {
-          const cp = checkpoints.find((c) => c.CheckpointId === id)
-          const value = formData[id]
-          if (!cp) return
-
-          const type = getType(cp.TypeId).toLowerCase()
-          if (type.includes("header") || type.includes("description")) return
-
-          if (
-            cp.Mandatory === 1 &&
-            (value === undefined ||
-              value === null ||
-              (typeof value === "string" && value.trim() === "") ||
-              (Array.isArray(value) && value.length === 0))
-          ) {
-            newErrors[id] = true
-            hasErrors = true
-          }
-        })
-      })
-
-      if (hasErrors) {
-        setErrors(newErrors)
-        Swal.fire({
-          icon: "error",
-          title: "Missing Required Fields",
-          text: "Please fill all mandatory fields before submitting.",
-        })
-        return
-      }
-    }
-
+  const handleSave = async () => {
     setErrors({})
 
     const menuId = 1
@@ -661,7 +627,7 @@ useEffect(() => {
     const dateTime = date.toISOString().slice(0, 19).replace("T", " ")
 
     Swal.fire({
-      title: isDraft ? "Saving draft..." : "Submitting form...",
+      title: "Saving...",
       allowOutsideClick: false,
       didOpen: () => {
         Swal.showLoading()
@@ -731,7 +697,7 @@ useEffect(() => {
               menuId,
               ActivityId: activityId,
               LatLong: latLong,
-              Draft: isDraft ? 1 : 0,
+              Draft: 1, // Always save as draft when using Save button
               data: textData,
             })
 
@@ -746,8 +712,167 @@ useEffect(() => {
 
             Swal.fire({
               icon: "success",
-              title: isDraft ? "Draft Saved" : "Form Submitted",
-              text: isDraft ? "Your draft has been saved successfully!" : "Your form has been submitted successfully!",
+              title: "Saved Successfully",
+              text: "Your data has been saved successfully!",
+              confirmButtonColor: "#F69320",
+            }).then(() => {
+              setHasChanges(false) // Reset changes flag after successful save
+            })
+          } catch (error) {
+            console.error("Save error", error)
+            Swal.fire({
+              icon: "error",
+              title: "Save Failed",
+              text: "There was an error saving your data. Please try again.",
+              confirmButtonColor: "#F69320",
+            })
+          }
+        }
+
+        submitData()
+      },
+      (error) => {
+        Swal.fire({
+          icon: "error",
+          title: "Location Access Denied",
+          text: "Please allow location access to save the form.",
+          confirmButtonColor: "#F69320",
+        })
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    )
+  }
+
+  const handleSubmit = async () => {
+    const newErrors = {}
+    let hasErrors = false
+
+    pages.forEach((pageCheckpoints) => {
+      pageCheckpoints.forEach((id) => {
+        const cp = checkpoints.find((c) => c.CheckpointId === id)
+        const value = formData[id]
+        if (!cp) return
+
+        const type = getType(cp.TypeId).toLowerCase()
+        if (type.includes("header") || type.includes("description")) return
+
+        if (
+          cp.Mandatory === 1 &&
+          (value === undefined ||
+            value === null ||
+            (typeof value === "string" && value.trim() === "") ||
+            (Array.isArray(value) && value.length === 0))
+        ) {
+          newErrors[id] = true
+          hasErrors = true
+        }
+      })
+    })
+
+    if (hasErrors) {
+      setErrors(newErrors)
+      Swal.fire({
+        icon: "error",
+        title: "Missing Required Fields",
+        text: "Please fill all mandatory fields before submitting.",
+      })
+      return
+    }
+
+    setErrors({})
+
+    const menuId = 1
+    const date = new Date()
+    const dateTime = date.toISOString().slice(0, 19).replace("T", " ")
+
+    Swal.fire({
+      title: "Submitting form...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading()
+      },
+    })
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const latLong = `${pos.coords.latitude}, ${pos.coords.longitude}`
+        const activityId = `${dateTime.replace(/\D/g, "")}_${latLong.replace(/[^0-9]/g, "")}`
+
+        const submitData = async () => {
+          const textData = {}
+          const imageData = {}
+
+          for (const cp of checkpoints) {
+            const id = cp.CheckpointId.toString()
+            const type = getType(cp.TypeId).toLowerCase()
+            const value = formData[id]
+
+            const parentId = getParentId(cp.CheckpointId)
+
+            if (parentId) {
+              const combinedId = `${parentId}_${cp.CheckpointId}`
+
+              if (type === "pic/camera") {
+                if (value) {
+                  const base64 = await convertToBase64(value)
+                  imageData[combinedId] = base64
+                }
+              } else if (
+                value === undefined ||
+                value === null ||
+                (typeof value === "string" && value.trim() === "") ||
+                (Array.isArray(value) && value.length === 0)
+              ) {
+                textData[combinedId] = null
+              } else {
+                textData[combinedId] = Array.isArray(value) ? value.join(",") : value
+              }
+
+              continue
+            }
+
+            if (type === "pic/camera") {
+              if (value) {
+                const base64 = await convertToBase64(value)
+                imageData[id] = base64
+              }
+              continue
+            }
+
+            if (
+              value === undefined ||
+              value === null ||
+              (typeof value === "string" && value.trim() === "") ||
+              (Array.isArray(value) && value.length === 0)
+            ) {
+              textData[id] = null
+            } else {
+              textData[id] = Array.isArray(value) ? value.join(",") : value
+            }
+          }
+
+          try {
+            await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_transaction.php", {
+              menuId,
+              ActivityId: activityId,
+              LatLong: latLong,
+              Draft: 0, // Submit as final
+              data: textData,
+            })
+
+            if (Object.keys(imageData).length > 0) {
+              await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_image.php", {
+                menuId,
+                ActivityId: activityId,
+                LatLong: latLong,
+                data: imageData,
+              })
+            }
+
+            Swal.fire({
+              icon: "success",
+              title: "Form Submitted",
+              text: "Your form has been submitted successfully!",
               confirmButtonColor: "#F69320",
             }).then(() => {
               navigate("/tender")
@@ -811,6 +936,8 @@ useEffect(() => {
     )
   }
 
+  const isLastPage = currentPage === pages.length - 1
+
   return (
     <Container maxWidth="md" sx={{ mt: 2, mb: 4 }}>
       <Box
@@ -872,80 +999,69 @@ useEffect(() => {
       </Box>
 
       <Box sx={{ display: "flex", gap: 2, justifyContent: "center", mt: 3 }}>
-        {currentPage > 0 && (
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: "#1976d2",
-              color: "white",
-              minWidth: "120px",
-              "&:hover": {
-                backgroundColor: "#1565c0",
-              },
-            }}
-            onClick={handlePrevious}
-          >
-            Previous
-          </Button>
-        )}
+  {currentPage > 0 && (
+    <Button
+      variant="contained"
+      sx={{
+        backgroundColor: "#1976d2",
+        color: "white",
+        minWidth: "120px",
+        "&:hover": {
+          backgroundColor: "#1565c0",
+        },
+      }}
+      onClick={handlePrevious}
+    >
+      Previous
+    </Button>
+  )}
 
-        {currentPage === pages.length - 1 ? (
-          <>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: "#757575",
-                color: "white",
-                minWidth: "120px",
-                "&:hover": {
-                  backgroundColor: "#616161",
-                },
-              }}
-              onClick={() => handleSubmit(true)}
-            >
-              Save Draft
-            </Button>
-            <Button
-              variant="contained"
-              sx={{
-                backgroundColor: "#F69320",
-                color: "white",
-                minWidth: "120px",
-                "&:hover": {
-                  backgroundColor: "#e08416",
-                },
-              }}
-              onClick={() => handleSubmit(false)}
-            >
-              Submit
-            </Button>
-          </>
-        ) : (
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: "#F69320",
-              color: "white",
-              minWidth: "120px",
-              "&:hover": {
-                backgroundColor: "#e08416",
-              },
-            }}
-            onClick={handleNext}
-          >
-            Next
-          </Button>
-        )}
-      </Box>
+  {/* Save button - always enabled, available on all pages */}
+  <Button
+    variant="contained"
+    sx={{
+      backgroundColor: "#757575",
+      color: "white",
+      minWidth: "120px",
+      "&:hover": {
+        backgroundColor: hasChanges ? "#616161" : "#757575",
+      },
+      opacity: hasChanges ? 1 : 0.7,
+    }}
+    onClick={handleSave}
+    disabled={!hasChanges}
+  >
+    Save
+  </Button>
+
+  {/* Remove this conditional block entirely */}
+  {/* Don't show Next button on last page either */}
+  {!isLastPage && (
+    <Button
+      variant="contained"
+      sx={{
+        backgroundColor: "#F69320",
+        color: "white",
+        minWidth: "120px",
+        "&:hover": {
+          backgroundColor: "#e08416",
+        },
+      }}
+      onClick={handleNext}
+    >
+      Next
+    </Button>
+  )}
+</Box>
 
       <Box sx={{ mt: 4, textAlign: "center" }}>
-        <Typography variant="body2" color="text.secondary">
-          Fields marked with <span style={{ color: "red" }}>*</span> are mandatory
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Your progress is saved as you navigate between steps
-        </Typography>
-      </Box>
+  <Typography variant="body2" color="text.secondary">
+    Fields marked with <span style={{ color: "red" }}>*</span> are mandatory
+  </Typography>
+  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+    Click Save to save your progress
+  </Typography>
+</Box>
     </Container>
   )
 }
