@@ -641,6 +641,7 @@ function EditDraft() {
     }
 
     await submitForm(true)
+    navigate("/tender")
   }
 
   // Function to submit the form (final submission)

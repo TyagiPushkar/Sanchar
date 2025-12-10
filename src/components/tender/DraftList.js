@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
-import "./DraftList.css"; // You would need to create this CSS file
+import "./DraftList.css";
 
 function DraftList() {
   const [tempRecords, setTempRecords] = useState([]);
@@ -15,6 +15,7 @@ function DraftList() {
   const [stageFilters, setStageFilters] = useState({});
   const [stageCounts, setStageCounts] = useState({});
   const [selectedStages, setSelectedStages] = useState([]);
+  const [updatingStatus, setUpdatingStatus] = useState({}); // Track which records are being updated
   const navigate = useNavigate();
   const tableRef = useRef(null);
 
@@ -50,7 +51,7 @@ function DraftList() {
   useEffect(() => {
     const initialFilters = {};
     stages.forEach(stage => {
-      initialFilters[stage.key] = 'all'; // all, complete, incomplete, not-applicable
+      initialFilters[stage.key] = 'all';
     });
     setStageFilters(initialFilters);
   }, []);
@@ -136,6 +137,94 @@ function DraftList() {
     setStageCounts(counts);
   };
 
+  // Check if all stages are complete for a record
+  const areAllStagesComplete = (record) => {
+    const stageStatus = record.stage_status || {};
+    
+    // Check if record is already completed (Draft === "0")
+    if (record.Draft === "0") {
+      return false; // Already completed, so don't show complete button
+    }
+    
+    for (let i = 0; i < stages.length; i++) {
+      const stageKey = stages[i].key;
+      const status = stageStatus[stageKey];
+      
+      // If any stage is not complete and not "Not Applicable", return false
+      if (status !== "Complete" && status !== "Completed" && status !== "Not Applicable") {
+        return false;
+      }
+    }
+    
+    // All stages are either complete or not applicable
+    return true;
+  };
+
+  // Function to update tender status via API
+  const updateTenderStatus = async (activityId) => {
+    setUpdatingStatus(prev => ({ ...prev, [activityId]: true }));
+    
+    try {
+      const response = await axios.post(
+        "https://namami-infotech.com/SANCHAR/src/menu/update_tender_status.php",
+        {
+          activityId: activityId
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        // Update the local state to reflect the change
+        // Assuming API sets Draft to "0" when completed (reverse logic)
+        setTempRecords(prevRecords => 
+          prevRecords.map(record => 
+            record.ActivityId === activityId 
+              ? { ...record, Draft: "0" } // Update Draft to "0" when complete
+              : record
+          )
+        );
+        
+        setFilteredRecords(prevRecords => 
+          prevRecords.map(record => 
+            record.ActivityId === activityId 
+              ? { ...record, Draft: "0" }
+              : record
+          )
+        );
+        
+        alert("Tender marked as complete successfully!");
+      } else {
+        alert(`Failed to update status: ${response.data.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error("Error updating tender status:", err);
+      alert("Failed to update tender status. Please try again.");
+    } finally {
+      setUpdatingStatus(prev => ({ ...prev, [activityId]: false }));
+    }
+  };
+
+  // Handle marking tender as complete
+  const handleMarkAsComplete = (record) => {
+    if (!areAllStagesComplete(record)) {
+      alert("Cannot mark as complete. All stages must be completed or marked as 'Not Applicable'.");
+      return;
+    }
+    
+    if (record.Draft === "0") {
+      alert("This tender is already marked as complete.");
+      return;
+    }
+    
+    if (window.confirm(`Are you sure you want to mark tender ${record.ActivityId} as complete? This action cannot be undone.`)) {
+      updateTenderStatus(record.ActivityId);
+    }
+  };
+
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
     setSearchTerm(value);
@@ -149,7 +238,6 @@ function DraftList() {
     };
     setStageFilters(newFilters);
     
-    // Update selected stages for visual feedback
     if (filterValue === 'all') {
       setSelectedStages(prev => prev.filter(s => s !== stageKey));
     } else {
@@ -161,7 +249,6 @@ function DraftList() {
 
   const applyFilters = (searchValue, filters) => {
     let filtered = tempRecords.filter((record) => {
-      // Apply search filter
       const nameEntry = record.chkData?.find((chk) => chk.ChkId === "4");
       const tenderno = nameEntry?.Value?.toLowerCase() || "";
       const nameEntry2 = record.chkData?.find((chk) => chk.ChkId === "7");
@@ -171,7 +258,6 @@ function DraftList() {
         tenderno.includes(searchValue) || 
         name.includes(searchValue);
 
-      // Apply stage filters
       let stageMatch = true;
       const stageStatus = record.stage_status || {};
       
@@ -210,7 +296,6 @@ function DraftList() {
   };
 
   const exportToExcel = () => {
-    // Prepare data for export
     const exportData = filteredRecords.map(record => {
       const nameEntry = record.chkData?.find((chk) => chk.ChkId === "4");
       const nameEntry2 = record.chkData?.find((chk) => chk.ChkId === "7");
@@ -223,9 +308,9 @@ function DraftList() {
         "Buyer": nameEntry2?.Value || "-",
         "Created Date": formatDate(record.Datetime),
         "Last Update": getTimeSince(record.LastUpdate),
+        "Draft Status": record.Draft === "0" ? "Complete" : "In Progress", // REVERSED
       };
 
-      // Add stage status columns
       stages.forEach(stage => {
         const status = stageStatus[stage.key];
         rowData[`Stage ${stage.label} (${stage.name})`] = status || "Not Started";
@@ -234,14 +319,10 @@ function DraftList() {
       return rowData;
     });
 
-    // Create worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
-    
-    // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tender List");
     
-    // Export file
     const fileName = `tender_list_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
@@ -257,11 +338,9 @@ function DraftList() {
     return `${day}/${month}/${year}`;
   };
 
-  // Calculate time since last update
   const getTimeSince = (lastUpdate) => {
     if (!lastUpdate) return "-";
     
-    // If lastUpdate is already formatted as a relative time, return it
     if (typeof lastUpdate === "string" && !lastUpdate.includes("-") && !lastUpdate.includes(":")) {
       return lastUpdate;
     }
@@ -284,7 +363,6 @@ function DraftList() {
     }
   };
 
-  // Check stage status and determine if it's editable
   const getStageStatusInfo = (record, stageKey) => {
     const stageStatus = record.stage_status || {};
     const status = stageStatus[stageKey];
@@ -304,7 +382,6 @@ function DraftList() {
         statusText: status
       };
     } else {
-      // Not Complete, Incomplete, or undefined/null
       return {
         isEditable: true,
         isComplete: false,
@@ -314,15 +391,12 @@ function DraftList() {
     }
   };
 
-  // Function to handle stage click - only for editable stages
   const handleStageClick = (record, stageIndex, stageKey, stageName, stageInfo) => {
-    // Check if stage is editable (not complete and not not-applicable)
     if (stageInfo.isEditable) {
       navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
     }
   };
 
-  // Render stage status with appropriate icon and behavior
   const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
     const stageInfo = getStageStatusInfo(record, stageKey);
     const title = `${stageName}: ${stageInfo.statusText}${stageInfo.isEditable ? ' - Click to edit' : ''}`;
@@ -356,7 +430,6 @@ function DraftList() {
     );
   };
 
-  // Render stage filter dropdown
   const renderStageFilter = (stage) => {
     const counts = stageCounts[stage.key] || { all: 0, complete: 0, incomplete: 0, notApplicable: 0 };
     
@@ -386,7 +459,6 @@ function DraftList() {
     );
   };
 
-  // Calculate total incomplete stages count
   const getTotalIncompleteCount = () => {
     let total = 0;
     Object.values(stageCounts).forEach(counts => {
@@ -449,7 +521,6 @@ function DraftList() {
         </div>
       </div>
 
-      {/* Stage Filters Row */}
       <div className="stage-filters-container">
         <div className="stage-filters-header">
           <h3>Filter by Stage Status</h3>
@@ -486,6 +557,7 @@ function DraftList() {
                   </div>
                 </th>
               ))}
+              <th>Draft Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -496,6 +568,10 @@ function DraftList() {
                 const nameEntry2 = record.chkData?.find((chk) => chk.ChkId === "7");
                 const nameEntry3 = record.chkData?.find((chk) => chk.ChkId === "60");
                 const timeSince = getTimeSince(record.LastUpdate);
+                const isAllStagesComplete = areAllStagesComplete(record);
+                const isUpdating = updatingStatus[record.ActivityId] || false;
+                const isDraftZero = record.Draft === "0"; // Complete
+                const isDraftOne = record.Draft === "1"; // In Progress
 
                 return (
                   <tr key={record.ID}>
@@ -513,6 +589,11 @@ function DraftList() {
                         {renderStageStatus(record, index, stage.key, stage.name)}
                       </td>
                     ))}
+                    <td className="draft-status-cell">
+                      <span className={`draft-status-badge ${isDraftZero ? 'complete' : 'in-progress'}`}>
+                        {isDraftZero ? 'Complete' : 'In Progress'}
+                      </span>
+                    </td>
                     <td className="actions-cell">
                       <div className="action-buttons">
                         <button 
@@ -522,6 +603,28 @@ function DraftList() {
                         >
                           <span className="button-icon">👁️</span>
                         </button>
+                        
+                        {/* Complete Tender Button - Only show if draft is "1" (In Progress) */}
+                        {!isDraftZero && (
+                          <button
+                            className={`complete-button ${!isAllStagesComplete ? 'disabled' : ''}`}
+                            title={
+                              isDraftZero 
+                                ? "Already Completed" 
+                                : !isAllStagesComplete 
+                                ? "All stages must be complete or marked as 'Not Applicable'"
+                                : "Mark tender as complete"
+                            }
+                            onClick={() => handleMarkAsComplete(record)}
+                            disabled={!isAllStagesComplete || isUpdating}
+                          >
+                            {isUpdating ? (
+                              <span className="button-icon">⏳</span>
+                            ) : (
+                              <span className="button-icon">✅</span>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -529,7 +632,7 @@ function DraftList() {
               })
             ) : (
               <tr>
-                <td colSpan={5 + stages.length + 1} className="no-records">
+                <td colSpan={5 + stages.length + 2} className="no-records">
                   No draft records found
                 </td>
               </tr>
@@ -550,7 +653,6 @@ function DraftList() {
           
           <div className="page-numbers">
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              // Logic to show pages around current page
               let pageNum = page;
               if (totalPages <= 5) {
                 pageNum = i;
@@ -588,7 +690,7 @@ function DraftList() {
         </div>
       </div>
 
-      {/* Add some CSS styles for the stage icons */}
+      {/* Add CSS styles */}
       <style jsx>{`
         .stage-status-column {
           text-align: center;
@@ -622,12 +724,87 @@ function DraftList() {
         }
         
         .stage-icon.not-applicable {
-          background-color: #2196f3; /* Blue background for N/A */
+          background-color: #2196f3;
           color: white;
         }
         
         .stage-column-cell {
           text-align: center;
+        }
+        
+        .draft-status-cell {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+        
+        .draft-status-badge {
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          display: inline-block;
+        }
+        
+        .draft-status-badge.complete {
+          background-color: #4caf50;
+          color: white;
+        }
+        
+        .draft-status-badge.in-progress {
+          background-color: #ff9800;
+          color: white;
+        }
+        
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+        }
+        
+        .complete-button {
+          background-color: #4caf50;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 6px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.3s;
+        }
+        
+        .complete-button:hover:not(.disabled) {
+          background-color: #388e3c;
+        }
+        
+        .complete-button.disabled {
+          background-color: #cccccc;
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+        
+        .button-icon {
+          font-size: 16px;
+        }
+        
+        .view-button {
+          background-color: #2196f3;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 6px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .view-button:hover {
+          background-color: #1976d2;
         }
       `}</style>
     </div>
