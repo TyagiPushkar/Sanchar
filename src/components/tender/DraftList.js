@@ -548,7 +548,7 @@ function DraftList() {
               <th>LOA No.</th>
               <th>Buyer</th>
               <th>Created Date</th>
-              <th>Last Update</th>
+              {/* <th>Last Update</th> */}
               {stages.map((stage) => (
                 <th key={stage.key} className="stage-column-header">
                   <div className="stage-header-content">
@@ -557,7 +557,7 @@ function DraftList() {
                   </div>
                 </th>
               ))}
-              <th>Draft Status</th>
+              <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -579,11 +579,11 @@ function DraftList() {
                     <td>{nameEntry3?.Value || "-"}</td>
                     <td>{nameEntry2?.Value || "-"}</td>
                     <td>{formatDate(record.Datetime)}</td>
-                    <td>
+                    {/* <td>
                       <span className={`time-badge ${timeSince.includes("day") ? "old" : "recent"}`}>
                         {timeSince}
                       </span>
-                    </td>
+                    </td> */}
                     {stages.map((stage, index) => (
                       <td key={stage.key} className="stage-column-cell">
                         {renderStageStatus(record, index, stage.key, stage.name)}
@@ -591,7 +591,7 @@ function DraftList() {
                     ))}
                     <td className="draft-status-cell">
                       <span className={`draft-status-badge ${isDraftZero ? 'complete' : 'in-progress'}`}>
-                        {isDraftZero ? 'Complete' : 'In Progress'}
+                        {isDraftZero ? 'Complete' : 'Pending'}
                       </span>
                     </td>
                     <td className="actions-cell">
@@ -605,14 +605,14 @@ function DraftList() {
                         </button>
                         
                         {/* Complete Tender Button - Only show if draft is "1" (In Progress) */}
-                        {!isDraftZero && (
+                        {!isDraftZero && isAllStagesComplete && (
                           <button
                             className={`complete-button ${!isAllStagesComplete ? 'disabled' : ''}`}
                             title={
                               isDraftZero 
                                 ? "Already Completed" 
                                 : !isAllStagesComplete 
-                                ? "All stages must be complete or marked as 'Not Applicable'"
+                                ? "All stages must be completed"
                                 : "Mark tender as complete"
                             }
                             onClick={() => handleMarkAsComplete(record)}
@@ -734,10 +734,8 @@ function DraftList() {
         
         .draft-status-cell {
           text-align: center;
-          display: flex;
-          flex-direction: column;
+         
           align-items: center;
-          gap: 4px;
         }
         
         .draft-status-badge {
@@ -765,7 +763,6 @@ function DraftList() {
         }
         
         .complete-button {
-          background-color: #4caf50;
           color: white;
           border: none;
           border-radius: 4px;
@@ -782,7 +779,7 @@ function DraftList() {
         }
         
         .complete-button.disabled {
-          background-color: #cccccc;
+          
           cursor: not-allowed;
           opacity: 0.6;
         }
@@ -792,7 +789,7 @@ function DraftList() {
         }
         
         .view-button {
-          background-color: #2196f3;
+          
           color: white;
           border: none;
           border-radius: 4px;
