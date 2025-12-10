@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import {
   Drawer,
@@ -44,8 +44,26 @@ function Sidebar() {
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const [expanded, setExpanded] = useState(!isTablet);
 
-  // 📌 Added submenu expansion state
-  const [directoryOpen, setDirectoryOpen] = useState(false);
+  // Directory sub routes
+  const directoryRoutes = [
+    { path: "/consignee", name: "Consignee", icon: <Person /> },
+    { path: "/directory", name: "Directory", icon: <ContactPhoneIcon /> },
+    { path: "/participant", name: "Participants", icon: <Person /> },
+    { path: "/employees", name: "Employees", icon: <BadgeIcon /> },
+  ];
+
+  // Check if current location is a directory route
+  const isDirectoryRoute = directoryRoutes.some(route => 
+    location.pathname === route.path || location.pathname.startsWith(route.path + "/")
+  );
+
+  // Initialize directoryOpen based on current location
+  const [directoryOpen, setDirectoryOpen] = useState(isDirectoryRoute);
+
+  // Update directoryOpen when route changes
+  useEffect(() => {
+    setDirectoryOpen(isDirectoryRoute);
+  }, [location.pathname]);
 
   const drawerWidth = expanded ? 240 : 80;
 
@@ -58,14 +76,6 @@ function Sidebar() {
     { path: "/material-supplied", name: "Material Supplied", icon: <InventoryIcon /> },
     { path: "/invoices", name: "Invoices", icon: <ReceiptIcon /> },
     { path: "/amc-work", name: "AMC Work", icon: <EngineeringIcon /> },
-  ];
-
-  // 🔹 Grouped Directory sub routes
-  const directoryRoutes = [
-    { path: "/consignee", name: "Consignee", icon: <Person /> },
-    { path: "/directory", name: "Directory", icon: <ContactPhoneIcon /> },
-    { path: "/participant", name: "Participants", icon: <Person /> },
-    { path: "/employees", name: "Employees", icon: <BadgeIcon /> },
   ];
 
   return (
@@ -143,7 +153,7 @@ function Sidebar() {
             ))}
           </List>
 
-          {/* 🔥 NEW GROUPED DIRECTORY TAB */}
+          {/* 🔥 GROUPED DIRECTORY TAB */}
           <List sx={{ px: 1.5 }}>
             <ListItem disablePadding>
               <Box
@@ -156,7 +166,10 @@ function Sidebar() {
                   borderRadius: "10px",
                   cursor: "pointer",
                   width: "100%",
-                  color: "#555",
+                  color: isDirectoryRoute ? "#F69320" : "#555",
+                  background: isDirectoryRoute
+                    ? "rgba(246,147,32,0.08)"
+                    : "transparent",
                   "&:hover": { background: "rgba(0,0,0,0.05)" },
                 }}
               >
@@ -178,39 +191,40 @@ function Sidebar() {
             {/* Submenu items */}
             <Collapse in={directoryOpen} timeout="auto" unmountOnExit>
               <List component="div" disablePadding sx={{ pl: expanded ? 4 : 0 }}>
-                {directoryRoutes.map((item, i) => (
-                  <ListItem key={i} disablePadding sx={{ mb: 0.5 }}>
-                    <Box
-                      component={Link}
-                      to={item.path}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        px: 2,
-                        py: 1.2,
-                        borderRadius: "10px",
-                        textDecoration: "none",
-                        color:
-                          location.pathname === item.path
-                            ? "#F69320"
-                            : "#777",
-                        background:
-                          location.pathname === item.path
+                {directoryRoutes.map((item, i) => {
+                  const isActive = location.pathname === item.path || 
+                                  location.pathname.startsWith(item.path + "/");
+                  
+                  return (
+                    <ListItem key={i} disablePadding sx={{ mb: 0.5 }}>
+                      <Box
+                        component={Link}
+                        to={item.path}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          px: 2,
+                          py: 1.2,
+                          borderRadius: "10px",
+                          textDecoration: "none",
+                          color: isActive ? "#F69320" : "#777",
+                          background: isActive
                             ? "rgba(246,147,32,0.08)"
                             : "transparent",
-                        "&:hover": { background: "rgba(0,0,0,0.05)" },
-                      }}
-                    >
-                      <ListItemIcon sx={{ minWidth: expanded ? 35 : "auto" }}>
-                        {item.icon}
-                      </ListItemIcon>
+                          "&:hover": { background: "rgba(0,0,0,0.05)" },
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: expanded ? 35 : "auto" }}>
+                          {item.icon}
+                        </ListItemIcon>
 
-                      {expanded && (
-                        <Typography sx={{ ml: 1 }}>{item.name}</Typography>
-                      )}
-                    </Box>
-                  </ListItem>
-                ))}
+                        {expanded && (
+                          <Typography sx={{ ml: 1 }}>{item.name}</Typography>
+                        )}
+                      </Box>
+                    </ListItem>
+                  );
+                })}
               </List>
             </Collapse>
           </List>
