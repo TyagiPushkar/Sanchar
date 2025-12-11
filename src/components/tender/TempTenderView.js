@@ -570,9 +570,21 @@ function TempTenderView() {
   }, [activityId])
 
   const getValueByChkId = (chkId) => {
-    const item = details.find((d) => Number.parseInt(d.ChkId) === chkId)
-    return item ? item.Value : ""
+  const item = details.find((d) => Number.parseInt(d.ChkId) === chkId);
+  if (!item) return "";
+  
+  const value = item.Value;
+  
+  // Check if the field name contains "date" (case insensitive)
+  const fieldName = checkpoints[chkId] || "";
+  const isDateField = fieldName.toLowerCase().includes('date');
+  
+  if (isDateField) {
+    return formatDate(value);
   }
+  
+  return value;
+};
 
   // Function to check if a value is an image URL
   const isImageUrl = (url) => {
@@ -632,26 +644,166 @@ function TempTenderView() {
   }
 
   // Function to export data to Excel
-  const exportToExcel = () => {
-    // Prepare data for export
-    const dataToExport = details.map((record) => {
-      return {
-        "Checkpoint ID": record.ChkId,
-        "Field Name": checkpoints[record.ChkId] || `Checkpoint #${record.ChkId}`,
-        "Value": record.Value,
-      };
-    });
+const exportToExcel = () => {
+  // Collect all fields that are rendered on the page
+  
+  // 1. Candidate/Tender Details fields
+  const tenderDetailsFields = candidateDetailsIds.map(id => {
+    const value = getValueByChkId(id);
+    return {
+      fieldName: checkpoints[id] || `Checkpoint #${id}`,
+      value: value || "—"
+    };
+  });
 
-    // Create worksheet
-    const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Tender Details");
-    
-    // Generate Excel file and trigger download
-    XLSX.writeFile(wb, `tender-details-${activityId}.xlsx`);
+  // 2. Tender Photo field
+  const tenderPhotoField = {
+    fieldName: checkpoints[studentPhotoChkId] || "Tender Photo",
+    value: getValueByChkId(studentPhotoChkId) || "—"
   };
+
+  // 3. Section fields
+  const sectionFields = [];
+  Object.entries(sections).forEach(([sectionTitle, ids]) => {
+    details.forEach(item => {
+      const baseId = Number.parseInt(item.ChkId.toString().split("_")[0]);
+      if (ids.includes(baseId) && item.Value !== null && item.Value !== "") {
+        const label = item.ChkId.includes("_") 
+          ? `${checkpoints[item.ChkId.split("_")[1]] || `Checkpoint #${item.ChkId.split("_")[1]}`} (${sectionTitle})`
+          : checkpoints[item.ChkId] || `Checkpoint #${item.ChkId}`;
+        
+        sectionFields.push({
+          fieldName: label,
+          value: item.Value || "—"
+        });
+      }
+    });
+  });
+
+  // Combine all fields
+  const allFields = [
+    ...tenderDetailsFields,
+    tenderPhotoField,
+    ...sectionFields
+  ];
+
+  // Remove duplicates (in case some fields appear in multiple sections)
+  const uniqueFields = [];
+  const seenFields = new Set();
+  
+  allFields.forEach(field => {
+    if (!seenFields.has(field.fieldName)) {
+      seenFields.add(field.fieldName);
+      uniqueFields.push(field);
+    }
+  });
+
+  // Prepare data for export
+  const dataToExport = uniqueFields.map(field => ({
+    "Field Name": field.fieldName,
+    "Value": field.value
+  }));
+
+  // Add a header row with Tender ID
+  const headerRow = {
+    "Field Name": "TENDER DETAILS",
+    "Value": `Tender ID: ${activityId}`
+  };
+  
+  const finalData = [headerRow, ...dataToExport];
+
+  // Create worksheet
+  const ws = XLSX.utils.json_to_sheet(finalData, { skipHeader: true });
+  
+  // Add custom header styling
+  const wscols = [
+    { wch: 40 }, // Field Name column width
+    { wch: 60 }  // Value column width
+  ];
+  ws['!cols'] = wscols;
+
+  // Style the header row
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for (let C = range.s.c; C <= range.e.c; ++C) {
+    const address = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (!ws[address]) continue;
+    
+    if (C === 0) {
+      // First cell - "TENDER DETAILS"
+      ws[address].s = {
+        font: { bold: true, sz: 16, color: { rgb: "FF6F00" } },
+        alignment: { horizontal: "center" }
+      };
+    } else {
+      // Second cell - Tender ID
+      ws[address].s = {
+        font: { bold: true, sz: 14 },
+        alignment: { horizontal: "center" }
+      };
+    }
+  }
+
+  // Style the data rows
+  for (let R = 1; R <= range.e.r; ++R) {
+    for (let C = 0; C <= range.e.c; ++C) {
+      const address = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[address]) continue;
+      
+      if (C === 0) {
+        // Field Name column
+        ws[address].s = {
+          font: { bold: true, sz: 12 },
+          alignment: { vertical: "top" }
+        };
+      } else {
+        // Value column
+        ws[address].s = {
+          font: { sz: 11 },
+          alignment: { vertical: "top", wrapText: true }
+        };
+      }
+    }
+  }
+
+  // Create workbook
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Tender Details");
+  
+  // Generate Excel file and trigger download
+  XLSX.writeFile(wb, `Tender_Details_${activityId}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+  // Date formatting utility function
+const formatDate = (dateValue) => {
+  if (!dateValue || dateValue === "" || dateValue === "—") return dateValue;
+  
+  // Check if it's already in dd-mm-yyyy format
+  const ddMmYyyyRegex = /^\d{2}-\d{2}-\d{4}$/;
+  if (ddMmYyyyRegex.test(dateValue)) {
+    return dateValue;
+  }
+  
+  // Check if it's in yyyy-mm-dd format (common from databases)
+  const yyyyMmDdRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (yyyyMmDdRegex.test(dateValue)) {
+    const [year, month, day] = dateValue.split('-');
+    return `${day}-${month}-${year}`;
+  }
+  
+  // Check if it's a date string that can be parsed
+  try {
+    const date = new Date(dateValue);
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+  } catch (e) {
+    // If parsing fails, return the original value
+  }
+  
+  return dateValue;
+};
 
   // Save changes
   const saveChanges = async () => {
