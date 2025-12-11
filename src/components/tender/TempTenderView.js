@@ -29,6 +29,39 @@ import {
 } from "lucide-react"
 import logo from "../../assets/images (1).png"
 
+// Date formatting utility function
+const formatDate = (dateValue) => {
+  if (!dateValue || dateValue === "" || dateValue === "—") return dateValue;
+  
+  // Check if it's already in dd-mm-yyyy format
+  const ddMmYyyyRegex = /^\d{2}-\d{2}-\d{4}$/;
+  if (ddMmYyyyRegex.test(dateValue)) {
+    return dateValue;
+  }
+  
+  // Check if it's in yyyy-mm-dd format (common from databases)
+  const yyyyMmDdRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (yyyyMmDdRegex.test(dateValue)) {
+    const [year, month, day] = dateValue.split('-');
+    return `${day}-${month}-${year}`;
+  }
+  
+  // Check if it's a date string that can be parsed
+  try {
+    const date = new Date(dateValue);
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+  } catch (e) {
+    // If parsing fails, return the original value
+  }
+  
+  return dateValue;
+};
+
 // Custom styled components using template literals
 const StyledContainer = ({ children, ...props }) => {
   const style = {
@@ -268,6 +301,66 @@ const StyledInput = ({ value, onChange, ...props }) => {
   }
   return <input value={value} onChange={onChange} style={style} {...props} />
 }
+
+// Date input component with auto-formatting
+const StyledDateInput = ({ value, onChange, ...props }) => {
+  const [displayValue, setDisplayValue] = useState(value || "");
+  
+  useEffect(() => {
+    setDisplayValue(value || "");
+  }, [value]);
+  
+  const handleChange = (e) => {
+    const input = e.target.value;
+    setDisplayValue(input);
+    
+    // Auto-format as user types
+    let formatted = input.replace(/\D/g, '');
+    
+    if (formatted.length > 2) {
+      formatted = formatted.substring(0, 2) + '-' + formatted.substring(2);
+    }
+    if (formatted.length > 5) {
+      formatted = formatted.substring(0, 5) + '-' + formatted.substring(5, 9);
+    }
+    
+    setDisplayValue(formatted);
+    
+    // Only call onChange when we have a complete date
+    if (formatted.length === 10) {
+      onChange(formatted);
+    } else if (formatted.length === 0) {
+      onChange("");
+    }
+  };
+  
+  const style = {
+    width: "100%",
+    padding: "8px 12px",
+    fontSize: "14px",
+    border: "1px solid #ddd",
+    borderRadius: "6px",
+    backgroundColor: "white",
+    transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+    outline: "none",
+    ":focus": {
+      borderColor: "#F69320",
+      boxShadow: "0 0 0 2px rgba(246, 147, 32, 0.2)",
+    },
+    ...props.style,
+  };
+  
+  return (
+    <input
+      value={displayValue}
+      onChange={handleChange}
+      placeholder="dd-mm-yyyy"
+      maxLength={10}
+      style={style}
+      {...props}
+    />
+  );
+};
 
 const StyledAvatar = ({ src, alt, size = 100, ...props }) => {
   const style = {
@@ -510,6 +603,7 @@ function TempTenderView() {
 
   const candidateDetailsIds = [2, 4, 5, 7, 6, 18]
   const studentPhotoChkId = 3 // Assume 2 is the image URL
+  const priceCheckpoints = [10, 12, 15, 17, 22, 24,26,28,29,62,64,66,70,72];
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth)
@@ -570,21 +664,21 @@ function TempTenderView() {
   }, [activityId])
 
   const getValueByChkId = (chkId) => {
-  const item = details.find((d) => Number.parseInt(d.ChkId) === chkId);
-  if (!item) return "";
-  
-  const value = item.Value;
-  
-  // Check if the field name contains "date" (case insensitive)
-  const fieldName = checkpoints[chkId] || "";
-  const isDateField = fieldName.toLowerCase().includes('date');
-  
-  if (isDateField) {
-    return formatDate(value);
-  }
-  
-  return value;
-};
+    const item = details.find((d) => Number.parseInt(d.ChkId) === chkId);
+    if (!item) return "";
+    
+    const value = item.Value;
+    
+    // Check if the field name contains "date" (case insensitive)
+    const fieldName = checkpoints[chkId] || "";
+    const isDateField = fieldName.toLowerCase().includes('date');
+    
+    if (isDateField) {
+      return formatDate(value);
+    }
+    
+    return value;
+  };
 
   // Function to check if a value is an image URL
   const isImageUrl = (url) => {
@@ -644,232 +738,342 @@ function TempTenderView() {
   }
 
   // Function to export data to Excel
-const exportToExcel = () => {
-  // Collect all fields that are rendered on the page
-  
-  // 1. Candidate/Tender Details fields
-  const tenderDetailsFields = candidateDetailsIds.map(id => {
-    const value = getValueByChkId(id);
-    return {
-      fieldName: checkpoints[id] || `Checkpoint #${id}`,
-      value: value || "—"
+  const exportToExcel = () => {
+    // Collect all fields that are rendered on the page
+    
+    // 1. Candidate/Tender Details fields
+    const tenderDetailsFields = candidateDetailsIds.map(id => {
+      const fieldName = checkpoints[id] || `Checkpoint #${id}`;
+      const isDateField = fieldName.toLowerCase().includes('date');
+      let value = getValueByChkId(id);
+      
+      return {
+        fieldName: fieldName,
+        value: value || "—"
+      };
+    });
+
+    // 2. Tender Photo field
+    const tenderPhotoField = {
+      fieldName: checkpoints[studentPhotoChkId] || "Tender Photo",
+      value: getValueByChkId(studentPhotoChkId) || "—"
     };
-  });
 
-  // 2. Tender Photo field
-  const tenderPhotoField = {
-    fieldName: checkpoints[studentPhotoChkId] || "Tender Photo",
-    value: getValueByChkId(studentPhotoChkId) || "—"
-  };
+    // 3. Section fields
+    const sectionFields = [];
+    Object.entries(sections).forEach(([sectionTitle, ids]) => {
+      details.forEach(item => {
+        const baseId = Number.parseInt(item.ChkId.toString().split("_")[0]);
+        if (ids.includes(baseId) && item.Value !== null && item.Value !== "") {
+          const label = item.ChkId.includes("_") 
+            ? `${checkpoints[item.ChkId.split("_")[1]] || `Checkpoint #${item.ChkId.split("_")[1]}`} (${sectionTitle})`
+            : checkpoints[item.ChkId] || `Checkpoint #${item.ChkId}`;
+          
+          const isDateField = label.toLowerCase().includes('date');
+          let value = item.Value;
+          
+          // Format date for export
+          if (isDateField) {
+            value = formatDate(value);
+          }
+          
+          sectionFields.push({
+            fieldName: label,
+            value: value || "—"
+          });
+        }
+      });
+    });
 
-  // 3. Section fields
-  const sectionFields = [];
-  Object.entries(sections).forEach(([sectionTitle, ids]) => {
-    details.forEach(item => {
-      const baseId = Number.parseInt(item.ChkId.toString().split("_")[0]);
-      if (ids.includes(baseId) && item.Value !== null && item.Value !== "") {
-        const label = item.ChkId.includes("_") 
-          ? `${checkpoints[item.ChkId.split("_")[1]] || `Checkpoint #${item.ChkId.split("_")[1]}`} (${sectionTitle})`
-          : checkpoints[item.ChkId] || `Checkpoint #${item.ChkId}`;
-        
-        sectionFields.push({
-          fieldName: label,
-          value: item.Value || "—"
-        });
+    // Combine all fields
+    const allFields = [
+      ...tenderDetailsFields,
+      tenderPhotoField,
+      ...sectionFields
+    ];
+
+    // Remove duplicates (in case some fields appear in multiple sections)
+    const uniqueFields = [];
+    const seenFields = new Set();
+    
+    allFields.forEach(field => {
+      if (!seenFields.has(field.fieldName)) {
+        seenFields.add(field.fieldName);
+        uniqueFields.push(field);
       }
     });
-  });
 
-  // Combine all fields
-  const allFields = [
-    ...tenderDetailsFields,
-    tenderPhotoField,
-    ...sectionFields
-  ];
+    // Prepare data for export
+    const dataToExport = uniqueFields.map(field => ({
+      "Field Name": field.fieldName,
+      "Value": field.value
+    }));
 
-  // Remove duplicates (in case some fields appear in multiple sections)
-  const uniqueFields = [];
-  const seenFields = new Set();
-  
-  allFields.forEach(field => {
-    if (!seenFields.has(field.fieldName)) {
-      seenFields.add(field.fieldName);
-      uniqueFields.push(field);
-    }
-  });
-
-  // Prepare data for export
-  const dataToExport = uniqueFields.map(field => ({
-    "Field Name": field.fieldName,
-    "Value": field.value
-  }));
-
-  // Add a header row with Tender ID
-  const headerRow = {
-    "Field Name": "TENDER DETAILS",
-    "Value": `Tender ID: ${activityId}`
-  };
-  
-  const finalData = [headerRow, ...dataToExport];
-
-  // Create worksheet
-  const ws = XLSX.utils.json_to_sheet(finalData, { skipHeader: true });
-  
-  // Add custom header styling
-  const wscols = [
-    { wch: 40 }, // Field Name column width
-    { wch: 60 }  // Value column width
-  ];
-  ws['!cols'] = wscols;
-
-  // Style the header row
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for (let C = range.s.c; C <= range.e.c; ++C) {
-    const address = XLSX.utils.encode_cell({ r: 0, c: C });
-    if (!ws[address]) continue;
+    // Add a header row with Tender ID
+    const headerRow = {
+      "Field Name": "TENDER DETAILS",
+      "Value": `Tender ID: ${activityId}`
+    };
     
-    if (C === 0) {
-      // First cell - "TENDER DETAILS"
-      ws[address].s = {
-        font: { bold: true, sz: 16, color: { rgb: "FF6F00" } },
-        alignment: { horizontal: "center" }
-      };
-    } else {
-      // Second cell - Tender ID
-      ws[address].s = {
-        font: { bold: true, sz: 14 },
-        alignment: { horizontal: "center" }
-      };
-    }
-  }
+    const finalData = [headerRow, ...dataToExport];
 
-  // Style the data rows
-  for (let R = 1; R <= range.e.r; ++R) {
-    for (let C = 0; C <= range.e.c; ++C) {
-      const address = XLSX.utils.encode_cell({ r: R, c: C });
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(finalData, { skipHeader: true });
+    
+    // Add custom header styling
+    const wscols = [
+      { wch: 40 }, // Field Name column width
+      { wch: 60 }  // Value column width
+    ];
+    ws['!cols'] = wscols;
+
+    // Style the header row
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const address = XLSX.utils.encode_cell({ r: 0, c: C });
       if (!ws[address]) continue;
       
       if (C === 0) {
-        // Field Name column
+        // First cell - "TENDER DETAILS"
         ws[address].s = {
-          font: { bold: true, sz: 12 },
-          alignment: { vertical: "top" }
+          font: { bold: true, sz: 16, color: { rgb: "FF6F00" } },
+          alignment: { horizontal: "center" }
         };
       } else {
-        // Value column
+        // Second cell - Tender ID
         ws[address].s = {
-          font: { sz: 11 },
-          alignment: { vertical: "top", wrapText: true }
+          font: { bold: true, sz: 14 },
+          alignment: { horizontal: "center" }
         };
       }
     }
-  }
 
-  // Create workbook
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Tender Details");
-  
-  // Generate Excel file and trigger download
-  XLSX.writeFile(wb, `Tender_Details_${activityId}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Style the data rows
+    for (let R = 1; R <= range.e.r; ++R) {
+      for (let C = 0; C <= range.e.c; ++C) {
+        const address = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[address]) continue;
+        
+        if (C === 0) {
+          // Field Name column
+          ws[address].s = {
+            font: { bold: true, sz: 12 },
+            alignment: { vertical: "top" }
+          };
+        } else {
+          // Value column
+          ws[address].s = {
+            font: { sz: 11 },
+            alignment: { vertical: "top", wrapText: true }
+          };
+        }
+      }
+    }
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Tender Details");
+    
+    // Generate Excel file and trigger download
+    XLSX.writeFile(wb, `Tender_Details_${activityId}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
-  // Date formatting utility function
-const formatDate = (dateValue) => {
-  if (!dateValue || dateValue === "" || dateValue === "—") return dateValue;
+
+  // Utility function to calculate GST (18%)
+  const calculateGST = (amount) => {
+    if (!amount || isNaN(amount)) return { withGST: 0, withoutGST: 0 };
+    
+    const numAmount = parseFloat(amount.toString().replace(/,/g, ''));
+    if (isNaN(numAmount)) return { withGST: 0, withoutGST: 0 };
+    
+    return {
+      withGST: numAmount,
+      withoutGST: numAmount / 1.18, // Assuming 18% GST
+      gstAmount: numAmount - (numAmount / 1.18)
+    };
+  };
+
+  const FileUploadField = ({ chkId, currentValue, onChange, isEditing }) => {
+    const [previewUrl, setPreviewUrl] = useState(currentValue);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef(null);
   
-  // Check if it's already in dd-mm-yyyy format
-  const ddMmYyyyRegex = /^\d{2}-\d{2}-\d{4}$/;
-  if (ddMmYyyyRegex.test(dateValue)) {
-    return dateValue;
-  }
+    const handleFileChange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
   
-  // Check if it's in yyyy-mm-dd format (common from databases)
-  const yyyyMmDdRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (yyyyMmDdRegex.test(dateValue)) {
-    const [year, month, day] = dateValue.split('-');
-    return `${day}-${month}-${year}`;
-  }
+      setIsUploading(true);
   
-  // Check if it's a date string that can be parsed
-  try {
-    const date = new Date(dateValue);
-    if (!isNaN(date.getTime())) {
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-  } catch (e) {
-    // If parsing fails, return the original value
-  }
+      try {
+        // Create preview for images
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            setPreviewUrl(event.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
   
-  return dateValue;
-};
-
-  // Save changes
-  const saveChanges = async () => {
-    if (!isAdmin) {
-      setToast({
-        show: true,
-        message: "Only admin users can save changes",
-        type: "error",
-      })
-      return
-    }
-
-    setIsSaving(true)
-    try {
-      // Convert editedData from object to array format expected by API
-      const dataToSend = {}
-      Object.keys(editedData).forEach((chkId) => {
-        dataToSend[chkId] = editedData[chkId]
-      })
-
-      const response = await axios.post("https://namami-infotech.com/SANCHAR/src/menu/edit_transaction.php", {
-        ActivityId: activityId,
-        data: dataToSend,
-        LatLong: null, // Add LatLong if needed
-      })
-
-      if (response.data.success) {
-        // Update local details with edited data
-        const updatedDetails = details.map((item) => ({
-          ...item,
-          Value: editedData[item.ChkId] || item.Value,
-        }))
-
-        setDetails(updatedDetails)
-        setIsEditing(false)
+        // Convert file to base64
+        const base64Data = await convertToBase64(file);
+        
+        // Call your API to upload the file
+        const response = await axios.post('https://namami-infotech.com/SANCHAR/src/menu/edit_image.php', {
+          ActivityId: activityId,
+          ChkId: chkId,
+          ImageData: base64Data
+        });
+  
+        if (response.data.success) {
+          onChange(chkId, response.data.data.ImageUrl);
+          setToast({
+            show: true,
+            message: 'File uploaded successfully',
+            type: 'success'
+          });
+        } else {
+          throw new Error(response.data.message || 'Upload failed');
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
         setToast({
           show: true,
-          message: "Changes saved successfully",
-          type: "success",
-        })
-      } else {
-        throw new Error(response.data.message || "Failed to save changes")
+          message: error.message || 'Failed to upload file',
+          type: 'error'
+        });
+        setPreviewUrl(currentValue); // Revert to previous value
+      } finally {
+        setIsUploading(false);
       }
-    } catch (err) {
-      console.error("Error saving changes:", err)
-      setToast({
-        show: true,
-        message: err.message || "Failed to save changes",
-        type: "error",
-      })
-    } finally {
-      setIsSaving(false)
+    };
+  
+    const convertToBase64 = (file) => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = error => reject(error);
+      });
+    };
+  
+    const triggerFileInput = () => {
+      fileInputRef.current.click();
+    };
+  
+    if (!isEditing) {
+      return null;
     }
-  }
+  
+    return (
+      <div style={{ marginTop: '10px' }}>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="image/*,.pdf"
+          style={{ display: 'none' }}
+        />
+        
+        <StyledButton
+          onClick={triggerFileInput}
+          style={{ width: '100%' }}
+          disabled={isUploading}
+        >
+          {isUploading ? 'Uploading...' : 'Upload New File'}
+        </StyledButton>
+        
+        {previewUrl && isImageUrl(previewUrl) && (
+          <img
+            src={previewUrl}
+            alt="Preview"
+            style={{
+              maxWidth: '100%',
+              maxHeight: '200px',
+              marginTop: '10px',
+              borderRadius: '8px'
+            }}
+          />
+        )}
+        
+        {previewUrl && isPdfUrl(previewUrl) && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginTop: '10px',
+            padding: '10px',
+            backgroundColor: '#f5f5f5',
+            borderRadius: '8px'
+          }}>
+            <FileText size={24} style={{ marginRight: '10px' }} />
+            <span>PDF Document</span>
+          </div>
+        )}
+      </div>
+    );
+  };
 
-  const closeToast = () => {
-    setToast({ ...toast, show: false })
-  }
+  const renderPriceField = (field, isEditing) => {
+    const priceData = calculateGST(field.value);
+    const formattedWithGST = priceData.withGST.toLocaleString('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    const formattedWithoutGST = priceData.withoutGST.toLocaleString('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    const formattedGSTAmount = priceData.gstAmount.toLocaleString('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+    return (
+      <StyledFieldBox key={field.id} isEditing={isEditing} variant={fieldVariant}>
+        <StyledFieldLabel>
+          {getIconForField(field.label)}
+          {field.label}
+        </StyledFieldLabel>
+        {isEditing ? (
+          <StyledInput
+            value={editedData[field.id] || ""}
+            onChange={(e) => handleInputChange(field.id, e.target.value)}
+            placeholder="Enter amount with GST"
+          />
+        ) : (
+          <div>
+            <StyledFieldValue style={{ fontWeight: 'bold' }}>
+              {formattedWithGST} (Incl. GST)
+            </StyledFieldValue>
+            <StyledFieldValue style={{ fontSize: '13px', color: '#555' }}>
+              {formattedWithoutGST} (Excl. GST)
+            </StyledFieldValue>
+            <StyledFieldValue style={{ fontSize: '12px', color: '#777' }}>
+              {formattedGSTAmount} (GST Amount)
+            </StyledFieldValue>
+          </div>
+        )}
+      </StyledFieldBox>
+    );
+  };
 
   const renderStudentDetails = () => {
     const fields = candidateDetailsIds.map((id) => {
+      const fieldName = checkpoints[id] || `Checkpoint #${id}`;
+      const isDateField = fieldName.toLowerCase().includes('date');
       const value = getValueByChkId(id);
+      
       return {
         id,
-        label: checkpoints[id] || `Checkpoint #${id}`,
-        value,
+        label: fieldName,
+        value: value,
+        isDateField,
         isImage: isImageUrl(value),
         isPdf: isPdfUrl(value),
       };
@@ -999,14 +1203,21 @@ const formatDate = (dateValue) => {
                       variant={fieldVariant}
                     >
                       <StyledFieldLabel>
-                        {getIconForField(field.label)}
+                        {field.isDateField ? <Calendar size={16} /> : getIconForField(field.label)}
                         {field.label}
                       </StyledFieldLabel>
                       {isEditing ? (
-                        <StyledInput
-                          value={editedData[field.id] || ""}
-                          onChange={(e) => handleInputChange(field.id, e.target.value)}
-                        />
+                        field.isDateField ? (
+                          <StyledDateInput
+                            value={editedData[field.id] || ""}
+                            onChange={(value) => handleInputChange(field.id, value)}
+                          />
+                        ) : (
+                          <StyledInput
+                            value={editedData[field.id] || ""}
+                            onChange={(e) => handleInputChange(field.id, e.target.value)}
+                          />
+                        )
                       ) : (
                         <StyledFieldValue>{field.value || "—"}</StyledFieldValue>
                       )}
@@ -1027,14 +1238,21 @@ const formatDate = (dateValue) => {
                 .map((field, idx) => (
                   <StyledFieldBox key={idx} isEditing={isEditing} variant={fieldVariant}>
                     <StyledFieldLabel>
-                      {getIconForField(field.label)}
+                      {field.isDateField ? <Calendar size={16} /> : getIconForField(field.label)}
                       {field.label}
                     </StyledFieldLabel>
                     {isEditing ? (
-                      <StyledInput
-                        value={editedData[field.id] || ""}
-                        onChange={(e) => handleInputChange(field.id, e.target.value)}
-                      />
+                      field.isDateField ? (
+                        <StyledDateInput
+                          value={editedData[field.id] || ""}
+                          onChange={(value) => handleInputChange(field.id, value)}
+                        />
+                      ) : (
+                        <StyledInput
+                          value={editedData[field.id] || ""}
+                          onChange={(e) => handleInputChange(field.id, e.target.value)}
+                        />
+                      )
                     ) : (
                       <StyledFieldValue>{field.value || "—"}</StyledFieldValue>
                     )}
@@ -1098,381 +1316,266 @@ const formatDate = (dateValue) => {
   }
 
   const renderSection = (title, checkpointIds) => {
-  const sectionData = details.filter((item) => {
-    const baseId = Number.parseInt(item.ChkId.toString().split("_")[0])
-    return checkpointIds.includes(baseId) && item.Value !== null && item.Value !== "";
-  });
+    const sectionData = details.filter((item) => {
+      const baseId = Number.parseInt(item.ChkId.toString().split("_")[0])
+      return checkpointIds.includes(baseId) && item.Value !== null && item.Value !== "";
+    });
 
-  if (sectionData.length === 0) return null
+    if (sectionData.length === 0) return null
 
-  const getLabel = (chkId) => {
-    if (chkId.includes("_")) {
-      const [parentId, childId] = chkId.split("_")
-      const parentLabel = checkpoints[parentId] || `Checkpoint #${parentId}`
-      const childLabel = checkpoints[childId] || `Checkpoint #${childId}`
-      return `${childLabel} (${parentLabel})`
-    } else {
-      return checkpoints[chkId] || `Checkpoint #${chkId}`
+    const getLabel = (chkId) => {
+      if (chkId.includes("_")) {
+        const [parentId, childId] = chkId.split("_")
+        const parentLabel = checkpoints[parentId] || `Checkpoint #${parentId}`
+        const childLabel = checkpoints[childId] || `Checkpoint #${childId}`
+        return `${childLabel} (${parentLabel})`
+      } else {
+        return checkpoints[chkId] || `Checkpoint #${chkId}`
+      }
     }
-  }
 
-  const isCollapsed = collapsedSections[title]
-  const itemCount = sectionData.length
+    const isCollapsed = collapsedSections[title]
+    const itemCount = sectionData.length
 
-  // Get icon based on section title
-  let sectionIcon
-  if (title.toLowerCase().includes("published")) {
-    sectionIcon = <FileText size={20} color="white" />
-  } else if (title.toLowerCase().includes("participated")) {
-    sectionIcon = <Briefcase size={20} color="white" />
-  } else if (title.toLowerCase().includes("opened")) {
-    sectionIcon = <FileCheck size={20} color="white" />
-  } else if (title.toLowerCase().includes("awarded")) {
-    sectionIcon = <Award size={20} color="white" />
-  } else {
-    sectionIcon = <FileCheck size={20} color="white" />
-  }
+    // Get icon based on section title
+    let sectionIcon
+    if (title.toLowerCase().includes("published")) {
+      sectionIcon = <FileText size={20} color="white" />
+    } else if (title.toLowerCase().includes("participated")) {
+      sectionIcon = <Briefcase size={20} color="white" />
+    } else if (title.toLowerCase().includes("opened")) {
+      sectionIcon = <FileCheck size={20} color="white" />
+    } else if (title.toLowerCase().includes("awarded")) {
+      sectionIcon = <Award size={20} color="white" />
+    } else {
+      sectionIcon = <FileCheck size={20} color="white" />
+    }
 
-  return (
-    <div key={title} style={{ marginBottom: "25px" }}>
-      <StyledSectionHeader
-        title={title}
-        icon={sectionIcon}
-        onToggle={() => toggleSectionCollapse(title)}
-        isCollapsed={isCollapsed}
-        count={itemCount}
-      />
+    return (
+      <div key={title} style={{ marginBottom: "25px" }}>
+        <StyledSectionHeader
+          title={title}
+          icon={sectionIcon}
+          onToggle={() => toggleSectionCollapse(title)}
+          isCollapsed={isCollapsed}
+          count={itemCount}
+        />
 
-      {!isCollapsed && (
-        <div
-          style={{
-            backgroundColor: "#ffffff",
-            borderRadius: "10px",
-            padding: "20px",
-            boxShadow: "0 4px 15px rgba(0, 0, 0, 0.05)",
-            border: "1px solid #f0f0f0",
-          }}
-        >
-          {/* Single grid for all items - no grouping */}
+        {!isCollapsed && (
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: getGridColumns(),
-              gap: "15px",
-              width: "100%",
+              backgroundColor: "#ffffff",
+              borderRadius: "10px",
+              padding: "20px",
+              boxShadow: "0 4px 15px rgba(0, 0, 0, 0.05)",
+              border: "1px solid #f0f0f0",
             }}
           >
-            {sectionData.map((item, index) => {
-              const isImage = isImageUrl(item.Value)
-              const isPdf = isPdfUrl(item.Value)
-              const isPriceField = priceCheckpoints.includes(Number(item.ChkId));
-              
-              // Skip rendering if value is null or empty
-              if (!item.Value || item.Value === "") return null;
-              
-              if (isPriceField) {
-                const field = {
-                  id: item.ChkId,
-                  label: getLabel(item.ChkId),
-                  value: item.Value
-                };
-                return renderPriceField(field, isEditing);
-              }
-              
-              return (
-                <StyledFieldBox
-                  key={`${item.ChkId}-${index}`}
-                  isEditing={isEditing}
-                  variant={fieldVariant}
-                  style={{
-                    backgroundColor: isImage || isPdf ? "rgba(246, 147, 32, 0.05)" : undefined,
-                    border: isImage || isPdf ? "1px solid rgba(246, 147, 32, 0.2)" : undefined,
-                  }}
-                >
-                  <StyledFieldLabel>
-                    {isImage ? (
-                      <ImageIcon size={16} />
-                    ) : isPdf ? (
-                      <FileText size={16} />
-                    ) : (
-                      getIconForField(getLabel(item.ChkId))
-                    )}
-                    {getLabel(item.ChkId)}
-                  </StyledFieldLabel>
-              
-                  {isEditing ? (
-                    <>
-                      {isImage || isPdf ? (
-                        <>
+            {/* Single grid for all items - no grouping */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: getGridColumns(),
+                gap: "15px",
+                width: "100%",
+              }}
+            >
+              {sectionData.map((item, index) => {
+                const isImage = isImageUrl(item.Value)
+                const isPdf = isPdfUrl(item.Value)
+                const isPriceField = priceCheckpoints.includes(Number(item.ChkId));
+                const fieldLabel = getLabel(item.ChkId);
+                const isDateField = fieldLabel.toLowerCase().includes('date');
+                
+                // Skip rendering if value is null or empty
+                if (!item.Value || item.Value === "") return null;
+                
+                if (isPriceField) {
+                  const field = {
+                    id: item.ChkId,
+                    label: fieldLabel,
+                    value: item.Value
+                  };
+                  return renderPriceField(field, isEditing);
+                }
+                
+                return (
+                  <StyledFieldBox
+                    key={`${item.ChkId}-${index}`}
+                    isEditing={isEditing}
+                    variant={fieldVariant}
+                    style={{
+                      backgroundColor: isImage || isPdf ? "rgba(246, 147, 32, 0.05)" : undefined,
+                      border: isImage || isPdf ? "1px solid rgba(246, 147, 32, 0.2)" : undefined,
+                    }}
+                  >
+                    <StyledFieldLabel>
+                      {isImage ? (
+                        <ImageIcon size={16} />
+                      ) : isPdf ? (
+                        <FileText size={16} />
+                      ) : isDateField ? (
+                        <Calendar size={16} />
+                      ) : (
+                        getIconForField(fieldLabel)
+                      )}
+                      {fieldLabel}
+                    </StyledFieldLabel>
+                
+                    {isEditing ? (
+                      <>
+                        {isImage || isPdf ? (
+                          <>
+                            <StyledInput
+                              value={editedData[item.ChkId] || ""}
+                              onChange={(e) => handleInputChange(item.ChkId, e.target.value)}
+                              placeholder={isPdf ? "Enter PDF URL" : isImage ? "Enter image URL" : "Enter value"}
+                            />
+                            <FileUploadField
+                              chkId={item.ChkId}
+                              currentValue={editedData[item.ChkId] || item.Value}
+                              onChange={handleInputChange}
+                              isEditing={isEditing}
+                            />
+                          </>
+                        ) : isDateField ? (
+                          <StyledDateInput
+                            value={editedData[item.ChkId] || ""}
+                            onChange={(value) => handleInputChange(item.ChkId, value)}
+                          />
+                        ) : (
                           <StyledInput
                             value={editedData[item.ChkId] || ""}
                             onChange={(e) => handleInputChange(item.ChkId, e.target.value)}
-                            placeholder={isPdf ? "Enter PDF URL" : isImage ? "Enter image URL" : "Enter value"}
                           />
-                          <FileUploadField
-                            chkId={item.ChkId}
-                            currentValue={editedData[item.ChkId] || item.Value}
-                            onChange={handleInputChange}
-                            isEditing={isEditing}
+                        )}
+                      </>
+                    ) : isImage ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                        <div style={{ position: "relative", marginBottom: "10px" }}>
+                          <img
+                            src={item.Value || "/placeholder.svg"}
+                            alt={fieldLabel}
+                            style={{
+                              width: "100px",
+                              height: "100px",
+                              objectFit: "cover",
+                              borderRadius: "8px",
+                              border: "2px solid white",
+                              boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                            }}
                           />
-                        </>
-                      ) : (
-                        <StyledInput
-                          value={editedData[item.ChkId] || ""}
-                          onChange={(e) => handleInputChange(item.ChkId, e.target.value)}
-                        />
-                      )}
-                    </>
-                  ) : isImage ? (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                      <div style={{ position: "relative", marginBottom: "10px" }}>
-                        <img
-                          src={item.Value || "/placeholder.svg"}
-                          alt={getLabel(item.ChkId)}
+                          <StyledIconButton onClick={() => openFileInNewTab(item.Value)}>
+                            <Eye size={16} />
+                          </StyledIconButton>
+                        </div>
+                        <StyledButton
+                          style={{ padding: "6px 12px", fontSize: "12px" }}
+                          onClick={() => openFileInNewTab(item.Value)}
+                        >
+                          <ExternalLink size={14} style={{ marginRight: "5px" }} />
+                          Open Image
+                        </StyledButton>
+                      </div>
+                    ) : isPdf ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                        <div
                           style={{
-                            width: "100px",
-                            height: "100px",
-                            objectFit: "cover",
-                            borderRadius: "8px",
-                            border: "2px solid white",
-                            boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#F69320',
+                            backgroundColor: 'rgba(246, 147, 32, 0.1)',
+                            marginBottom: '10px'
                           }}
-                        />
-                        <StyledIconButton onClick={() => openFileInNewTab(item.Value)}>
-                          <Eye size={16} />
-                        </StyledIconButton>
+                        >
+                          <FileText size={12} style={{ marginRight: '5px' }} />
+                          PDF Document
+                        </div>
+                        <StyledButton
+                          style={{ padding: "6px 12px", fontSize: "12px" }}
+                          onClick={() => openFileInNewTab(item.Value)}
+                        >
+                          <ExternalLink size={14} style={{ marginRight: "5px" }} />
+                          Open PDF
+                        </StyledButton>
                       </div>
-                      <StyledButton
-                        style={{ padding: "6px 12px", fontSize: "12px" }}
-                        onClick={() => openFileInNewTab(item.Value)}
-                      >
-                        <ExternalLink size={14} style={{ marginRight: "5px" }} />
-                        Open Image
-                      </StyledButton>
-                    </div>
-                  ) : isPdf ? (
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '4px 8px',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#F69320',
-                          backgroundColor: 'rgula(246, 147, 32, 0.1)',
-                          marginBottom: '10px'
-                        }}
-                      >
-                        <FileText size={12} style={{ marginRight: '5px' }} />
-                        PDF Document
-                      </div>
-                      <StyledButton
-                        style={{ padding: "6px 12px", fontSize: "12px" }}
-                        onClick={() => openFileInNewTab(item.Value)}
-                      >
-                        <ExternalLink size={14} style={{ marginRight: "5px" }} />
-                        Open PDF
-                      </StyledButton>
-                    </div>
-                  ) : (
-                    <StyledFieldValue>{item.Value || "—"}</StyledFieldValue>
-                  )}
-                </StyledFieldBox>
-              )
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-  // Utility function to calculate GST (18%)
-const calculateGST = (amount) => {
-  if (!amount || isNaN(amount)) return { withGST: 0, withoutGST: 0 };
-  
-  const numAmount = parseFloat(amount.toString().replace(/,/g, ''));
-  if (isNaN(numAmount)) return { withGST: 0, withoutGST: 0 };
-  
-  return {
-    withGST: numAmount,
-    withoutGST: numAmount / 1.18, // Assuming 18% GST
-    gstAmount: numAmount - (numAmount / 1.18)
-  };
-  };
-  const renderPriceField = (field, isEditing) => {
-    const priceData = calculateGST(field.value);
-    const formattedWithGST = priceData.withGST.toLocaleString('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    const formattedWithoutGST = priceData.withoutGST.toLocaleString('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    
-    const formattedGSTAmount = priceData.gstAmount.toLocaleString('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  
-    return (
-      <StyledFieldBox key={field.id} isEditing={isEditing} variant={fieldVariant}>
-        <StyledFieldLabel>
-          {getIconForField(field.label)}
-          {field.label}
-        </StyledFieldLabel>
-        {isEditing ? (
-          <StyledInput
-            value={editedData[field.id] || ""}
-            onChange={(e) => handleInputChange(field.id, e.target.value)}
-            placeholder="Enter amount with GST"
-          />
-        ) : (
-          <div>
-            <StyledFieldValue style={{ fontWeight: 'bold' }}>
-              {formattedWithGST} (Incl. GST)
-            </StyledFieldValue>
-            <StyledFieldValue style={{ fontSize: '13px', color: '#555' }}>
-              {formattedWithoutGST} (Excl. GST)
-            </StyledFieldValue>
-            <StyledFieldValue style={{ fontSize: '12px', color: '#777' }}>
-              {formattedGSTAmount} (GST Amount)
-            </StyledFieldValue>
-          </div>
-        )}
-      </StyledFieldBox>
-    );
-  };
-  const priceCheckpoints = [10, 12, 15, 17, 22, 24,26,28,29,62,64,66,70,72]; // Add more IDs as needed
-
-  const FileUploadField = ({ chkId, currentValue, onChange, isEditing }) => {
-    const [previewUrl, setPreviewUrl] = useState(currentValue);
-    const [isUploading, setIsUploading] = useState(false);
-    const fileInputRef = useRef(null);
-  
-    const handleFileChange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-  
-      setIsUploading(true);
-  
-      try {
-        // Create preview for images
-        if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            setPreviewUrl(event.target.result);
-          };
-          reader.readAsDataURL(file);
-        }
-  
-        // Convert file to base64
-        const base64Data = await convertToBase64(file);
-        
-        // Call your API to upload the file
-        const response = await axios.post('https://namami-infotech.com/SANCHAR/src/menu/edit_image.php', {
-          ActivityId: activityId,
-          ChkId: chkId,
-          ImageData: base64Data
-        });
-  
-        if (response.data.success) {
-          onChange(chkId, response.data.data.ImageUrl);
-          setToast({
-            show: true,
-            message: 'File uploaded successfully',
-            type: 'success'
-          });
-        } else {
-          throw new Error(response.data.message || 'Upload failed');
-        }
-      } catch (error) {
-        console.error('Upload error:', error);
-        setToast({
-          show: true,
-          message: error.message || 'Failed to upload file',
-          type: 'error'
-        });
-        setPreviewUrl(currentValue); // Revert to previous value
-      } finally {
-        setIsUploading(false);
-      }
-    };
-  
-    const convertToBase64 = (file) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = error => reject(error);
-      });
-    };
-  
-    const triggerFileInput = () => {
-      fileInputRef.current.click();
-    };
-  
-    if (!isEditing) {
-      return null;
-    }
-  
-    return (
-      <div style={{ marginTop: '10px' }}>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept="image/*,.pdf"
-          style={{ display: 'none' }}
-        />
-        
-        <StyledButton
-          onClick={triggerFileInput}
-          style={{ width: '100%' }}
-          disabled={isUploading}
-        >
-          {isUploading ? 'Uploading...' : 'Upload New File'}
-        </StyledButton>
-        
-        {previewUrl && isImageUrl(previewUrl) && (
-          <img
-            src={previewUrl}
-            alt="Preview"
-            style={{
-              maxWidth: '100%',
-              maxHeight: '200px',
-              marginTop: '10px',
-              borderRadius: '8px'
-            }}
-          />
-        )}
-        
-        {previewUrl && isPdfUrl(previewUrl) && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            marginTop: '10px',
-            padding: '10px',
-            backgroundColor: '#f5f5f5',
-            borderRadius: '8px'
-          }}>
-            <FileText size={24} style={{ marginRight: '10px' }} />
-            <span>PDF Document</span>
+                    ) : (
+                      <StyledFieldValue>
+                        {isDateField ? formatDate(item.Value) : item.Value || "—"}
+                      </StyledFieldValue>
+                    )}
+                  </StyledFieldBox>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
-    );
+    )
   };
+
+  // Save changes
+  const saveChanges = async () => {
+    if (!isAdmin) {
+      setToast({
+        show: true,
+        message: "Only admin users can save changes",
+        type: "error",
+      })
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      // Convert editedData from object to array format expected by API
+      const dataToSend = {}
+      Object.keys(editedData).forEach((chkId) => {
+        dataToSend[chkId] = editedData[chkId]
+      })
+
+      const response = await axios.post("https://namami-infotech.com/SANCHAR/src/menu/edit_transaction.php", {
+        ActivityId: activityId,
+        data: dataToSend,
+        LatLong: null, // Add LatLong if needed
+      })
+
+      if (response.data.success) {
+        // Update local details with edited data
+        const updatedDetails = details.map((item) => ({
+          ...item,
+          Value: editedData[item.ChkId] || item.Value,
+        }))
+
+        setDetails(updatedDetails)
+        setIsEditing(false)
+        setToast({
+          show: true,
+          message: "Changes saved successfully",
+          type: "success",
+        })
+      } else {
+        throw new Error(response.data.message || "Failed to save changes")
+      }
+    } catch (err) {
+      console.error("Error saving changes:", err)
+      setToast({
+        show: true,
+        message: err.message || "Failed to save changes",
+        type: "error",
+      })
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const closeToast = () => {
+    setToast({ ...toast, show: false })
+  }
+
   if (loading) {
     return <StyledLoading />
   }
