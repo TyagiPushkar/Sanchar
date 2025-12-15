@@ -66,31 +66,37 @@ function ContactList() {
     fetchTempData();
   }, []);
 
-  useEffect(() => {
-    let filtered = tempRecords;
+ useEffect(() => {
+  let filtered = tempRecords;
 
-    if (typeFilter) {
-      filtered = filtered.filter(
-        (record) => record.Type?.toLowerCase() === typeFilter.toLowerCase()
-      );
-    }
+  if (typeFilter) {
+    filtered = filtered.filter(
+      (record) => record.Type?.toLowerCase() === typeFilter.toLowerCase()
+    );
+  }
 
-    if (searchTerm) {
-      const value = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (record) =>
-          record.ZoneID?.toString().toLowerCase().includes(value) ||
-          record.ZoneName?.toLowerCase().includes(value) ||
-          record.DivisionID?.toString().toLowerCase().includes(value) ||
-          record.DivisionName?.toLowerCase().includes(value) ||
-          record.StationID?.toString().toLowerCase().includes(value) ||
-          record.StationName?.toLowerCase().includes(value)
-      );
-    }
+  if (searchTerm) {
+    const value = searchTerm.toLowerCase();
+    filtered = filtered.filter(
+      (record) =>
+        record.ZoneID?.toString().toLowerCase().includes(value) ||
+        record.ZoneName?.toLowerCase().includes(value) ||
+        record.DivisionID?.toString().toLowerCase().includes(value) ||
+        record.DivisionName?.toLowerCase().includes(value) ||
+        record.StationID?.toString().toLowerCase().includes(value) ||
+        record.StationName?.toLowerCase().includes(value) ||
+        // Add TypeId search
+        record.TypeId?.toString().toLowerCase().includes(value) ||
+        // Add ContactPerson search
+        record.ContactPerson?.toLowerCase().includes(value) ||
+        // Also search Type (if needed)
+        record.Type?.toLowerCase().includes(value)
+    );
+  }
 
-    setFilteredRecords(filtered);
-    setPage(0);
-  }, [searchTerm, typeFilter, tempRecords]);
+  setFilteredRecords(filtered);
+  setPage(0);
+}, [searchTerm, typeFilter, tempRecords]);
 
   const handleSearch = (e) => setSearchTerm(e.target.value);
   const handleChangePage = (event, newPage) => setPage(newPage);
@@ -293,24 +299,24 @@ function ContactList() {
           />
 
           <TextField
-            label="Search by Station ID or Name"
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={handleSearch}
-            InputProps={{
-              startAdornment: <Search size={18} color="#666" style={{ marginRight: "8px" }} />,
-            }}
-            sx={{
-              width: 300,
-              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#F69320",
-              },
-              "& .MuiInputLabel-root.Mui-focused": {
-                color: "#F69320",
-              },
-            }}
-          />
+  label="Search by Type, Type ID, or Contact Person"
+  variant="outlined"
+  size="small"
+  value={searchTerm}
+  onChange={handleSearch}
+  InputProps={{
+    startAdornment: <Search size={18} color="#666" style={{ marginRight: "8px" }} />,
+  }}
+  sx={{
+    width: 300,
+    "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#F69320",
+    },
+    "& .MuiInputLabel-root.Mui-focused": {
+      color: "#F69320",
+    },
+  }}
+/>
 
           <Button
             variant="contained"

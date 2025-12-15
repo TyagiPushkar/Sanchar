@@ -392,7 +392,7 @@ function DraftList() {
   };
 
   const handleStageClick = (record, stageIndex, stageKey, stageName, stageInfo) => {
-    if (stageInfo.isEditable) {
+    if (stageInfo.isEditable || stageInfo.isComplete) {
       navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
     }
   };
