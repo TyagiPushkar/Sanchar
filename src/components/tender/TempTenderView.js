@@ -766,7 +766,7 @@ function TempTenderView() {
         const baseId = Number.parseInt(item.ChkId.toString().split("_")[0]);
         if (ids.includes(baseId) && item.Value !== null && item.Value !== "") {
           const label = item.ChkId.includes("_") 
-            ? `${checkpoints[item.ChkId.split("_")[1]] || `Checkpoint #${item.ChkId.split("_")[1]}`} (${sectionTitle})`
+            ? `${checkpoints[item.ChkId.split("_")[1]] || `Checkpoint #${item.ChkId.split("_")[1]}`}`
             : checkpoints[item.ChkId] || `Checkpoint #${item.ChkId}`;
           
           const isDateField = label.toLowerCase().includes('date');
