@@ -391,44 +391,76 @@ function DraftList() {
     }
   };
 
-  const handleStageClick = (record, stageIndex, stageKey, stageName, stageInfo) => {
-    if (stageInfo.isEditable || stageInfo.isComplete) {
-      navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
-    }
-  };
+ const handleStageClick = (record, stageIndex, stageKey, stageName, stageInfo) => {
+  // Only allow editing if:
+  // 1. The stage is editable (not complete, not "Not Applicable")
+  // 2. AND the overall tender is still in draft status (Draft === "1")
+  if (stageInfo.isEditable && record.Draft === "1") {
+    navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
+  }
+  // If it's complete but tender is still in progress, show message
+  else if (stageInfo.isComplete && record.Draft === "1") {
+    alert(`Stage ${stageIndex + 1} (${stageName}) is already completed.`);
+    navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
+  }
+  // If tender is already marked as complete
+  else if (record.Draft === "0") {
+    alert("This tender has been marked as complete and cannot be edited.");
+  }
+};
 
-  const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
-    const stageInfo = getStageStatusInfo(record, stageKey);
-    const title = `${stageName}: ${stageInfo.statusText}${stageInfo.isEditable ? ' - Click to edit' : ''}`;
-    
-    let iconContent = "";
-    let iconClass = "";
-    
-    if (stageInfo.isComplete) {
-      iconContent = "✓";
-      iconClass = "complete";
-    } else if (stageInfo.isNotApplicable) {
-      iconContent = "N/A";
-      iconClass = "not-applicable";
-    } else {
-      iconContent = "✗";
-      iconClass = "incomplete";
-    }
-    
-    return (
-      <div 
-        className="stage-status-column" 
-        title={title}
-        onClick={() => handleStageClick(record, stageIndex, stageKey, stageName, stageInfo)}
-        style={{ 
-          cursor: stageInfo.isEditable ? 'pointer' : 'default',
-          opacity: stageInfo.isEditable ? 1 : 0.7
-        }}
-      >
-        <span className={`stage-icon ${iconClass}`}>{iconContent}</span>
-      </div>
-    );
-  };
+const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
+  const stageInfo = getStageStatusInfo(record, stageKey);
+  const isTenderComplete = record.Draft === "0";
+  
+  let title = `${stageName}: ${stageInfo.statusText}`;
+  let cursorStyle = 'default';
+  
+  // Determine if clickable and update title accordingly
+  if (stageInfo.isEditable && !isTenderComplete) {
+    title += ' - Click to edit';
+    cursorStyle = 'pointer';
+  } else if (stageInfo.isComplete && !isTenderComplete) {
+    title += ' - Completed (click for info)';
+    cursorStyle = 'pointer';
+  } else if (isTenderComplete) {
+    title += ' - Tender completed (not editable)';
+    cursorStyle = 'not-allowed';
+  } else {
+    cursorStyle = 'default';
+  }
+  
+  let iconContent = "";
+  let iconClass = "";
+  
+  if (stageInfo.isComplete) {
+    iconContent = "✓";
+    iconClass = "complete";
+  } else if (stageInfo.isNotApplicable) {
+    iconContent = "N/A";
+    iconClass = "not-applicable";
+  } else {
+    iconContent = "✗";
+    iconClass = "incomplete";
+  }
+  
+  // Apply different styling based on tender completion status
+  const opacityValue = isTenderComplete ? 0.5 : (stageInfo.isEditable ? 1 : 0.7);
+  
+  return (
+    <div 
+      className="stage-status-column" 
+      title={title}
+      onClick={() => handleStageClick(record, stageIndex, stageKey, stageName, stageInfo)}
+      style={{ 
+        cursor: cursorStyle,
+        opacity: opacityValue
+      }}
+    >
+      <span className={`stage-icon ${iconClass}`}>{iconContent}</span>
+    </div>
+  );
+};
 
   const renderStageFilter = (stage) => {
     const counts = stageCounts[stage.key] || { all: 0, complete: 0, incomplete: 0, notApplicable: 0 };
@@ -690,120 +722,129 @@ function DraftList() {
         </div>
       </div>
 
-      {/* Add CSS styles */}
       <style jsx>{`
-        .stage-status-column {
-          text-align: center;
-          padding: 8px;
-          transition: background-color 0.2s;
-        }
-        
-        .stage-status-column:hover {
-          background-color: #f5f5f5;
-        }
-        
-        .stage-icon {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          font-size: 14px;
-          font-weight: bold;
-        }
-        
-        .stage-icon.complete {
-          background-color: #4caf50;
-          color: white;
-        }
-        
-        .stage-icon.incomplete {
-          background-color: #f44336;
-          color: white;
-        }
-        
-        .stage-icon.not-applicable {
-          background-color: #2196f3;
-          color: white;
-        }
-        
-        .stage-column-cell {
-          text-align: center;
-        }
-        
-        .draft-status-cell {
-          text-align: center;
-         
-          align-items: center;
-        }
-        
-        .draft-status-badge {
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 600;
-          display: inline-block;
-        }
-        
-        .draft-status-badge.complete {
-          background-color: #4caf50;
-          color: white;
-        }
-        
-        .draft-status-badge.in-progress {
-          background-color: #ff9800;
-          color: white;
-        }
-        
-        .action-buttons {
-          display: flex;
-          gap: 8px;
-          justify-content: center;
-        }
-        
-        .complete-button {
-          color: white;
-          border: none;
-          border-radius: 4px;
-          padding: 6px 12px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: background-color 0.3s;
-        }
-        
-        .complete-button:hover:not(.disabled) {
-          background-color: #388e3c;
-        }
-        
-        .complete-button.disabled {
-          
-          cursor: not-allowed;
-          opacity: 0.6;
-        }
-        
-        .button-icon {
-          font-size: 16px;
-        }
-        
-        .view-button {
-          
-          color: white;
-          border: none;
-          border-radius: 4px;
-          padding: 6px 12px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .view-button:hover {
-          background-color: #1976d2;
-        }
-      `}</style>
+  .stage-status-column {
+    text-align: center;
+    padding: 8px;
+    transition: background-color 0.2s;
+    border-radius: 4px;
+  }
+  
+  .stage-status-column:hover {
+    background-color: #f5f5f5;
+  }
+  
+  .stage-status-column[style*="cursor: pointer"]:hover {
+    background-color: #e3f2fd;
+    transform: scale(1.05);
+  }
+  
+  .stage-status-column[style*="cursor: not-allowed"] {
+    background-color: #f5f5f5;
+  }
+  
+  .stage-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    transition: transform 0.2s;
+  }
+  
+  .stage-icon.complete {
+    background-color: #4caf50;
+    color: white;
+  }
+  
+  .stage-icon.incomplete {
+    background-color: #f44336;
+    color: white;
+  }
+  
+  .stage-icon.not-applicable {
+    background-color: #2196f3;
+    color: white;
+  }
+  
+  .stage-column-cell {
+    text-align: center;
+    padding: 8px !important;
+  }
+  
+  .draft-status-cell {
+    text-align: center;
+    align-items: center;
+  }
+  
+  .draft-status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+  }
+  
+  .draft-status-badge.complete {
+    background-color: #4caf50;
+    color: white;
+  }
+  
+  .draft-status-badge.in-progress {
+    background-color: #ff9800;
+    color: white;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+  
+  .complete-button {
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+  }
+  
+  .complete-button:hover:not(.disabled) {
+    background-color: #388e3c;
+  }
+  
+  .complete-button.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+  
+  .button-icon {
+    font-size: 16px;
+  }
+  
+  .view-button {
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s;
+  }
+  
+  .view-button:hover {
+    background-color: #1976d2;
+  }
+`}</style>
     </div>
   );
 }

@@ -433,218 +433,221 @@ function EditDraft() {
   }
 
   // Common submission logic for both save and submit
-  const submitForm = async (isDraft = true) => {
-    // Clear any previous errors
-    setErrors({})
+const submitForm = async (isDraft = true) => {
+  // Clear any previous errors
+  setErrors({})
 
-    // Show loading indicator
-    Swal.fire({
-      title: isDraft ? "Saving..." : "Submitting...",
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading()
-      },
-    })
+  // Show loading indicator
+  Swal.fire({
+    title: isDraft ? "Saving..." : "Submitting...",
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading()
+    },
+  })
 
-    const menuId = 1
-    const date = new Date()
-    const dateTime = date.toISOString().slice(0, 19).replace("T", " ")
+  const menuId = 1
+  const date = new Date()
+  const dateTime = date.toISOString().slice(0, 19).replace("T", " ")
 
+  // For draft saves, use a default location or skip location requirement
+  if (isDraft) {
+    try {
+      // Try to get location, but if it fails, use default and proceed
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          await processFormSubmission(pos, isDraft)
+        },
+        async (error) => {
+          // Location denied for draft - use default and proceed
+          console.warn("Location access denied for draft save. Using default location.")
+          const defaultPos = {
+            coords: {
+              latitude: 0,
+              longitude: 0
+            }
+          }
+          await processFormSubmission(defaultPos, isDraft)
+        },
+        { timeout: 5000, enableHighAccuracy: true }
+      )
+    } catch (error) {
+      // Fallback if geolocation completely fails
+      const defaultPos = {
+        coords: {
+          latitude: 0,
+          longitude: 0
+        }
+      }
+      await processFormSubmission(defaultPos, isDraft)
+    }
+  } else {
+    // For final submission, require location
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
-        const latLong = `${pos.coords.latitude}, ${pos.coords.longitude}`
-
-        try {
-          // Get only changed fields
-          const changedFields = getChangedFields()
-          
-          if (Object.keys(changedFields).length === 0) {
-            Swal.fire({
-              icon: "info",
-              title: "No Changes",
-              text: "No changes were made to save.",
-              confirmButtonColor: "#F69320",
-            })
-            return
-          }
-
-          const textData = {}
-          const imageData = {}
-
-          // Process only changed fields
-          for (const [key, value] of Object.entries(changedFields)) {
-            console.log(`Processing changed field ${key} with value:`, value)
-
-            // Check if this is a dependent field (format: parentId_dependentId)
-            if (key.includes("_")) {
-              // For dependent fields with image type
-              if (value && typeof value === "object" && value instanceof File) {
-                const base64 = await convertToBase64(value)
-                imageData[key] = base64
-                console.log(`Added dependent image field ${key} to imageData`)
-              } else if (value !== undefined && value !== null) {
-                // For text-based dependent fields
-                // Convert array to string if needed
-                textData[key] = Array.isArray(value) ? value.join(",") : value
-                console.log(`Added dependent text field ${key} to textData with value:`, textData[key])
-              } else if (value === null) {
-                // Send null explicitly if field was removed
-                textData[key] = null
-              }
-              continue
-            }
-
-            // For regular fields
-            const cpId = Number.parseInt(key)
-            const cp = checkpoints.find((c) => c.CheckpointId === cpId)
-
-            if (!cp) {
-              console.log(`No checkpoint found for ID ${key}, skipping`)
-              continue
-            }
-
-            const type = getType(cp.TypeId).toLowerCase()
-
-            if (type === "pic/camera") {
-              // Only include image data if it's a new file (File object)
-              if (value && typeof value === "object" && value instanceof File) {
-                const base64 = await convertToBase64(value)
-                imageData[key] = base64
-                console.log(`Added regular image field ${key} to imageData`)
-              } else if (value === null) {
-                // Send null for removed image fields
-                textData[key] = null
-              }
-            } else {
-              // For text-based fields
-              if (value !== undefined && value !== null) {
-                // Convert array to string if needed
-                textData[key] = Array.isArray(value) ? value.join(",") : value
-                console.log(`Added regular text field ${key} to textData with value:`, textData[key])
-              } else if (value === null) {
-                // Send null explicitly if field was removed
-                textData[key] = null
-              }
-            }
-          }
-
-          console.log("Sending text data to API:", textData)
-          console.log("Sending image data to API:", Object.keys(imageData))
-
-          // Use update_transaction.php to update existing record
-          await axios.post("https://namami-infotech.com/SANCHAR/src/menu/update_transaction.php", {
-            menuId,
-            ActivityId,
-            LatLong: latLong,
-            Draft: isDraft ? 1 : 0,
-            data: textData,
-          })
-
-          // Only send image data if there are actually new/changed images
-          if (Object.keys(imageData).length > 0) {
-            console.log("Sending updated image data:", Object.keys(imageData))
-            await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_image.php", {
-              menuId,
-              ActivityId,
-              LatLong: latLong,
-              data: imageData,
-            })
-          } else {
-            console.log("No image data changes to send")
-          }
-
-          // Update original form data to reflect saved state
-          setOriginalFormData({...formData})
-          setHasChanges(false)
-
-          if (isDraft) {
-            Swal.fire({
-              icon: "success",
-              title: "Saved Successfully",
-              text: "Your changes have been saved successfully!",
-              confirmButtonColor: "#F69320",
-            })
-          } else {
-            Swal.fire({
-              icon: "success",
-              title: "Form Submitted",
-              text: "Your form has been submitted successfully!",
-              confirmButtonColor: "#F69320",
-            }).then(() => {
-              navigate("/tender")
-            })
-          }
-        } catch (error) {
-          console.error("Save error:", error)
-          Swal.fire({
-            icon: "error",
-            title: isDraft ? "Save Failed" : "Submission Failed",
-            text: isDraft 
-              ? "There was an error saving your data. Please try again."
-              : "There was an error processing your request. Please try again.",
-            confirmButtonColor: "#F69320",
-          })
-        }
+        await processFormSubmission(pos, isDraft)
       },
       (error) => {
         Swal.fire({
           icon: "error",
           title: "Location Access Denied",
-          text: "Please allow location access to save the form.",
+          text: "Please allow location access to submit the form.",
           confirmButtonColor: "#F69320",
         })
       },
-      { timeout: 10000, enableHighAccuracy: true },
+      { timeout: 10000, enableHighAccuracy: true }
     )
   }
+}
 
-  // Function to save the form (draft)
-  const handleSave = async () => {
-    // Validate required fields for the current page only when saving
-    const pageCheckpoints = pages[currentPage] || []
-    const newErrors = {}
-    let hasErrors = false
+// Extract the form processing logic into a separate function
+const processFormSubmission = async (pos, isDraft) => {
+  const latLong = `${pos.coords.latitude}, ${pos.coords.longitude}`
 
-    pageCheckpoints.forEach((id) => {
-      const cp = checkpoints.find((c) => c.CheckpointId === id)
-      if (!cp) return
-
-      const type = getType(cp.TypeId).toLowerCase()
-      if (type.includes("header") || type.includes("description")) return
-
-      // Check if field is a dependent
-      const parentId = getParentId(cp.CheckpointId)
-      const fieldId = parentId ? `${parentId}_${cp.CheckpointId}` : cp.CheckpointId.toString()
-      const value = formData[fieldId]
-
-      if (
-        cp.Mandatory === 1 &&
-        (value === undefined ||
-          value === null ||
-          (typeof value === "string" && value.trim() === "") ||
-          (Array.isArray(value) && value.length === 0))
-      ) {
-        newErrors[cp.CheckpointId] = true
-        hasErrors = true
-      }
-    })
-
-    if (hasErrors) {
-      setErrors(newErrors)
+  try {
+    // Get only changed fields
+    const changedFields = getChangedFields()
+    
+    // For draft saves, don't check if there are no changes - allow saving anyway
+    if (Object.keys(changedFields).length === 0 && !isDraft) {
       Swal.fire({
-        icon: "error",
-        title: "Missing Required Fields",
-        text: "Please fill all mandatory fields on this page before saving.",
+        icon: "info",
+        title: "No Changes",
+        text: "No changes were made to submit.",
         confirmButtonColor: "#F69320",
       })
       return
     }
 
+    const textData = {}
+    const imageData = {}
+
+    // Process only changed fields (or all fields if it's a draft save with no changes)
+    const dataToProcess = isDraft && Object.keys(changedFields).length === 0 ? formData : changedFields
+    
+    for (const [key, value] of Object.entries(dataToProcess)) {
+      console.log(`Processing field ${key} with value:`, value)
+
+      // Check if this is a dependent field (format: parentId_dependentId)
+      if (key.includes("_")) {
+        // For dependent fields with image type
+        if (value && typeof value === "object" && value instanceof File) {
+          const base64 = await convertToBase64(value)
+          imageData[key] = base64
+          console.log(`Added dependent image field ${key} to imageData`)
+        } else if (value !== undefined && value !== null) {
+          // For text-based dependent fields
+          // Convert array to string if needed
+          textData[key] = Array.isArray(value) ? value.join(",") : value
+          console.log(`Added dependent text field ${key} to textData with value:`, textData[key])
+        } else if (value === null) {
+          // Send null explicitly if field was removed
+          textData[key] = null
+        }
+        continue
+      }
+
+      // For regular fields
+      const cpId = Number.parseInt(key)
+      const cp = checkpoints.find((c) => c.CheckpointId === cpId)
+
+      if (!cp) {
+        console.log(`No checkpoint found for ID ${key}, skipping`)
+        continue
+      }
+
+      const type = getType(cp.TypeId).toLowerCase()
+
+      if (type === "pic/camera") {
+        // Only include image data if it's a new file (File object)
+        if (value && typeof value === "object" && value instanceof File) {
+          const base64 = await convertToBase64(value)
+          imageData[key] = base64
+          console.log(`Added regular image field ${key} to imageData`)
+        } else if (value === null) {
+          // Send null for removed image fields
+          textData[key] = null
+        }
+      } else {
+        // For text-based fields
+        if (value !== undefined && value !== null) {
+          // Convert array to string if needed
+          textData[key] = Array.isArray(value) ? value.join(",") : value
+          console.log(`Added regular text field ${key} to textData with value:`, textData[key])
+        } else if (value === null) {
+          // Send null explicitly if field was removed
+          textData[key] = null
+        }
+      }
+    }
+
+    console.log("Sending text data to API:", textData)
+    console.log("Sending image data to API:", Object.keys(imageData))
+    const menuId = 1
+    // Use update_transaction.php to update existing record
+    await axios.post("https://namami-infotech.com/SANCHAR/src/menu/update_transaction.php", {
+      menuId,
+      ActivityId,
+      LatLong: latLong,
+      Draft: isDraft ? 1 : 0,
+      data: textData,
+    })
+
+    // Only send image data if there are actually new/changed images
+    if (Object.keys(imageData).length > 0) {
+      console.log("Sending updated image data:", Object.keys(imageData))
+      await axios.post("https://namami-infotech.com/SANCHAR/src/menu/add_image.php", {
+        menuId,
+        ActivityId,
+        LatLong: latLong,
+        data: imageData,
+      })
+    } else {
+      console.log("No image data changes to send")
+    }
+
+    // Update original form data to reflect saved state
+    setOriginalFormData({...formData})
+    setHasChanges(false)
+
+    if (isDraft) {
+      Swal.fire({
+        icon: "success",
+        title: "Saved Successfully",
+        text: "Your changes have been saved successfully!",
+        confirmButtonColor: "#F69320",
+      })
+      navigate(`/tender`)
+    } else {
+      Swal.fire({
+        icon: "success",
+        title: "Form Submitted",
+        text: "Your form has been submitted successfully!",
+        confirmButtonColor: "#F69320",
+      }).then(() => {
+        navigate("/tender")
+      })
+    }
+  } catch (error) {
+    console.error("Save error:", error)
+    Swal.fire({
+      icon: "error",
+      title: isDraft ? "Save Failed" : "Submission Failed",
+      text: isDraft 
+        ? "There was an error saving your data. Please try again."
+        : "There was an error processing your request. Please try again.",
+      confirmButtonColor: "#F69320",
+    })
+  }
+}
+
+  // Function to save the form (draft) - NO VALIDATION
+  const handleSave = async () => {
+    // Save without validation - just save whatever data exists
     await submitForm(true)
-    navigate("/tender")
   }
 
-  // Function to submit the form (final submission)
+  // Function to submit the form (final submission) - WITH VALIDATION
   const handleSubmit = async () => {
     // Validate all required fields on final submission
     const newErrors = {}
@@ -1095,7 +1098,7 @@ function EditDraft() {
           >
             Retry
           </Button>
-        </Box>
+    </Box>
       </Box>
     )
   }
@@ -1220,6 +1223,24 @@ function EditDraft() {
             Next
           </Button>
         )}
+
+        {/* Show Submit button only on last page */}
+        {isLastPage && (
+          <Button
+            variant="contained"
+            sx={{
+              backgroundColor: "#4caf50",
+              color: "white",
+              minWidth: "120px",
+              "&:hover": {
+                backgroundColor: "#388e3c",
+              },
+            }}
+            onClick={handleSubmit}
+          >
+            Submit
+          </Button>
+        )}
       </Box>
 
       {/* Help text */}
@@ -1228,8 +1249,13 @@ function EditDraft() {
           Fields marked with <span style={{ color: "red" }}>*</span> are mandatory
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Click Save to save your progress
+          Click Save to save your progress (no validation required)
         </Typography>
+        {isLastPage && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Click Submit to finalize your application (all mandatory fields must be filled)
+          </Typography>
+        )}
       </Box>
     </Container>
   )
