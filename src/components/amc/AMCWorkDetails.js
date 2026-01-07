@@ -116,7 +116,7 @@ function AMCWorkDetails() {
     "First Supply Goods Bill Invoice No.",
     "First Supply Goods Bill Invoice Amount",
     "First Supply Goods Bill Received Amount",
-    "First Supply Good Paymemt Date",
+    "First Supply Good Payment Date",
     "Warranty Start Date",
     "Warranty End date",
     "AMC Start Date",
