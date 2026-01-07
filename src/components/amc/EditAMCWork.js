@@ -121,7 +121,19 @@ function EditAMCWork() {
   };
 
   const isDocumentField = (checkpointId) => {
-    return ["599", "603", "609", "613", "619", "623", "629", "633"].includes(checkpointId);
+    return [
+      "599",
+      "603",
+      "609",
+      "613",
+      "619",
+      "623",
+      "629",
+      "633",
+      "671",
+      "650",
+      "654",
+    ].includes(checkpointId);
   };
 
   if (!transaction) {
