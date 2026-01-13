@@ -8,7 +8,7 @@ function AMCWorkList() {
   const [transactions, setTransactions] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
-  const [loading, setLoading]= useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
@@ -27,11 +27,18 @@ function AMCWorkList() {
         }
 
         const [transactionsResponse, checkpointsResponse] = await Promise.all([
-          axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=10"),
-          axios.get("https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php")
+          axios.get(
+            "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=10"
+          ),
+          axios.get(
+            "https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php"
+          ),
         ]);
 
-        if (transactionsResponse.data.success && checkpointsResponse.data.success) {
+        if (
+          transactionsResponse.data.success &&
+          checkpointsResponse.data.success
+        ) {
           setTransactions(transactionsResponse.data.data);
           setFilteredRecords(transactionsResponse.data.data);
           setCheckpoints(checkpointsResponse.data.data);
@@ -50,8 +57,8 @@ function AMCWorkList() {
 
   const getCheckpointDescription = (checkpointId) => {
     // Convert both to strings for consistent comparison
-    const checkpoint = checkpoints.find(cp => 
-      cp.CheckpointId.toString() === checkpointId.toString()
+    const checkpoint = checkpoints.find(
+      (cp) => cp.CheckpointId.toString() === checkpointId.toString()
     );
     return checkpoint ? checkpoint.Description : `Field ${checkpointId}`;
   };
@@ -60,17 +67,31 @@ function AMCWorkList() {
     return displayCheckpointIds;
   };
 
+  // Function to format date from yyyy-mm-dd to dd-mm-yyyy
+  const formatDate = (dateString) => {
+    if (!dateString || dateString === "-") return "-";
+
+    // Check if the date string is in yyyy-mm-dd format
+    const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+    if (!datePattern.test(dateString)) return dateString;
+
+    const [year, month, day] = dateString.split("-");
+    return `${day}-${month}-${year}`;
+  };
+
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
     setSearchTerm(value);
-    
-    const filtered = transactions.filter(transaction => {
-      return transaction.Details.some(detail => {
+
+    const filtered = transactions.filter((transaction) => {
+      return transaction.Details.some((detail) => {
         // Check if detail.Value exists before calling toLowerCase()
-        return detail.Value && detail.Value.toString().toLowerCase().includes(value);
+        return (
+          detail.Value && detail.Value.toString().toLowerCase().includes(value)
+        );
       });
     });
-    
+
     setFilteredRecords(filtered);
     setPage(0);
   };
@@ -78,25 +99,34 @@ function AMCWorkList() {
   // Function to export data to Excel
   const exportToExcel = () => {
     // Prepare data for export
-    const dataToExport = filteredRecords.map(record => {
+    const dataToExport = filteredRecords.map((record) => {
       const exportData = {};
-      
-      displayCheckpointIds.forEach(checkpointId => {
-        const detail = record.Details.find(d => d.ChkId === checkpointId);
+
+      displayCheckpointIds.forEach((checkpointId) => {
+        const detail = record.Details.find((d) => d.ChkId === checkpointId);
         const fieldName = getCheckpointDescription(checkpointId);
-        exportData[fieldName] = detail ? detail.Value : "-";
+        // Format dates for Excel export too
+        if (
+          ["590", "591", "592", "593"].includes(checkpointId) &&
+          detail &&
+          detail.Value
+        ) {
+          exportData[fieldName] = formatDate(detail.Value);
+        } else {
+          exportData[fieldName] = detail ? detail.Value : "-";
+        }
       });
-      
+
       return exportData;
     });
 
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
+
     // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "AMC Work");
-    
+
     // Generate Excel file and trigger download
     XLSX.writeFile(wb, "amc-work.xlsx");
   };
@@ -110,11 +140,18 @@ function AMCWorkList() {
   };
 
   const getTransactionValue = (transaction, checkpointId) => {
-    const detail = transaction.Details.find(d => d.ChkId === checkpointId);
-    return detail ? detail.Value : "-";
+    const detail = transaction.Details.find((d) => d.ChkId === checkpointId);
+
+    if (!detail || !detail.Value) return "-";
+
+    // Format dates for specific checkpoint IDs
+    if (["590", "591", "592", "593"].includes(checkpointId)) {
+      return formatDate(detail.Value);
+    }
+
+    return detail.Value;
   };
 
-  
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
@@ -146,7 +183,7 @@ function AMCWorkList() {
             />
             <span className="search-icon">🔍</span>
           </div>
-          
+
           {/* Export to Excel Button */}
           <button
             onClick={exportToExcel}
@@ -156,15 +193,13 @@ function AMCWorkList() {
           >
             📊 Export to Excel
           </button>
-          
-         
-            <button
-              className="action-button new-material-button"
-              onClick={() => navigate("/add-amc-work")}
-            >
-              Add Work
-            </button>
-          
+
+          <button
+            className="action-button new-material-button"
+            onClick={() => navigate("/add-amc-work")}
+          >
+            Add Work
+          </button>
         </div>
       </div>
 
@@ -174,8 +209,10 @@ function AMCWorkList() {
         <table className="material-table">
           <thead>
             <tr>
-              {allCheckpointIds.map(checkpointId => (
-                <th key={checkpointId}>{getCheckpointDescription(checkpointId)}</th>
+              {allCheckpointIds.map((checkpointId) => (
+                <th key={checkpointId}>
+                  {getCheckpointDescription(checkpointId)}
+                </th>
               ))}
               <th>Actions</th>
             </tr>
@@ -184,34 +221,36 @@ function AMCWorkList() {
             {currentRecords.length > 0 ? (
               currentRecords.map((record) => (
                 <tr key={record.ActivityId}>
-                  {allCheckpointIds.map(checkpointId => (
+                  {allCheckpointIds.map((checkpointId) => (
                     <td key={`${record.ActivityId}-${checkpointId}`}>
                       {getTransactionValue(record, checkpointId)}
                     </td>
                   ))}
                   <td>
                     <div className="action-buttons">
-                      <button 
+                      <button
                         className="view-button"
                         onClick={() => handleViewDetails(record)}
                       >
                         👁️
                       </button>
-                     
-                        <button 
-                          className="edit-button"
-                          onClick={() => handleEdit(record)}
-                        >
-                          ✏️
-                        </button>
-                     
+
+                      <button
+                        className="edit-button"
+                        onClick={() => handleEdit(record)}
+                      >
+                        ✏️
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={allCheckpointIds.length + 1} className="no-records">
+                <td
+                  colSpan={allCheckpointIds.length + 1}
+                  className="no-records"
+                >
                   No records found
                 </td>
               </tr>
