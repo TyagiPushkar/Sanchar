@@ -350,18 +350,31 @@ function EmployeeList() {
     <div style={{ padding: "20px" }}>
       {/* Alert Messages */}
       {error && (
-        <Alert severity="error" style={{ marginBottom: "16px" }} onClose={() => setError("")}>
+        <Alert
+          severity="error"
+          style={{ marginBottom: "16px" }}
+          onClose={() => setError("")}
+        >
           {error}
         </Alert>
       )}
       {success && (
-        <Alert severity="success" style={{ marginBottom: "16px" }} onClose={() => setSuccess("")}>
+        <Alert
+          severity="success"
+          style={{ marginBottom: "16px" }}
+          onClose={() => setSuccess("")}
+        >
           {success}
         </Alert>
       )}
 
       {/* Header Section */}
-      <Grid container spacing={2} alignItems="center" style={{ marginBottom: "20px" }}>
+      <Grid
+        container
+        spacing={2}
+        alignItems="center"
+        style={{ marginBottom: "20px" }}
+      >
         <Grid item xs={12} md={8}>
           <TextField
             fullWidth
@@ -370,7 +383,9 @@ function EmployeeList() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
-              startAdornment: <SearchIcon style={{ marginRight: "8px", color: "#666" }} />,
+              startAdornment: (
+                <SearchIcon style={{ marginRight: "8px", color: "#666" }} />
+              ),
             }}
           />
         </Grid>
@@ -389,23 +404,46 @@ function EmployeeList() {
 
       {/* Employee Table */}
       <Box sx={{ overflowX: "auto" }}>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead style={{ backgroundColor: "#F69320" }}>
+        <TableContainer
+          component={Paper}
+          sx={{ maxHeight: "69vh", overflow: "auto" }}
+        >
+          <Table stickyHeader>
+            <TableHead>
               <TableRow>
-                <TableCell style={{ color: "white", fontWeight: "bold" }}>Employee ID</TableCell>
-                <TableCell style={{ color: "white", fontWeight: "bold" }}>Name</TableCell>
-                <TableCell style={{ color: "white", fontWeight: "bold" }}>Mobile</TableCell>
-                <TableCell style={{ color: "white", fontWeight: "bold" }}>Email</TableCell>
-                <TableCell style={{ color: "white", fontWeight: "bold" }}>Role</TableCell>
-                <TableCell style={{ color: "white", fontWeight: "bold" }}>Status</TableCell>
-                <TableCell style={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+                {[
+                  "Employee ID",
+                  "Name",
+                  "Mobile",
+                  "Email",
+                  "Role",
+                  "Status", 
+                  "Actions",
+                ].map((label) => (
+                  <TableCell
+                    key={label}
+                    sx={{
+                      backgroundColor: "#F69320", // 🔒 solid bg
+                      color: "white",
+                      fontWeight: "bold",
+                      position: "sticky",
+                      top: 0,
+                      zIndex: 2, // 🔒 stay above rows
+                    }}
+                  >
+                    {label}
+                  </TableCell>
+                ))}
               </TableRow>
+              
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} style={{ textAlign: "center", padding: "40px" }}>
+                  <TableCell
+                    colSpan={7}
+                    style={{ textAlign: "center", padding: "40px" }}
+                  >
                     <CircularProgress />
                     <Typography variant="body2" style={{ marginTop: "10px" }}>
                       Loading employees...
@@ -414,7 +452,10 @@ function EmployeeList() {
                 </TableRow>
               ) : filteredEmployees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} style={{ textAlign: "center", padding: "40px" }}>
+                  <TableCell
+                    colSpan={7}
+                    style={{ textAlign: "center", padding: "40px" }}
+                  >
                     <Typography variant="body1" color="textSecondary">
                       No employees found
                     </Typography>
@@ -424,31 +465,44 @@ function EmployeeList() {
                 filteredEmployees
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((employee, index) => {
-                    const isFirstInGroup = isFirstInRoleGroup(page * rowsPerPage + index);
-                    
+                    const isFirstInGroup = isFirstInRoleGroup(
+                      page * rowsPerPage + index,
+                    );
+
                     return (
-                      <TableRow 
-                        key={employee.EmpId} 
+                      <TableRow
+                        key={employee.EmpId}
                         hover
                         style={{
-                          borderTop: isFirstInGroup ? '3px solid #e0e0e0' : 'none',
+                          borderTop: isFirstInGroup
+                            ? "3px solid #e0e0e0"
+                            : "none",
                         }}
                       >
-                        <TableCell style={{ fontWeight: "500" }}>{employee.EmpId}</TableCell>
+                        <TableCell style={{ fontWeight: "500" }}>
+                          {employee.EmpId}
+                        </TableCell>
                         <TableCell>
                           {isFirstInGroup && (
-                            <div style={{ display: 'flex', alignItems: 'center' }}>
-                              <div 
+                            <div
+                              style={{ display: "flex", alignItems: "center" }}
+                            >
+                              <div
                                 style={{
-                                  width: '8px',
-                                  height: '8px',
-                                  borderRadius: '50%',
-                                  backgroundColor: 
-                                    employee.Role === 'Admin' ? '#d32f2f' :
-                                    employee.Role === 'Project Manager' ? '#1976d2' :
-                                    employee.Role === 'Technician' ? '#388e3c' :
-                                    employee.Role === 'Customer Support' ? '#f57c00' : '#757575',
-                                  marginRight: '8px'
+                                  width: "8px",
+                                  height: "8px",
+                                  borderRadius: "50%",
+                                  backgroundColor:
+                                    employee.Role === "Admin"
+                                      ? "#d32f2f"
+                                      : employee.Role === "Project Manager"
+                                        ? "#1976d2"
+                                        : employee.Role === "Technician"
+                                          ? "#388e3c"
+                                          : employee.Role === "Customer Support"
+                                            ? "#f57c00"
+                                            : "#757575",
+                                  marginRight: "8px",
                                 }}
                               />
                               {employee.Name}
@@ -462,12 +516,17 @@ function EmployeeList() {
                           <Typography
                             variant="body2"
                             style={{
-                              fontWeight: 'bold',
-                              color: 
-                                employee.Role === 'Admin' ? '#d32f2f' :
-                                employee.Role === 'Project Manager' ? '#1976d2' :
-                                employee.Role === 'Technician' ? '#388e3c' :
-                                employee.Role === 'Customer Support' ? '#f57c00' : '#757575'
+                              fontWeight: "bold",
+                              color:
+                                employee.Role === "Admin"
+                                  ? "#d32f2f"
+                                  : employee.Role === "Project Manager"
+                                    ? "#1976d2"
+                                    : employee.Role === "Technician"
+                                      ? "#388e3c"
+                                      : employee.Role === "Customer Support"
+                                        ? "#f57c00"
+                                        : "#757575",
                             }}
                           >
                             {employee.Role}
@@ -496,18 +555,30 @@ function EmployeeList() {
                             </IconButton>
                             <IconButton
                               style={{
-                                color: employee.IsActive ? "#f44336" : "#4caf50",
+                                color: employee.IsActive
+                                  ? "#f44336"
+                                  : "#4caf50",
                               }}
-                              onClick={() => handleToggleEmployeeStatus(employee)}
+                              onClick={() =>
+                                handleToggleEmployeeStatus(employee)
+                              }
                               disabled={loading}
-                              title={employee.IsActive ? "Disable Employee" : "Enable Employee"}
+                              title={
+                                employee.IsActive
+                                  ? "Disable Employee"
+                                  : "Enable Employee"
+                              }
                             >
-                              {employee.IsActive ? <CloseIcon /> : <CheckCircleIcon />}
+                              {employee.IsActive ? (
+                                <CloseIcon />
+                              ) : (
+                                <CheckCircleIcon />
+                              )}
                             </IconButton>
                           </div>
                         </TableCell>
                       </TableRow>
-                    )
+                    );
                   })
               )}
             </TableBody>
@@ -539,10 +610,14 @@ function EmployeeList() {
                   fullWidth
                   label="Employee ID"
                   value={formData.EmpId}
-                  onChange={(e) => setFormData({ ...formData, EmpId: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, EmpId: e.target.value })
+                  }
                   required
                   disabled={formMode === "edit"}
-                  helperText={formMode === "edit" ? "Employee ID cannot be changed" : ""}
+                  helperText={
+                    formMode === "edit" ? "Employee ID cannot be changed" : ""
+                  }
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -550,7 +625,9 @@ function EmployeeList() {
                   fullWidth
                   label="Full Name"
                   value={formData.Name}
-                  onChange={(e) => setFormData({ ...formData, Name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, Name: e.target.value })
+                  }
                   required
                 />
               </Grid>
@@ -561,7 +638,9 @@ function EmployeeList() {
                     label="Password"
                     type="password"
                     value={formData.Password}
-                    onChange={(e) => setFormData({ ...formData, Password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, Password: e.target.value })
+                    }
                     required
                     helperText="Minimum 6 characters recommended"
                   />
@@ -573,9 +652,9 @@ function EmployeeList() {
                   label="Mobile Number"
                   value={formData.Mobile}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "") // Only allow digits
+                    const value = e.target.value.replace(/\D/g, ""); // Only allow digits
                     if (value.length <= 10) {
-                      setFormData({ ...formData, Mobile: value })
+                      setFormData({ ...formData, Mobile: value });
                     }
                   }}
                   required
@@ -589,7 +668,9 @@ function EmployeeList() {
                   label="Email Address"
                   type="email"
                   value={formData.EmailId}
-                  onChange={(e) => setFormData({ ...formData, EmailId: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, EmailId: e.target.value })
+                  }
                   required
                 />
               </Grid>
@@ -599,7 +680,9 @@ function EmployeeList() {
                   fullWidth
                   label="Role"
                   value={formData.Role}
-                  onChange={(e) => setFormData({ ...formData, Role: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, Role: e.target.value })
+                  }
                   required
                 >
                   <MenuItem value="Admin">Admin</MenuItem>
@@ -621,12 +704,18 @@ function EmployeeList() {
             style={{ backgroundColor: "#F69320", color: "white" }}
             disabled={loading}
           >
-            {loading ? <CircularProgress size={20} /> : formMode === "add" ? "Add Employee" : "Update Employee"}
+            {loading ? (
+              <CircularProgress size={20} />
+            ) : formMode === "add" ? (
+              "Add Employee"
+            ) : (
+              "Update Employee"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
     </div>
-  )
+  );
 }
 
 export default EmployeeList

@@ -226,7 +226,9 @@ const filterAvailableStations = () => {
   .then((res) => res.json())
   .then((data) => {
     if (data.success) {
-      const technicians = data.data.filter(emp => emp.Role === "Technician");
+      const technicians = data.data.filter(
+        (emp) => emp.Role === "Technician" && emp.IsActive === 1,
+      );
       setTechnicians(technicians);
     } else {
       setTechnicians([]);

@@ -126,22 +126,120 @@ function BuyerList() {
 
   return (
     <Box>
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} fullWidth maxWidth="md">
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        fullWidth
+        maxWidth="md"
+      >
         <DialogTitle>Edit Buyer</DialogTitle>
         <DialogContent>
           {selectedBuyer && (
             <Box mt={2} display="flex" flexDirection="column" gap={2}>
-              <TextField label="LOA" value={selectedBuyer.LOA} onChange={e => setSelectedBuyer({ ...selectedBuyer, LOA: e.target.value })} />
-              <TextField label="Zone ID" value={selectedBuyer.ZoneID} onChange={e => setSelectedBuyer({ ...selectedBuyer, ZoneID: e.target.value })} />
-              <TextField label="Zone Name" value={selectedBuyer.ZoneName} onChange={e => setSelectedBuyer({ ...selectedBuyer, ZoneName: e.target.value })} />
-              <TextField label="Zone Address" value={selectedBuyer.ZoneAddress} onChange={e => setSelectedBuyer({ ...selectedBuyer, ZoneAddress: e.target.value })} />
-              <TextField label="Division ID" value={selectedBuyer.DivisionID} onChange={e => setSelectedBuyer({ ...selectedBuyer, DivisionID: e.target.value })} />
-              <TextField label="Division Name" value={selectedBuyer.DivisionName} onChange={e => setSelectedBuyer({ ...selectedBuyer, DivisionName: e.target.value })} />
-              <TextField label="Division Address" value={selectedBuyer.DivisionAddress} onChange={e => setSelectedBuyer({ ...selectedBuyer, DivisionAddress: e.target.value })} />
-              <TextField label="Station ID" value={selectedBuyer.StationID} onChange={e => setSelectedBuyer({ ...selectedBuyer, StationID: e.target.value })} />
-              <TextField label="Station Name" value={selectedBuyer.StationName} onChange={e => setSelectedBuyer({ ...selectedBuyer, StationName: e.target.value })} />
-              <TextField label="Station Address" value={selectedBuyer.StationAddress} onChange={e => setSelectedBuyer({ ...selectedBuyer, StationAddress: e.target.value })} />
-              <TextField label="Section Name" value={selectedBuyer.SectionName} onChange={e => setSelectedBuyer({ ...selectedBuyer, SectionName: e.target.value })} />
+              <TextField
+                label="LOA"
+                value={selectedBuyer.LOA}
+                onChange={(e) =>
+                  setSelectedBuyer({ ...selectedBuyer, LOA: e.target.value })
+                }
+              />
+              <TextField
+                label="Zone ID"
+                value={selectedBuyer.ZoneID}
+                onChange={(e) =>
+                  setSelectedBuyer({ ...selectedBuyer, ZoneID: e.target.value })
+                }
+              />
+              <TextField
+                label="Zone Name"
+                value={selectedBuyer.ZoneName}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    ZoneName: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Zone Address"
+                value={selectedBuyer.ZoneAddress}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    ZoneAddress: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Division ID"
+                value={selectedBuyer.DivisionID}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    DivisionID: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Division Name"
+                value={selectedBuyer.DivisionName}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    DivisionName: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Division Address"
+                value={selectedBuyer.DivisionAddress}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    DivisionAddress: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Station ID"
+                value={selectedBuyer.StationID}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    StationID: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Station Name"
+                value={selectedBuyer.StationName}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    StationName: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Station Address"
+                value={selectedBuyer.StationAddress}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    StationAddress: e.target.value,
+                  })
+                }
+              />
+              <TextField
+                label="Section Name"
+                value={selectedBuyer.SectionName}
+                onChange={(e) =>
+                  setSelectedBuyer({
+                    ...selectedBuyer,
+                    SectionName: e.target.value,
+                  })
+                }
+              />
             </Box>
           )}
         </DialogContent>
@@ -152,22 +250,28 @@ function BuyerList() {
             sx={{ backgroundColor: "#F69320" }}
             onClick={async () => {
               try {
-                const res = await axios.post("https://namami-infotech.com/SANCHAR/src/buyer/update_buyer.php", selectedBuyer)
+                const res = await axios.post(
+                  "https://namami-infotech.com/SANCHAR/src/buyer/update_buyer.php",
+                  selectedBuyer,
+                );
                 if (res.data.success) {
-                  alert("Buyer updated successfully")
-                  setEditDialogOpen(false)
-                  setBuyers(prev =>
-                    prev.map(b => (b.BuyerID === selectedBuyer.BuyerID ? selectedBuyer : b))
-                  )
-                  setFilteredBuyers(prev =>
-                    prev.map(b => (b.BuyerID === selectedBuyer.BuyerID ? selectedBuyer : b))
-                  )
-                  
+                  alert("Buyer updated successfully");
+                  setEditDialogOpen(false);
+                  setBuyers((prev) =>
+                    prev.map((b) =>
+                      b.BuyerID === selectedBuyer.BuyerID ? selectedBuyer : b,
+                    ),
+                  );
+                  setFilteredBuyers((prev) =>
+                    prev.map((b) =>
+                      b.BuyerID === selectedBuyer.BuyerID ? selectedBuyer : b,
+                    ),
+                  );
                 } else {
-                  alert("Update failed: " + res.data.message)
+                  alert("Update failed: " + res.data.message);
                 }
               } catch (err) {
-                alert("Error updating buyer.")
+                alert("Error updating buyer.");
               }
             }}
           >
@@ -175,8 +279,13 @@ function BuyerList() {
           </Button>
         </DialogActions>
       </Dialog>
-      
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
         <Typography variant="h5" fontWeight="bold" color="#333">
           Consignee List
         </Typography>
@@ -189,23 +298,25 @@ function BuyerList() {
             value={searchTerm}
             onChange={handleSearch}
             InputProps={{
-              startAdornment: <Search size={18} color="#666" style={{ marginRight: "8px" }} />,
+              startAdornment: (
+                <Search size={18} color="#666" style={{ marginRight: "8px" }} />
+              ),
             }}
             sx={{
               width: 300,
-              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#F69320",
-              },
+              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                {
+                  borderColor: "#F69320",
+                },
               "& .MuiInputLabel-root.Mui-focused": {
                 color: "#F69320",
               },
             }}
           />
-          
+
           {/* Export to Excel Button */}
           <Button
             variant="contained"
-           
             onClick={exportToExcel}
             sx={{
               backgroundColor: "#F69320",
@@ -214,9 +325,9 @@ function BuyerList() {
               },
             }}
           >
-           📊 Export to Excel
+            📊 Export to Excel
           </Button>
-          
+
           <Button
             variant="contained"
             startIcon={<Plus size={18} />}
@@ -246,55 +357,84 @@ function BuyerList() {
               overflow: "hidden",
               boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
               width: "100%",
+              maxHeight: "69vh", 
+              overflow: "auto",
             }}
           >
-            <Table size="medium">
-              <TableHead sx={{ backgroundColor: "#F69320" }}>
+            <Table size="medium" stickyHeader>
+              <TableHead>
                 <TableRow>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Zone ID</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Zone Name</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Division ID</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Division Name</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Section Name</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Station ID</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Station Name</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>LOA</TableCell>
-                  <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+                  {[
+                    "Zone ID",
+                    "Zone Name",
+                    "Division ID",
+                    "Division Name",
+                    "Section Name",
+                    "Station ID",
+                    "Station Name",
+                    "LOA",
+                    "Actions",
+                  ].map((label) => (
+                    <TableCell
+                      key={label}
+                      sx={{
+                        backgroundColor: "#F69320", // 🔒 solid bg
+                        color: "white",
+                        fontWeight: "bold",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 2, // 🔒 stay above rows
+                      }}
+                    >
+                      {label}
+                    </TableCell>
+                  ))}
                 </TableRow>
               </TableHead>
+
               <TableBody>
                 {filteredBuyers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} align="center" sx={{ py: 3 }}>
-                      <Typography color="textSecondary">No buyers found</Typography>
+                      <Typography color="textSecondary">
+                        No buyers found
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredBuyers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((buyer, index) => (
-                    <TableRow
-                      key={index}
-                      hover
-                      sx={{
-                        "&:hover": {
-                          backgroundColor: "rgba(246, 147, 32, 0.04)",
-                        },
-                      }}
-                    >
-                      <TableCell>{buyer.ZoneID}</TableCell>
-                      <TableCell>{buyer.ZoneName}</TableCell>
-                      <TableCell>{buyer.DivisionID}</TableCell>
-                      <TableCell>{buyer.DivisionName}</TableCell>
-                      <TableCell>{buyer.SectionName}</TableCell>
-                      <TableCell>{buyer.StationID}</TableCell>
-                      <TableCell>{buyer.StationName}</TableCell>
-                      <TableCell>{buyer.LOA}</TableCell>
-                      <TableCell>
-                        <Button size="small" onClick={() => { setSelectedBuyer(buyer); setEditDialogOpen(true); }}>
-                          Edit
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredBuyers
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((buyer, index) => (
+                      <TableRow
+                        key={index}
+                        hover
+                        sx={{
+                          "&:hover": {
+                            backgroundColor: "rgba(246, 147, 32, 0.04)",
+                          },
+                        }}
+                      >
+                        <TableCell>{buyer.ZoneID}</TableCell>
+                        <TableCell>{buyer.ZoneName}</TableCell>
+                        <TableCell>{buyer.DivisionID}</TableCell>
+                        <TableCell>{buyer.DivisionName}</TableCell>
+                        <TableCell>{buyer.SectionName}</TableCell>
+                        <TableCell>{buyer.StationID}</TableCell>
+                        <TableCell>{buyer.StationName}</TableCell>
+                        <TableCell>{buyer.LOA}</TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            onClick={() => {
+                              setSelectedBuyer(buyer);
+                              setEditDialogOpen(true);
+                            }}
+                          >
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
                 )}
               </TableBody>
             </Table>
@@ -322,9 +462,9 @@ function BuyerList() {
             }}
           />
         </>
-      )}       
+      )}
     </Box>
-  )
+  );
 }
 
 export default BuyerList

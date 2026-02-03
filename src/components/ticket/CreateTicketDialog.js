@@ -56,7 +56,7 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       ])
 
       if (techData.success) {
-        setTechnicians(techData.data.filter(emp => emp.Role === "Technician"))
+        setTechnicians(techData.data.filter(emp => emp.Role === "Technician" && emp.IsActive === 1))
       }
 
       if (stationData.success) {

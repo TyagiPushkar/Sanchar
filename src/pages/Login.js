@@ -56,6 +56,18 @@ export default function LoginPage() {
       });
 
       if (response.data.success) {
+        const userData = response.data.data;
+
+        // 🚫 Block Technician role
+        if (userData.role === "Technician") {
+          // Clear any existing auth data
+          localStorage.clear();
+          sessionStorage.clear();
+
+          setError("Technician users are not allowed to login.");
+          setLoading(false);
+          return;
+        }
         login(response.data.data);
         setTimeout(() => {
           navigate("/profile");
