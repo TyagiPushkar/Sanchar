@@ -222,17 +222,21 @@ function EmployeeList() {
     const submitData = {
       EmpId: formData.EmpId.trim(),
       Name: formData.Name.trim(),
-      Password: formData.Password,
       Mobile: formData.Mobile.trim(),
       EmailId: formData.EmailId.trim(),
       Role: formData.Role,
-      // Default values that PHP backend expects
       OTP: "123456",
       IsOTPExpired: 1,
       IsGeofence: 0,
       Tenent_Id: user.tenent_id,
       IsActive: 1,
+    };
+
+    // Only send password if user entered it
+    if (formData.Password) {
+      submitData.Password = formData.Password;
     }
+
 
     console.log("Submitting data:", submitData)
 
@@ -417,7 +421,7 @@ function EmployeeList() {
                   "Mobile",
                   "Email",
                   "Role",
-                  "Status", 
+                  "Status",
                   "Actions",
                 ].map((label) => (
                   <TableCell
@@ -435,7 +439,6 @@ function EmployeeList() {
                   </TableCell>
                 ))}
               </TableRow>
-              
             </TableHead>
             <TableBody>
               {loading ? (
@@ -631,21 +634,24 @@ function EmployeeList() {
                   required
                 />
               </Grid>
-              {formMode === "add" && (
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    type="password"
-                    value={formData.Password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, Password: e.target.value })
-                    }
-                    required
-                    helperText="Minimum 6 characters recommended"
-                  />
-                </Grid>
-              )}
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label={formMode === "add" ? "Password" : "New Password"}
+                  type="password"
+                  value={formData.Password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, Password: e.target.value })
+                  }
+                  required={formMode === "add"}
+                  helperText={
+                    formMode === "edit"
+                      ? "Leave blank to keep existing password"
+                      : "Minimum 6 characters recommended"
+                  }
+                />
+              </Grid>
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
