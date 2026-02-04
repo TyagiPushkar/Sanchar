@@ -392,3 +392,15 @@
     flex-direction: column;
   }
 }
+.table-container {
+  max-height: 70vh;          /* adjust height as needed */
+  overflow-y: auto;
+}
+
+/* Sticky table header */
+.material-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.05); /* optional, looks nice */
+}

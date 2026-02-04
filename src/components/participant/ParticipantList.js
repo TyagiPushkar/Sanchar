@@ -228,9 +228,18 @@ const ParticipantList = () => {
   return (
     <Box p={2}>
       {/* Edit Participant Dialog */}
-      <Dialog open={state.editDialogOpen} onClose={handleEditClose} fullWidth maxWidth="sm">
+      <Dialog
+        open={state.editDialogOpen}
+        onClose={handleEditClose}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Typography variant="h6">Edit Participant</Typography>
             <IconButton onClick={handleEditClose}>
               <X />
@@ -310,13 +319,24 @@ const ParticipantList = () => {
               },
             }}
           >
-            {state.editLoading ? <CircularProgress size={24} color="inherit" /> : "Save Changes"}
+            {state.editLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Save Changes"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Main Participant List */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+        flexWrap="wrap"
+        gap={2}
+      >
         <Typography variant="h5" fontWeight="bold" color="#333">
           Participant List
         </Typography>
@@ -328,13 +348,16 @@ const ParticipantList = () => {
             value={state.searchTerm}
             onChange={handleSearch}
             InputProps={{
-              startAdornment: <Search size={18} color="#666" style={{ marginRight: "8px" }} />,
+              startAdornment: (
+                <Search size={18} color="#666" style={{ marginRight: "8px" }} />
+              ),
             }}
             sx={{
               width: 300,
-              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: "#F69320",
-              },
+              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                {
+                  borderColor: "#F69320",
+                },
               "& .MuiInputLabel-root.Mui-focused": {
                 color: "#F69320",
               },
@@ -370,28 +393,52 @@ const ParticipantList = () => {
           overflow: "hidden",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
           width: "100%",
+          maxHeight: "69vh",
+          overflow: "auto",
         }}
       >
-        <Table size="medium">
+        <Table size="medium" stickyHeader>
           <TableHead sx={{ backgroundColor: "#F69320" }}>
             <TableRow>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Company Name</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Contact Person</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Mobile</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Mail</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+              {[
+                "Company Name",
+                "Contact Person",
+                "Mobile",
+                "Mail",
+                "Actions",
+              ].map((label) => (
+                <TableCell
+                  key={label}
+                  sx={{
+                    backgroundColor: "#F69320", // 🔒 solid bg
+                    color: "white",
+                    fontWeight: "bold",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2, // 🔒 stay above rows
+                  }}
+                >
+                  {label}
+                </TableCell>
+              ))}
             </TableRow>
+           
           </TableHead>
           <TableBody>
             {filteredRecords.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 3 }}>
-                  <Typography color="textSecondary">No participants found</Typography>
+                  <Typography color="textSecondary">
+                    No participants found
+                  </Typography>
                 </TableCell>
               </TableRow>
             ) : (
               filteredRecords
-                .slice(state.page * state.rowsPerPage, state.page * state.rowsPerPage + state.rowsPerPage)
+                .slice(
+                  state.page * state.rowsPerPage,
+                  state.page * state.rowsPerPage + state.rowsPerPage,
+                )
                 .map((record) => (
                   <TableRow
                     key={record.ID}
@@ -407,7 +454,10 @@ const ParticipantList = () => {
                     <TableCell>{record.Mobile}</TableCell>
                     <TableCell>{record.Mail}</TableCell>
                     <TableCell>
-                      <IconButton onClick={() => handleEditClick(record)} sx={{ color: "#F69320" }}>
+                      <IconButton
+                        onClick={() => handleEditClick(record)}
+                        sx={{ color: "#F69320" }}
+                      >
                         <Edit size={18} />
                       </IconButton>
                     </TableCell>
@@ -440,7 +490,7 @@ const ParticipantList = () => {
         }}
       />
     </Box>
-  )
+  );
 }
 
 export default ParticipantList

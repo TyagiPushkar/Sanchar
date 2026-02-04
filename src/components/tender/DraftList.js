@@ -15,43 +15,44 @@ function DraftList() {
   const [stageFilters, setStageFilters] = useState({});
   const [stageCounts, setStageCounts] = useState({});
   const [selectedStages, setSelectedStages] = useState([]);
-  const [updatingStatus, setUpdatingStatus] = useState({}); // Track which records are being updated
+  const [updatingStatus, setUpdatingStatus] = useState({});
+  const [showFilters, setShowFilters] = useState(false); // New state for filter visibility
   const navigate = useNavigate();
   const tableRef = useRef(null);
 
   // Stage configuration with field IDs and step mapping
   const stages = [
-    { 
-      key: 'first_stage', 
-      name: 'Tender Publish Details', 
-      label: '1', 
-      step: 0
+    {
+      key: "first_stage",
+      name: "Tender Publish Details",
+      label: "1",
+      step: 0,
     },
-    { 
-      key: 'second_stage', 
-      name: 'Tender Participated by SWCL', 
-      label: '2', 
-      step: 1
+    {
+      key: "second_stage",
+      name: "Tender Participated by SWCL",
+      label: "2",
+      step: 1,
     },
-    { 
-      key: 'third_stage', 
-      name: 'Tender Opened', 
-      label: '3', 
-      step: 2
+    {
+      key: "third_stage",
+      name: "Tender Opened",
+      label: "3",
+      step: 2,
     },
-    { 
-      key: 'fourth_stage', 
-      name: 'LOA Awarded', 
-      label: '4', 
-      step: 3
-    }
+    {
+      key: "fourth_stage",
+      name: "LOA Awarded",
+      label: "4",
+      step: 3,
+    },
   ];
 
   // Initialize stage filters
   useEffect(() => {
     const initialFilters = {};
-    stages.forEach(stage => {
-      initialFilters[stage.key] = 'all';
+    stages.forEach((stage) => {
+      initialFilters[stage.key] = "all";
     });
     setStageFilters(initialFilters);
   }, []);
@@ -63,30 +64,35 @@ function DraftList() {
           "https://namami-infotech.com/SANCHAR/src/menu/get_temp_draft.php?menuId=1",
         );
         if (response.data.success) {
-          const recordsWithStep = response.data.data.map(record => {
+          const recordsWithStep = response.data.data.map((record) => {
             // Calculate current step based on stage_status from API
             let currentStep = 0;
             const stageStatus = record.stage_status || {};
-            
+
             // Find first incomplete stage (excluding Not Applicable)
             for (let i = 0; i < stages.length; i++) {
               const stageKey = stages[i].key;
               const status = stageStatus[stageKey];
-              
-              if ((status === "Not Complete" || status === "Incomplete" || !status) && status !== "Not Applicable") {
+
+              if (
+                (status === "Not Complete" ||
+                  status === "Incomplete" ||
+                  !status) &&
+                status !== "Not Applicable"
+              ) {
                 currentStep = i;
                 break;
               }
-              
+
               // If all stages are complete or not applicable, set to last stage
               if (i === stages.length - 1) {
                 currentStep = i;
               }
             }
-            
+
             return {
               ...record,
-              currentStep: currentStep
+              currentStep: currentStep,
             };
           });
           setTempRecords(recordsWithStep);
@@ -107,23 +113,23 @@ function DraftList() {
   // Calculate counts for each stage status
   const calculateStageCounts = (records) => {
     const counts = {};
-    
-    stages.forEach(stage => {
+
+    stages.forEach((stage) => {
       counts[stage.key] = {
         all: 0,
         complete: 0,
         incomplete: 0,
-        notApplicable: 0
+        notApplicable: 0,
       };
     });
 
-    records.forEach(record => {
+    records.forEach((record) => {
       const stageStatus = record.stage_status || {};
-      
-      stages.forEach(stage => {
+
+      stages.forEach((stage) => {
         counts[stage.key].all++;
         const status = stageStatus[stage.key];
-        
+
         if (status === "Not Applicable") {
           counts[stage.key].notApplicable++;
         } else if (status === "Complete" || status === "Completed") {
@@ -140,87 +146,98 @@ function DraftList() {
   // Check if all stages are complete for a record
   const areAllStagesComplete = (record) => {
     const stageStatus = record.stage_status || {};
-    
+
     // Check if record is already completed (Draft === "0")
     if (record.Draft === "0") {
       return false; // Already completed, so don't show complete button
     }
-    
+
     for (let i = 0; i < stages.length; i++) {
       const stageKey = stages[i].key;
       const status = stageStatus[stageKey];
-      
+
       // If any stage is not complete and not "Not Applicable", return false
-      if (status !== "Complete" && status !== "Completed" && status !== "Not Applicable") {
+      if (
+        status !== "Complete" &&
+        status !== "Completed" &&
+        status !== "Not Applicable"
+      ) {
         return false;
       }
     }
-    
+
     // All stages are either complete or not applicable
     return true;
   };
 
   // Function to update tender status via API
   const updateTenderStatus = async (activityId) => {
-    setUpdatingStatus(prev => ({ ...prev, [activityId]: true }));
-    
+    setUpdatingStatus((prev) => ({ ...prev, [activityId]: true }));
+
     try {
       const response = await axios.post(
         "https://namami-infotech.com/SANCHAR/src/menu/update_tender_status.php",
         {
-          activityId: activityId
+          activityId: activityId,
         },
         {
           headers: {
-            'Content-Type': 'application/json'
-          }
-        }
+            "Content-Type": "application/json",
+          },
+        },
       );
-      
+
       if (response.data.success) {
         // Update the local state to reflect the change
-        // Assuming API sets Draft to "0" when completed (reverse logic)
-        setTempRecords(prevRecords => 
-          prevRecords.map(record => 
-            record.ActivityId === activityId 
+        setTempRecords((prevRecords) =>
+          prevRecords.map((record) =>
+            record.ActivityId === activityId
               ? { ...record, Draft: "0" } // Update Draft to "0" when complete
-              : record
-          )
+              : record,
+          ),
         );
-        
-        setFilteredRecords(prevRecords => 
-          prevRecords.map(record => 
-            record.ActivityId === activityId 
+
+        setFilteredRecords((prevRecords) =>
+          prevRecords.map((record) =>
+            record.ActivityId === activityId
               ? { ...record, Draft: "0" }
-              : record
-          )
+              : record,
+          ),
         );
-        
+
         alert("Tender marked as complete successfully!");
       } else {
-        alert(`Failed to update status: ${response.data.message || 'Unknown error'}`);
+        alert(
+          `Failed to update status: ${response.data.message || "Unknown error"}`,
+        );
       }
     } catch (err) {
       console.error("Error updating tender status:", err);
       alert("Failed to update tender status. Please try again.");
     } finally {
-      setUpdatingStatus(prev => ({ ...prev, [activityId]: false }));
+      setUpdatingStatus((prev) => ({ ...prev, [activityId]: false }));
     }
   };
 
   // Handle marking tender as complete
   const handleMarkAsComplete = (record) => {
     if (!areAllStagesComplete(record)) {
-      alert("Cannot mark as complete. All stages must be completed or marked as 'Not Applicable'.");
+      alert(
+        "Cannot mark as complete. All stages must be completed or marked as 'Not Applicable'.",
+      );
       return;
     }
-    
+
     if (record.Draft === "0") {
       alert("This tender is already marked as complete.");
       return;
     }
-    
-    if (window.confirm(`Are you sure you want to mark tender ${record.ActivityId} as complete? This action cannot be undone.`)) {
+
+    if (
+      window.confirm(
+        `Are you sure you want to mark tender ${record.ActivityId} as complete? This action cannot be undone.`,
+      )
+    ) {
       updateTenderStatus(record.ActivityId);
     }
   };
@@ -234,16 +251,19 @@ function DraftList() {
   const handleStageFilterChange = (stageKey, filterValue) => {
     const newFilters = {
       ...stageFilters,
-      [stageKey]: filterValue
+      [stageKey]: filterValue,
     };
     setStageFilters(newFilters);
-    
-    if (filterValue === 'all') {
-      setSelectedStages(prev => prev.filter(s => s !== stageKey));
+
+    if (filterValue === "all") {
+      setSelectedStages((prev) => prev.filter((s) => s !== stageKey));
     } else {
-      setSelectedStages(prev => [...prev.filter(s => s !== stageKey), stageKey]);
+      setSelectedStages((prev) => [
+        ...prev.filter((s) => s !== stageKey),
+        stageKey,
+      ]);
     }
-    
+
     applyFilters(searchTerm, newFilters);
   };
 
@@ -254,24 +274,30 @@ function DraftList() {
       const nameEntry2 = record.chkData?.find((chk) => chk.ChkId === "7");
       const name = nameEntry2?.Value?.toLowerCase() || "";
 
-      const searchMatch = searchValue === "" || 
-        tenderno.includes(searchValue) || 
+      const searchMatch =
+        searchValue === "" ||
+        tenderno.includes(searchValue) ||
         name.includes(searchValue);
 
       let stageMatch = true;
       const stageStatus = record.stage_status || {};
-      
-      stages.forEach(stage => {
+
+      stages.forEach((stage) => {
         const filterValue = filters[stage.key];
-        if (filterValue !== 'all') {
+        if (filterValue !== "all") {
           const status = stageStatus[stage.key];
-          
-          if (filterValue === 'complete') {
-            stageMatch = stageMatch && (status === "Complete" || status === "Completed");
-          } else if (filterValue === 'incomplete') {
-            stageMatch = stageMatch && (status !== "Complete" && status !== "Completed" && status !== "Not Applicable");
-          } else if (filterValue === 'not-applicable') {
-            stageMatch = stageMatch && (status === "Not Applicable");
+
+          if (filterValue === "complete") {
+            stageMatch =
+              stageMatch && (status === "Complete" || status === "Completed");
+          } else if (filterValue === "incomplete") {
+            stageMatch =
+              stageMatch &&
+              status !== "Complete" &&
+              status !== "Completed" &&
+              status !== "Not Applicable";
+          } else if (filterValue === "not-applicable") {
+            stageMatch = stageMatch && status === "Not Applicable";
           }
         }
       });
@@ -286,8 +312,8 @@ function DraftList() {
 
   const clearAllFilters = () => {
     const clearedFilters = {};
-    stages.forEach(stage => {
-      clearedFilters[stage.key] = 'all';
+    stages.forEach((stage) => {
+      clearedFilters[stage.key] = "all";
     });
     setStageFilters(clearedFilters);
     setSelectedStages([]);
@@ -296,24 +322,25 @@ function DraftList() {
   };
 
   const exportToExcel = () => {
-    const exportData = filteredRecords.map(record => {
+    const exportData = filteredRecords.map((record) => {
       const nameEntry = record.chkData?.find((chk) => chk.ChkId === "4");
       const nameEntry2 = record.chkData?.find((chk) => chk.ChkId === "7");
       const nameEntry3 = record.chkData?.find((chk) => chk.ChkId === "60");
       const stageStatus = record.stage_status || {};
-      
+
       const rowData = {
         "Tender No.": nameEntry?.Value || "-",
         "LOA No.": nameEntry3?.Value || "-",
-        "Buyer": nameEntry2?.Value || "-",
+        Buyer: nameEntry2?.Value || "-",
         "Created Date": formatDate(record.Datetime),
         "Last Update": getTimeSince(record.LastUpdate),
-        "Draft Status": record.Draft === "0" ? "Complete" : "In Progress", // REVERSED
+        "Draft Status": record.Draft === "0" ? "Complete" : "In Progress",
       };
 
-      stages.forEach(stage => {
+      stages.forEach((stage) => {
         const status = stageStatus[stage.key];
-        rowData[`Stage ${stage.label} (${stage.name})`] = status || "Not Started";
+        rowData[`Stage ${stage.label} (${stage.name})`] =
+          status || "Not Started";
       });
 
       return rowData;
@@ -322,8 +349,8 @@ function DraftList() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Tender List");
-    
-    const fileName = `tender_list_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+    const fileName = `tender_list_${new Date().toISOString().split("T")[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
   };
 
@@ -340,24 +367,28 @@ function DraftList() {
 
   const getTimeSince = (lastUpdate) => {
     if (!lastUpdate) return "-";
-    
-    if (typeof lastUpdate === "string" && !lastUpdate.includes("-") && !lastUpdate.includes(":")) {
+
+    if (
+      typeof lastUpdate === "string" &&
+      !lastUpdate.includes("-") &&
+      !lastUpdate.includes(":")
+    ) {
       return lastUpdate;
     }
-    
+
     const updateDate = new Date(lastUpdate);
     const now = new Date();
     const diffMs = now - updateDate;
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffDays > 0) {
-      return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+      return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
     } else if (diffHours > 0) {
-      return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     } else if (diffMins > 0) {
-      return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+      return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
     } else {
       return "Just now";
     }
@@ -366,105 +397,122 @@ function DraftList() {
   const getStageStatusInfo = (record, stageKey) => {
     const stageStatus = record.stage_status || {};
     const status = stageStatus[stageKey];
-    
+
     if (status === "Not Applicable") {
       return {
         isEditable: false,
         isComplete: false,
         isNotApplicable: true,
-        statusText: status
+        statusText: status,
       };
     } else if (status === "Complete" || status === "Completed") {
       return {
         isEditable: false,
         isComplete: true,
         isNotApplicable: false,
-        statusText: status
+        statusText: status,
       };
     } else {
       return {
         isEditable: true,
         isComplete: false,
         isNotApplicable: false,
-        statusText: status || "Not Started"
+        statusText: status || "Not Started",
       };
     }
   };
 
- const handleStageClick = (record, stageIndex, stageKey, stageName, stageInfo) => {
-  // Only allow editing if:
-  // 1. The stage is editable (not complete, not "Not Applicable")
-  // 2. AND the overall tender is still in draft status (Draft === "1")
-  if (stageInfo.isEditable && record.Draft === "1") {
-    navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
-  }
-  // If it's complete but tender is still in progress, show message
-  else if (stageInfo.isComplete && record.Draft === "1") {
-    alert(`Stage ${stageIndex + 1} (${stageName}) is already completed.`);
-    navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
-  }
-  // If tender is already marked as complete
-  else if (record.Draft === "0") {
-    alert("This tender has been marked as complete and cannot be edited.");
-  }
-};
+  const handleStageClick = (
+    record,
+    stageIndex,
+    stageKey,
+    stageName,
+    stageInfo,
+  ) => {
+    // Only allow editing if:
+    // 1. The stage is editable (not complete, not "Not Applicable")
+    // 2. AND the overall tender is still in draft status (Draft === "1")
+    if (stageInfo.isEditable && record.Draft === "1") {
+      navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
+    }
+    // If it's complete but tender is still in progress, show message
+    else if (stageInfo.isComplete && record.Draft === "1") {
+      alert(`Stage ${stageIndex + 1} (${stageName}) is already completed.`);
+      navigate(`/edit-draft/${record.ActivityId}?step=${stageIndex}`);
+    }
+    // If tender is already marked as complete
+    else if (record.Draft === "0") {
+      alert("This tender has been marked as complete and cannot be edited.");
+    }
+  };
 
-const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
-  const stageInfo = getStageStatusInfo(record, stageKey);
-  const isTenderComplete = record.Draft === "0";
-  
-  let title = `${stageName}: ${stageInfo.statusText}`;
-  let cursorStyle = 'default';
-  
-  // Determine if clickable and update title accordingly
-  if (stageInfo.isEditable && !isTenderComplete) {
-    title += ' - Click to edit';
-    cursorStyle = 'pointer';
-  } else if (stageInfo.isComplete && !isTenderComplete) {
-    title += ' - Completed (click for info)';
-    cursorStyle = 'pointer';
-  } else if (isTenderComplete) {
-    title += ' - Tender completed (not editable)';
-    cursorStyle = 'not-allowed';
-  } else {
-    cursorStyle = 'default';
-  }
-  
-  let iconContent = "";
-  let iconClass = "";
-  
-  if (stageInfo.isComplete) {
-    iconContent = "✓";
-    iconClass = "complete";
-  } else if (stageInfo.isNotApplicable) {
-    iconContent = "N/A";
-    iconClass = "not-applicable";
-  } else {
-    iconContent = "✗";
-    iconClass = "incomplete";
-  }
-  
-  // Apply different styling based on tender completion status
-  const opacityValue = isTenderComplete ? 0.5 : (stageInfo.isEditable ? 1 : 0.7);
-  
-  return (
-    <div 
-      className="stage-status-column" 
-      title={title}
-      onClick={() => handleStageClick(record, stageIndex, stageKey, stageName, stageInfo)}
-      style={{ 
-        cursor: cursorStyle,
-        opacity: opacityValue
-      }}
-    >
-      <span className={`stage-icon ${iconClass}`}>{iconContent}</span>
-    </div>
-  );
-};
+  const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
+    const stageInfo = getStageStatusInfo(record, stageKey);
+    const isTenderComplete = record.Draft === "0";
+
+    let title = `${stageName}: ${stageInfo.statusText}`;
+    let cursorStyle = "default";
+
+    // Determine if clickable and update title accordingly
+    if (stageInfo.isEditable && !isTenderComplete) {
+      title += " - Click to edit";
+      cursorStyle = "pointer";
+    } else if (stageInfo.isComplete && !isTenderComplete) {
+      title += " - Completed (click for info)";
+      cursorStyle = "pointer";
+    } else if (isTenderComplete) {
+      title += " - Tender completed (not editable)";
+      cursorStyle = "not-allowed";
+    } else {
+      cursorStyle = "default";
+    }
+
+    let iconContent = "";
+    let iconClass = "";
+
+    if (stageInfo.isComplete) {
+      iconContent = "✓";
+      iconClass = "complete";
+    } else if (stageInfo.isNotApplicable) {
+      iconContent = "N/A";
+      iconClass = "not-applicable";
+    } else {
+      iconContent = "✗";
+      iconClass = "incomplete";
+    }
+
+    // Apply different styling based on tender completion status
+    const opacityValue = isTenderComplete
+      ? 0.5
+      : stageInfo.isEditable
+        ? 1
+        : 0.7;
+
+    return (
+      <div
+        className="stage-status-column"
+        title={title}
+        onClick={() =>
+          handleStageClick(record, stageIndex, stageKey, stageName, stageInfo)
+        }
+        style={{
+          cursor: cursorStyle,
+          opacity: opacityValue,
+        }}
+      >
+        <span className={`stage-icon ${iconClass}`}>{iconContent}</span>
+      </div>
+    );
+  };
 
   const renderStageFilter = (stage) => {
-    const counts = stageCounts[stage.key] || { all: 0, complete: 0, incomplete: 0, notApplicable: 0 };
-    
+    const counts = stageCounts[stage.key] || {
+      all: 0,
+      complete: 0,
+      incomplete: 0,
+      notApplicable: 0,
+    };
+
     return (
       <div key={stage.key} className="stage-filter">
         <div className="stage-filter-header">
@@ -474,18 +522,21 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
           </span>
         </div>
         <select
-          value={stageFilters[stage.key] || 'all'}
+          value={stageFilters[stage.key] || "all"}
           onChange={(e) => handleStageFilterChange(stage.key, e.target.value)}
           className="stage-filter-select"
           style={{
-            backgroundColor: stageFilters[stage.key] !== 'all' ? '#e3f2fd' : 'white',
-            borderColor: stageFilters[stage.key] !== 'all' ? '#2196f3' : '#ddd'
+            backgroundColor:
+              stageFilters[stage.key] !== "all" ? "#e3f2fd" : "white",
+            borderColor: stageFilters[stage.key] !== "all" ? "#2196f3" : "#ddd",
           }}
         >
           <option value="all">All ({counts.all})</option>
           <option value="complete">Complete ({counts.complete})</option>
           <option value="incomplete">Incomplete ({counts.incomplete})</option>
-          <option value="not-applicable">Not Applicable ({counts.notApplicable})</option>
+          <option value="not-applicable">
+            Not Applicable ({counts.notApplicable})
+          </option>
         </select>
       </div>
     );
@@ -493,10 +544,14 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
 
   const getTotalIncompleteCount = () => {
     let total = 0;
-    Object.values(stageCounts).forEach(counts => {
+    Object.values(stageCounts).forEach((counts) => {
       total += counts.incomplete || 0;
     });
     return total;
+  };
+
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
   };
 
   const totalPages = Math.ceil(filteredRecords.length / rowsPerPage);
@@ -519,14 +574,13 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
         <div className="title-container">
           <h2 className="draft-list-title">Tender List</h2>
           <div className="draft-stats">
-            <span className="draft-count">Total Tenders - {filteredRecords.length}</span>
+            <span className="draft-count">
+              Total Tenders - {filteredRecords.length}
+            </span>
             <span className="incomplete-count">
               Total Incomplete Stages - {getTotalIncompleteCount()}
             </span>
           </div>
-        </div>
-
-        <div className="draft-list-actions">
           <div className="search-container">
             <input
               type="text"
@@ -537,36 +591,56 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
             />
             <span className="search-icon">🔍</span>
           </div>
+          
+        </div>
+
+        <div className="draft-list-actions">
+          {/* Filter Toggle Button */}
+<button
+            className={`action-button filter-toggle-button ${selectedStages.length > 0 ? "active-filters" : ""}`}
+            onClick={toggleFilters}
+            title="Toggle Filters"
+          >
+            {showFilters ? "▲ Hide" : "▼ Show"}
+            {selectedStages.length > 0 && (
+              <span className="filter-badge">{selectedStages.length}</span>
+            )}
+          </button>
           <button
             className="action-button export-button"
             onClick={exportToExcel}
             title="Export to Excel"
           >
-            📊 Export Excel
+            📊 Excel
           </button>
           <button
             className="action-button new-tender-button"
             onClick={() => navigate("/create-tender")}
           >
-            New Tender
+            New
           </button>
         </div>
       </div>
 
-      <div className="stage-filters-container">
+      {/* Collapsible Filters Section */}
+      <div
+        className={`stage-filters-container ${showFilters ? "visible" : "hidden"}`}
+      >
         <div className="stage-filters-header">
           <h3>Filter by Stage Status</h3>
-          {selectedStages.length > 0 && (
-            <button 
-              className="clear-filters-button"
-              onClick={clearAllFilters}
-            >
-              Clear All Filters
-            </button>
-          )}
+          <div className="filter-actions">
+            {selectedStages.length > 0 && (
+              <button
+                className="clear-filters-button"
+                onClick={clearAllFilters}
+              >
+                Clear All Filters
+              </button>
+            )}
+          </div>
         </div>
         <div className="stage-filters-grid">
-          {stages.map(stage => renderStageFilter(stage))}
+          {stages.map((stage) => renderStageFilter(stage))}
         </div>
       </div>
 
@@ -574,36 +648,41 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
 
       <div className="table-container" ref={tableRef}>
         <table className="draft-table">
-          <thead>
+          <thead className="sticky-header">
             <tr>
-              <th>Tender No.</th>
-              <th>LOA No.</th>
-              <th>Buyer</th>
-              <th>Created Date</th>
-              {/* <th>Last Update</th> */}
+              <th className="sticky-th">Tender No.</th>
+              <th className="sticky-th">LOA No.</th>
+              <th className="sticky-th">Buyer</th>
+              <th className="sticky-th">Created Date</th>
               {stages.map((stage) => (
-                <th key={stage.key} className="stage-column-header">
+                <th key={stage.key} className="stage-column-header sticky-th">
                   <div className="stage-header-content">
                     <span className="stage-number">{stage.label}</span>
                     <span className="stage-name">{stage.name}</span>
                   </div>
                 </th>
               ))}
-              <th>Status</th>
-              <th>Actions</th>
+              <th className="sticky-th">Status</th>
+              <th className="sticky-th">Actions</th>
             </tr>
           </thead>
           <tbody>
             {currentRecords.length > 0 ? (
               currentRecords.map((record) => {
-                const nameEntry = record.chkData?.find((chk) => chk.ChkId === "4");
-                const nameEntry2 = record.chkData?.find((chk) => chk.ChkId === "7");
-                const nameEntry3 = record.chkData?.find((chk) => chk.ChkId === "60");
+                const nameEntry = record.chkData?.find(
+                  (chk) => chk.ChkId === "4",
+                );
+                const nameEntry2 = record.chkData?.find(
+                  (chk) => chk.ChkId === "7",
+                );
+                const nameEntry3 = record.chkData?.find(
+                  (chk) => chk.ChkId === "60",
+                );
                 const timeSince = getTimeSince(record.LastUpdate);
                 const isAllStagesComplete = areAllStagesComplete(record);
                 const isUpdating = updatingStatus[record.ActivityId] || false;
-                const isDraftZero = record.Draft === "0"; // Complete
-                const isDraftOne = record.Draft === "1"; // In Progress
+                const isDraftZero = record.Draft === "0";
+                const isDraftOne = record.Draft === "1";
 
                 return (
                   <tr key={record.ID}>
@@ -611,41 +690,45 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
                     <td>{nameEntry3?.Value || "-"}</td>
                     <td>{nameEntry2?.Value || "-"}</td>
                     <td>{formatDate(record.Datetime)}</td>
-                    {/* <td>
-                      <span className={`time-badge ${timeSince.includes("day") ? "old" : "recent"}`}>
-                        {timeSince}
-                      </span>
-                    </td> */}
                     {stages.map((stage, index) => (
                       <td key={stage.key} className="stage-column-cell">
-                        {renderStageStatus(record, index, stage.key, stage.name)}
+                        {renderStageStatus(
+                          record,
+                          index,
+                          stage.key,
+                          stage.name,
+                        )}
                       </td>
                     ))}
                     <td className="draft-status-cell">
-                      <span className={`draft-status-badge ${isDraftZero ? 'complete' : 'in-progress'}`}>
-                        {isDraftZero ? 'Complete' : 'Pending'}
+                      <span
+                        className={`draft-status-badge ${isDraftZero ? "complete" : "in-progress"}`}
+                      >
+                        {isDraftZero ? "Complete" : "Pending"}
                       </span>
                     </td>
                     <td className="actions-cell">
                       <div className="action-buttons">
-                        <button 
+                        <button
                           className="view-button"
                           title="View Draft"
-                          onClick={() => navigate(`/tender/view/${record.ActivityId}`)}
+                          onClick={() =>
+                            navigate(`/tender/view/${record.ActivityId}`)
+                          }
                         >
                           <span className="button-icon">👁️</span>
                         </button>
-                        
+
                         {/* Complete Tender Button - Only show if draft is "1" (In Progress) */}
                         {!isDraftZero && isAllStagesComplete && (
                           <button
-                            className={`complete-button ${!isAllStagesComplete ? 'disabled' : ''}`}
+                            className={`complete-button ${!isAllStagesComplete ? "disabled" : ""}`}
                             title={
-                              isDraftZero 
-                                ? "Already Completed" 
-                                : !isAllStagesComplete 
-                                ? "All stages must be completed"
-                                : "Mark tender as complete"
+                              isDraftZero
+                                ? "Already Completed"
+                                : !isAllStagesComplete
+                                  ? "All stages must be completed"
+                                  : "Mark tender as complete"
                             }
                             onClick={() => handleMarkAsComplete(record)}
                             disabled={!isAllStagesComplete || isUpdating}
@@ -675,14 +758,14 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
 
       <div className="pagination-container">
         <div className="pagination">
-          <button 
+          <button
             className="pagination-button"
             disabled={page === 0}
             onClick={() => handleChangePage(page - 1)}
           >
             Previous
           </button>
-          
+
           <div className="page-numbers">
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let pageNum = page;
@@ -697,9 +780,9 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
               }
 
               return (
-                <button 
-                  key={pageNum} 
-                  className={`page-number ${pageNum === page ? 'active' : ''}`}
+                <button
+                  key={pageNum}
+                  className={`page-number ${pageNum === page ? "active" : ""}`}
                   onClick={() => handleChangePage(pageNum)}
                 >
                   {pageNum + 1}
@@ -707,8 +790,8 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
               );
             })}
           </div>
-          
-          <button 
+
+          <button
             className="pagination-button"
             disabled={page >= totalPages - 1}
             onClick={() => handleChangePage(page + 1)}
@@ -716,135 +799,199 @@ const renderStageStatus = (record, stageIndex, stageKey, stageName) => {
             Next
           </button>
         </div>
-        
+
         <div className="page-info">
-          Showing {startIndex + 1} - {Math.min(endIndex, filteredRecords.length)} of {filteredRecords.length} records
+          Showing {startIndex + 1} -{" "}
+          {Math.min(endIndex, filteredRecords.length)} of{" "}
+          {filteredRecords.length} records
         </div>
       </div>
 
       <style jsx>{`
-  .stage-status-column {
-    text-align: center;
-    padding: 8px;
-    transition: background-color 0.2s;
-    border-radius: 4px;
-  }
-  
-  .stage-status-column:hover {
-    background-color: #f5f5f5;
-  }
-  
-  .stage-status-column[style*="cursor: pointer"]:hover {
-    background-color: #e3f2fd;
-    transform: scale(1.05);
-  }
-  
-  .stage-status-column[style*="cursor: not-allowed"] {
-    background-color: #f5f5f5;
-  }
-  
-  .stage-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    font-size: 14px;
-    font-weight: bold;
-    transition: transform 0.2s;
-  }
-  
-  .stage-icon.complete {
-    background-color: #4caf50;
-    color: white;
-  }
-  
-  .stage-icon.incomplete {
-    background-color: #f44336;
-    color: white;
-  }
-  
-  .stage-icon.not-applicable {
-    background-color: #2196f3;
-    color: white;
-  }
-  
-  .stage-column-cell {
-    text-align: center;
-    padding: 8px !important;
-  }
-  
-  .draft-status-cell {
-    text-align: center;
-    align-items: center;
-  }
-  
-  .draft-status-badge {
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-    display: inline-block;
-  }
-  
-  .draft-status-badge.complete {
-    background-color: #4caf50;
-    color: white;
-  }
-  
-  .draft-status-badge.in-progress {
-    background-color: #ff9800;
-    color: white;
-  }
-  
-  .action-buttons {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-  }
-  
-  .complete-button {
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
-  }
-  
-  .complete-button:hover:not(.disabled) {
-    background-color: #388e3c;
-  }
-  
-  .complete-button.disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-  
-  .button-icon {
-    font-size: 16px;
-  }
-  
-  .view-button {
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s;
-  }
-  
-  .view-button:hover {
-    background-color: #1976d2;
-  }
-`}</style>
+        .stage-status-column {
+          text-align: center;
+          padding: 8px;
+          transition: background-color 0.2s;
+          border-radius: 4px;
+        }
+
+        .stage-status-column:hover {
+          background-color: #f5f5f5;
+        }
+
+        .stage-status-column[style*="cursor: pointer"]:hover {
+          background-color: #e3f2fd;
+          transform: scale(1.05);
+        }
+
+        .stage-status-column[style*="cursor: not-allowed"] {
+          background-color: #f5f5f5;
+        }
+
+        .stage-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          font-size: 14px;
+          font-weight: bold;
+          transition: transform 0.2s;
+        }
+
+        .stage-icon.complete {
+          background-color: #4caf50;
+          color: white;
+        }
+
+        .stage-icon.incomplete {
+          background-color: #f44336;
+          color: white;
+        }
+
+        .stage-icon.not-applicable {
+          background-color: #2196f3;
+          color: white;
+        }
+
+        .stage-column-cell {
+          text-align: center;
+          padding: 8px !important;
+        }
+
+        .draft-status-cell {
+          text-align: center;
+          align-items: center;
+        }
+
+        .draft-status-badge {
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          display: inline-block;
+        }
+
+        .draft-status-badge.complete {
+          background-color: #4caf50;
+          color: white;
+        }
+
+        .draft-status-badge.in-progress {
+          background-color: #ff9800;
+          color: white;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+        }
+
+        .complete-button {
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 6px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.3s;
+        }
+
+        .complete-button:hover:not(.disabled) {
+          background-color: #388e3c;
+        }
+
+        .complete-button.disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .button-icon {
+          font-size: 16px;
+        }
+
+        .view-button {
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 6px 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background-color 0.3s;
+        }
+
+        .view-button:hover {
+          background-color: #1976d2;
+        }
+
+        .filter-toggle-button {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .filter-badge {
+          background-color: #f44336;
+          color: white;
+          border-radius: 50%;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: bold;
+        }
+
+        .filter-toggle-button.active-filters {
+          background-color: #e3f2fd;
+          border-color: #2196f3;
+          color: #2196f3;
+        }
+
+        .stage-filters-container.hidden {
+          display: none;
+        }
+
+        .stage-filters-container.visible {
+          display: block;
+          animation: slideDown 0.3s ease-out;
+        }
+
+        .sticky-header {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background-color: white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sticky-th {
+          position: sticky;
+          top: 0;
+          background-color: white;
+          z-index: 5;
+          border-bottom: 2px solid #ddd;
+        }
+
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

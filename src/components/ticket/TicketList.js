@@ -629,8 +629,6 @@ const TicketList = () => {
             </CardContent>
           </Card>
         </Grid>
-
-       
       </Grid>
 
       {/* Export All Button - Only show when there are active filters */}
@@ -671,21 +669,25 @@ const TicketList = () => {
       ) : (
         <>
           {/* Table */}
-          <TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
-            <Table>
+          <TableContainer
+            component={Paper}
+            variant="outlined"
+            sx={{ mb: 3, maxHeight: "69vh", overflow: "auto" }}
+          >
+            <Table stickyHeader>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#F69320", color: "#fff" }}>
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <strong>ID</strong>
                   </TableCell>
 
                   {/* LOA Column with Filter */}
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <strong>LOA</strong>
                       <IconButton
                         size="small"
-                        sx={{ color: "#fff" }}
+                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
                         onClick={(e) => handleFilterClick(e, "LOA")}
                       >
                         <FilterList fontSize="small" />
@@ -702,12 +704,12 @@ const TicketList = () => {
                   </TableCell>
 
                   {/* Technician Column with Filter */}
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <strong>Technician</strong>
                       <IconButton
                         size="small"
-                        sx={{ color: "#fff" }}
+                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
                         onClick={(e) => handleFilterClick(e, "EmpName")}
                       >
                         <FilterList fontSize="small" />
@@ -724,12 +726,12 @@ const TicketList = () => {
                   </TableCell>
 
                   {/* Station Column with Filter */}
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <strong>Station</strong>
                       <IconButton
                         size="small"
-                        sx={{ color: "#fff" }}
+                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
                         onClick={(e) => handleFilterClick(e, "Station")}
                       >
                         <FilterList fontSize="small" />
@@ -746,12 +748,12 @@ const TicketList = () => {
                   </TableCell>
 
                   {/* Contact Person Column with Filter */}
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <strong>Contact Person</strong>
                       <IconButton
                         size="small"
-                        sx={{ color: "#fff" }}
+                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
                         onClick={(e) => handleFilterClick(e, "ContactPerson")}
                       >
                         <FilterList fontSize="small" />
@@ -767,12 +769,12 @@ const TicketList = () => {
                     </Box>
                   </TableCell>
 
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <strong>Contact Number</strong>
                   </TableCell>
 
                   {/* Status Column with Filter */}
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <strong>Status</strong>
                       <IconButton
@@ -793,10 +795,10 @@ const TicketList = () => {
                     </Box>
                   </TableCell>
 
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320", }}>
                     <strong>Assign Date</strong>
                   </TableCell>
-                  <TableCell sx={{ color: "#fff" }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <strong>Action Date</strong>
                   </TableCell>
                 </TableRow>

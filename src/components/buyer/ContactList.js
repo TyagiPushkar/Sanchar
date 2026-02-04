@@ -190,9 +190,18 @@ function ContactList() {
   return (
     <Box p={2}>
       {/* Edit Contact Dialog */}
-      <Dialog open={editDialogOpen} onClose={handleEditClose} fullWidth maxWidth="sm">
+      <Dialog
+        open={editDialogOpen}
+        onClose={handleEditClose}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Typography variant="h6">Edit Contact</Typography>
             <IconButton onClick={handleEditClose}>
               <X />
@@ -269,9 +278,9 @@ function ContactList() {
           <Button onClick={handleEditClose} color="primary">
             Cancel
           </Button>
-          <Button 
-            onClick={handleEditSubmit} 
-            color="primary" 
+          <Button
+            onClick={handleEditSubmit}
+            color="primary"
             variant="contained"
             disabled={editLoading}
           >
@@ -281,7 +290,14 @@ function ContactList() {
       </Dialog>
 
       {/* Main Contact List */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={2}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+        flexWrap="wrap"
+        gap={2}
+      >
         <Typography variant="h5" fontWeight="bold" color="#333">
           Contact List
         </Typography>
@@ -299,24 +315,27 @@ function ContactList() {
           />
 
           <TextField
-  label="Search by Type, Type ID, or Contact Person"
-  variant="outlined"
-  size="small"
-  value={searchTerm}
-  onChange={handleSearch}
-  InputProps={{
-    startAdornment: <Search size={18} color="#666" style={{ marginRight: "8px" }} />,
-  }}
-  sx={{
-    width: 300,
-    "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
-      borderColor: "#F69320",
-    },
-    "& .MuiInputLabel-root.Mui-focused": {
-      color: "#F69320",
-    },
-  }}
-/>
+            label="Search by Type, Type ID, or Contact Person"
+            variant="outlined"
+            size="small"
+            value={searchTerm}
+            onChange={handleSearch}
+            InputProps={{
+              startAdornment: (
+                <Search size={18} color="#666" style={{ marginRight: "8px" }} />
+              ),
+            }}
+            sx={{
+              width: 300,
+              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                {
+                  borderColor: "#F69320",
+                },
+              "& .MuiInputLabel-root.Mui-focused": {
+                color: "#F69320",
+              },
+            }}
+          />
 
           <Button
             variant="contained"
@@ -348,24 +367,45 @@ function ContactList() {
           overflow: "hidden",
           boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
           width: "100%",
+          maxHeight: "69vh",
+          overflow: "auto",
         }}
       >
-        <Table size="medium">
+        <Table size="medium" stickyHeader>
           <TableHead sx={{ backgroundColor: "#F69320" }}>
             <TableRow>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Type</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Type ID</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Contact Person</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Mobile</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Mail</TableCell>
-              <TableCell sx={{ color: "white", fontWeight: "bold" }}>Actions</TableCell>
+              {[
+                "Type",
+                "Type ID",
+                "Contact Person",
+                "Mobile",
+                "Mail",
+
+                "Actions",
+              ].map((label) => (
+                <TableCell
+                  key={label}
+                  sx={{
+                    backgroundColor: "#F69320", // 🔒 solid bg
+                    color: "white",
+                    fontWeight: "bold",
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 2, // 🔒 stay above rows
+                  }}
+                >
+                  {label}
+                </TableCell>
+              ))}
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredRecords.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                  <Typography color="textSecondary">No contacts found</Typography>
+                  <Typography color="textSecondary">
+                    No contacts found
+                  </Typography>
                 </TableCell>
               </TableRow>
             ) : (
@@ -387,7 +427,7 @@ function ContactList() {
                     <TableCell>{record.ContactNumber}</TableCell>
                     <TableCell>{record.ContactMail}</TableCell>
                     <TableCell>
-                      <IconButton 
+                      <IconButton
                         onClick={() => handleEditClick(record)}
                         sx={{ color: "#F69320" }}
                       >
