@@ -386,52 +386,7 @@ function Sidebar() {
             </List>
           )}
 
-          {/* Admin Panel - Only for Admin role */}
-          {userRole === "Admin" && (
-            <List sx={{ px: 1.5, mt: 2, borderTop: "1px solid #eee", pt: 2 }}>
-              <Typography
-                variant="caption"
-                sx={{
-                  px: 2,
-                  mb: 1,
-                  color: "#999",
-                  fontSize: "0.75rem",
-                  fontWeight: "bold",
-                }}
-              >
-                ADMIN PANEL
-              </Typography>
-              <ListItem disablePadding sx={{ mb: 0.5 }}>
-                <Box
-                  component={Link}
-                  to="/admin"
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    px: 2,
-                    py: 1.3,
-                    borderRadius: "10px",
-                    textDecoration: "none",
-                    color: location.pathname === "/admin" ? "#F69320" : "#555",
-                    background:
-                      location.pathname === "/admin"
-                        ? "rgba(246,147,32,0.08)"
-                        : "transparent",
-                    "&:hover": { background: "rgba(0,0,0,0.05)" },
-                  }}
-                >
-                  <ListItemIcon sx={{ minWidth: expanded ? 40 : "auto" }}>
-                    <AdminPanelSettingsIcon />
-                  </ListItemIcon>
-                  {expanded && (
-                    <Typography sx={{ ml: 1, fontWeight: 500 }}>
-                      Admin Dashboard
-                    </Typography>
-                  )}
-                </Box>
-              </ListItem>
-            </List>
-          )}
+          
         </Drawer>
       </Box>
     </Box>
