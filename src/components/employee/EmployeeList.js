@@ -29,11 +29,9 @@ import CloseIcon from "@mui/icons-material/Close"
 import AddIcon from "@mui/icons-material/Add"
 import CheckCircleIcon from "@mui/icons-material/CheckCircle"
 import SearchIcon from "@mui/icons-material/Search"
+import { useAuth } from "../auth/AuthContext"
 
 // Mock auth hook - replace with your actual auth implementation
-const useAuth = () => ({
-  user: { tenent_id: "1" }, // Replace with your actual auth logic
-})
 
 // Role hierarchy order
 const ROLE_HIERARCHY = {
@@ -394,15 +392,17 @@ function EmployeeList() {
           />
         </Grid>
         <Grid item xs={12} md={4} style={{ textAlign: "right" }}>
-          <Button
-            variant="contained"
-            style={{ backgroundColor: "#F69320", color: "white" }}
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenForm("add")}
-            disabled={loading}
-          >
-            Add Employee
-          </Button>
+          {(user.role === "Admin" || user.role === "Project Manager") && (
+            <Button
+              variant="contained"
+              style={{ backgroundColor: "#F69320", color: "white" }}
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenForm("add")}
+              disabled={loading}
+            >
+              Add Employee
+            </Button>
+          )}
         </Grid>
       </Grid>
 
@@ -547,38 +547,41 @@ function EmployeeList() {
                           </Typography>
                         </TableCell>
                         <TableCell>
-                          <div style={{ display: "flex", gap: "8px" }}>
-                            <IconButton
-                              color="primary"
-                              onClick={() => handleOpenForm("edit", employee)}
-                              disabled={loading}
-                              title="Edit Employee"
-                            >
-                              <EditIcon />
-                            </IconButton>
-                            <IconButton
-                              style={{
-                                color: employee.IsActive
-                                  ? "#f44336"
-                                  : "#4caf50",
-                              }}
-                              onClick={() =>
-                                handleToggleEmployeeStatus(employee)
-                              }
-                              disabled={loading}
-                              title={
-                                employee.IsActive
-                                  ? "Disable Employee"
-                                  : "Enable Employee"
-                              }
-                            >
-                              {employee.IsActive ? (
-                                <CloseIcon />
-                              ) : (
-                                <CheckCircleIcon />
-                              )}
-                            </IconButton>
-                          </div>
+                          {(user.role === "Admin" ||
+                            user.role === "Project Manager") && (
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              <IconButton
+                                color="primary"
+                                onClick={() => handleOpenForm("edit", employee)}
+                                disabled={loading}
+                                title="Edit Employee"
+                              >
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton
+                                style={{
+                                  color: employee.IsActive
+                                    ? "#f44336"
+                                    : "#4caf50",
+                                }}
+                                onClick={() =>
+                                  handleToggleEmployeeStatus(employee)
+                                }
+                                disabled={loading}
+                                title={
+                                  employee.IsActive
+                                    ? "Disable Employee"
+                                    : "Enable Employee"
+                                }
+                              >
+                                {employee.IsActive ? (
+                                  <CloseIcon />
+                                ) : (
+                                  <CheckCircleIcon />
+                                )}
+                              </IconButton>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     );

@@ -3,8 +3,10 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx"; // Import the xlsx library
 import "./AMCWorkList.css";
+import { useAuth } from "../auth/AuthContext";
 
 function AMCWorkList() {
+  const {user} = useAuth()
   const [transactions, setTransactions] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
@@ -13,7 +15,6 @@ function AMCWorkList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(15);
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   const displayCheckpointIds = ["589", "590", "591", "592", "593", "594"];
@@ -21,11 +22,7 @@ function AMCWorkList() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-
+       
         const [transactionsResponse, checkpointsResponse] = await Promise.all([
           axios.get(
             "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=10"
@@ -157,7 +154,6 @@ function AMCWorkList() {
   const endIndex = startIndex + rowsPerPage;
   const currentRecords = filteredRecords.slice(startIndex, endIndex);
   const allCheckpointIds = getAllCheckpointIds();
-  const isAdmin = user?.role === "Admin";
 
   if (loading) {
     return (
@@ -193,13 +189,15 @@ function AMCWorkList() {
           >
             📊 Export to Excel
           </button>
-
-          <button
-            className="action-button new-material-button"
-            onClick={() => navigate("/add-amc-work")}
-          >
-            Add Work
-          </button>
+          {(user.role === "Admin" ||
+            user.role === "Project Manager") && (
+              <button
+                className="action-button new-material-button"
+                onClick={() => navigate("/add-amc-work")}
+              >
+                Add Work
+              </button>
+            )}
         </div>
       </div>
 
@@ -234,13 +232,15 @@ function AMCWorkList() {
                       >
                         👁️
                       </button>
-
-                      <button
-                        className="edit-button"
-                        onClick={() => handleEdit(record)}
-                      >
-                        ✏️
-                      </button>
+                      {(user.role === "Admin" ||
+                        user.role === "Project Manager") && (
+                          <button
+                            className="edit-button"
+                            onClick={() => handleEdit(record)}
+                          >
+                            ✏️
+                          </button>
+                        )}
                     </div>
                   </td>
                 </tr>

@@ -3,8 +3,10 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx"; // Import the xlsx library
 import "./InvoicesList.css";
+import { useAuth } from "../auth/AuthContext";
 
 function InvoicesList() {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
@@ -186,13 +188,15 @@ function InvoicesList() {
           >
             📊 Export to Excel
           </button>
-          
-          <button
-            className="action-button new-material-button"
-            onClick={() => navigate("/add-invoice")}
-          >
-            Add Invoice
-          </button>
+          {(user.role === "Admin" ||
+            user.role === "Project Manager") && (
+              <button
+                className="action-button new-material-button"
+                onClick={() => navigate("/add-invoice")}
+              >
+                Add Invoice
+              </button>
+            )}
         </div>
       </div>
 
@@ -218,17 +222,20 @@ function InvoicesList() {
                     </td>
                   ))}
                   <td>
-                    <button 
-                      className="edit-button"
-                      onClick={() => navigate("/edit-invoice", { 
-                        state: { 
-                          transaction: record, 
-                          checkpoints 
-                        } 
-                      })}
-                    >
-                      ✏️
-                    </button>
+                    {(user.role === "Admin" ||
+                      user.role === "Project Manager") && (
+                        <button
+                          className="edit-button"
+                          onClick={() => navigate("/edit-invoice", {
+                            state: {
+                              transaction: record,
+                              checkpoints
+                            }
+                          })}
+                        >
+                          ✏️
+                        </button>
+                      )}
                   </td>
                 </tr>
               ))

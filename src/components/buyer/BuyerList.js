@@ -25,43 +25,47 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions
 } from "@mui/material"
 import * as XLSX from "xlsx"; // Import the xlsx library
+import { useAuth } from "../auth/AuthContext";
 
 function BuyerList() {
-  const [buyers, setBuyers] = useState([])
-  const [filteredBuyers, setFilteredBuyers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(15)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [selectedBuyer, setSelectedBuyer] = useState(null)
+  const { user } = useAuth();
+  const [buyers, setBuyers] = useState([]);
+  const [filteredBuyers, setFilteredBuyers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(15);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedBuyer, setSelectedBuyer] = useState(null);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchBuyerData = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const response = await axios.get("https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php")
+        const response = await axios.get(
+          "https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php",
+        );
         if (response.data.success) {
-          setBuyers(response.data.data)
-          setFilteredBuyers(response.data.data)
+          setBuyers(response.data.data);
+          setFilteredBuyers(response.data.data);
         } else {
-          setError("No buyer data found.")
+          setError("No buyer data found.");
         }
       } catch (err) {
-        setError("Failed to fetch buyer data.")
+        setError("Failed to fetch buyer data.");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchBuyerData()
-  }, [])
+    };
+    fetchBuyerData();
+  }, []);
 
   const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase()
-    setSearchTerm(value)
+    const value = e.target.value.toLowerCase();
+    setSearchTerm(value);
     const filtered = buyers.filter((buyer) => {
       return (
         buyer.ZoneID?.toString().toLowerCase().includes(value) ||
@@ -70,18 +74,18 @@ function BuyerList() {
         buyer.DivisionName?.toLowerCase().includes(value) ||
         buyer.StationID?.toString().toLowerCase().includes(value) ||
         buyer.StationName?.toLowerCase().includes(value)
-      )
-    })
-    setFilteredBuyers(filtered)
-    setPage(0)
-  }
+      );
+    });
+    setFilteredBuyers(filtered);
+    setPage(0);
+  };
 
-  const handleChangePage = (event, newPage) => setPage(newPage)
+  const handleChangePage = (event, newPage) => setPage(newPage);
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(Number.parseInt(event.target.value, 10))
-    setPage(0)
-  }
+    setRowsPerPage(Number.parseInt(event.target.value, 10));
+    setPage(0);
+  };
 
   // Function to export data to Excel
   const exportToExcel = () => {
@@ -98,30 +102,36 @@ function BuyerList() {
         "Station ID": buyer.StationID,
         "Station Name": buyer.StationName,
         "Station Address": buyer.StationAddress,
-        "LOA": buyer.LOA,
+        LOA: buyer.LOA,
       };
     });
 
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
+
     // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Buyers");
-    
+
     // Generate Excel file and trigger download
     XLSX.writeFile(wb, "consignee.xlsx");
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="80vh" flexDirection="column">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="80vh"
+        flexDirection="column"
+      >
         <CircularProgress sx={{ color: "#F69320" }} />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Loading buyer data...
         </Typography>
       </Box>
-    )
+    );
   }
 
   return (
@@ -327,20 +337,21 @@ function BuyerList() {
           >
             📊 Export to Excel
           </Button>
-
-          <Button
-            variant="contained"
-            startIcon={<Plus size={18} />}
-            onClick={() => navigate("/new-consignee")}
-            sx={{
-              backgroundColor: "#F69320",
-              "&:hover": {
-                backgroundColor: "#e08416",
-              },
-            }}
-          >
-            New Buyer
-          </Button>
+          {(user.role === "Admin" || user.role === "Project Manager") && (
+            <Button
+              variant="contained"
+              startIcon={<Plus size={18} />}
+              onClick={() => navigate("/new-consignee")}
+              sx={{
+                backgroundColor: "#F69320",
+                "&:hover": {
+                  backgroundColor: "#e08416",
+                },
+              }}
+            >
+              New Buyer
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -357,7 +368,7 @@ function BuyerList() {
               overflow: "hidden",
               boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
               width: "100%",
-              maxHeight: "69vh", 
+              maxHeight: "69vh",
               overflow: "auto",
             }}
           >
@@ -422,16 +433,20 @@ function BuyerList() {
                         <TableCell>{buyer.StationID}</TableCell>
                         <TableCell>{buyer.StationName}</TableCell>
                         <TableCell>{buyer.LOA}</TableCell>
+
                         <TableCell>
-                          <Button
-                            size="small"
-                            onClick={() => {
-                              setSelectedBuyer(buyer);
-                              setEditDialogOpen(true);
-                            }}
-                          >
-                            Edit
-                          </Button>
+                          {(user.role === "Admin" ||
+                            user.role === "Project Manager") && (
+                            <Button
+                              size="small"
+                              onClick={() => {
+                                setSelectedBuyer(buyer);
+                                setEditDialogOpen(true);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))

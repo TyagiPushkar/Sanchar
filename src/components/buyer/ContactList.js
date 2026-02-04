@@ -26,8 +26,10 @@ import {
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Edit, X } from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
 
 function ContactList() {
+  const { user } = useAuth();
   const [tempRecords, setTempRecords] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,7 @@ function ContactList() {
     const fetchTempData = async () => {
       try {
         const response = await axios.get(
-          "https://namami-infotech.com/SANCHAR/src/buyer/contact_station_list.php"
+          "https://namami-infotech.com/SANCHAR/src/buyer/contact_station_list.php",
         );
         if (response.data.success) {
           setTempRecords(response.data.data);
@@ -66,37 +68,37 @@ function ContactList() {
     fetchTempData();
   }, []);
 
- useEffect(() => {
-  let filtered = tempRecords;
+  useEffect(() => {
+    let filtered = tempRecords;
 
-  if (typeFilter) {
-    filtered = filtered.filter(
-      (record) => record.Type?.toLowerCase() === typeFilter.toLowerCase()
-    );
-  }
+    if (typeFilter) {
+      filtered = filtered.filter(
+        (record) => record.Type?.toLowerCase() === typeFilter.toLowerCase(),
+      );
+    }
 
-  if (searchTerm) {
-    const value = searchTerm.toLowerCase();
-    filtered = filtered.filter(
-      (record) =>
-        record.ZoneID?.toString().toLowerCase().includes(value) ||
-        record.ZoneName?.toLowerCase().includes(value) ||
-        record.DivisionID?.toString().toLowerCase().includes(value) ||
-        record.DivisionName?.toLowerCase().includes(value) ||
-        record.StationID?.toString().toLowerCase().includes(value) ||
-        record.StationName?.toLowerCase().includes(value) ||
-        // Add TypeId search
-        record.TypeId?.toString().toLowerCase().includes(value) ||
-        // Add ContactPerson search
-        record.ContactPerson?.toLowerCase().includes(value) ||
-        // Also search Type (if needed)
-        record.Type?.toLowerCase().includes(value)
-    );
-  }
+    if (searchTerm) {
+      const value = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (record) =>
+          record.ZoneID?.toString().toLowerCase().includes(value) ||
+          record.ZoneName?.toLowerCase().includes(value) ||
+          record.DivisionID?.toString().toLowerCase().includes(value) ||
+          record.DivisionName?.toLowerCase().includes(value) ||
+          record.StationID?.toString().toLowerCase().includes(value) ||
+          record.StationName?.toLowerCase().includes(value) ||
+          // Add TypeId search
+          record.TypeId?.toString().toLowerCase().includes(value) ||
+          // Add ContactPerson search
+          record.ContactPerson?.toLowerCase().includes(value) ||
+          // Also search Type (if needed)
+          record.Type?.toLowerCase().includes(value),
+      );
+    }
 
-  setFilteredRecords(filtered);
-  setPage(0);
-}, [searchTerm, typeFilter, tempRecords]);
+    setFilteredRecords(filtered);
+    setPage(0);
+  }, [searchTerm, typeFilter, tempRecords]);
 
   const handleSearch = (e) => setSearchTerm(e.target.value);
   const handleChangePage = (event, newPage) => setPage(newPage);
@@ -119,9 +121,9 @@ function ContactList() {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setCurrentContact(prev => ({
+    setCurrentContact((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -129,7 +131,7 @@ function ContactList() {
     setEditLoading(true);
     setEditError("");
     setEditSuccess("");
-  
+
     // Prepare payload with consistent field names
     const payload = {
       ID: currentContact.Id || currentContact.ID, // Handle both cases
@@ -137,31 +139,31 @@ function ContactList() {
       TypeId: currentContact.TypeId,
       ContactNumber: currentContact.ContactNumber,
       ContactPerson: currentContact.ContactPerson,
-      ContactMail: currentContact.ContactMail
+      ContactMail: currentContact.ContactMail,
     };
-  
+
     try {
       const response = await axios.post(
         "https://namami-infotech.com/SANCHAR/src/buyer/edit_contact_station.php",
-        payload
+        payload,
       );
-  
+
       if (response.data.success) {
         setEditSuccess("Contact updated successfully!");
-        
+
         // Update both records states
-        setTempRecords(prevRecords => 
-          prevRecords.map(record => 
-            record.ID === currentContact.ID ? { ...currentContact } : record
-          )
+        setTempRecords((prevRecords) =>
+          prevRecords.map((record) =>
+            record.ID === currentContact.ID ? { ...currentContact } : record,
+          ),
         );
-        
-        setFilteredRecords(prevRecords => 
-          prevRecords.map(record => 
-            record.ID === currentContact.ID ? { ...currentContact } : record
-          )
+
+        setFilteredRecords((prevRecords) =>
+          prevRecords.map((record) =>
+            record.ID === currentContact.ID ? { ...currentContact } : record,
+          ),
         );
-  
+
         setTimeout(() => {
           setEditDialogOpen(false);
         }, 1500);
@@ -178,7 +180,13 @@ function ContactList() {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="80vh" flexDirection="column">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="80vh"
+        flexDirection="column"
+      >
         <CircularProgress sx={{ color: "#F69320" }} />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Loading contact data...
@@ -336,20 +344,21 @@ function ContactList() {
               },
             }}
           />
-
-          <Button
-            variant="contained"
-            startIcon={<Plus size={18} />}
-            onClick={() => navigate("/contact")}
-            sx={{
-              backgroundColor: "#F69320",
-              "&:hover": {
-                backgroundColor: "#e08416",
-              },
-            }}
-          >
-            Add Contact
-          </Button>
+          {(user.role === "Admin" || user.role === "Project Manager") && (
+            <Button
+              variant="contained"
+              startIcon={<Plus size={18} />}
+              onClick={() => navigate("/contact")}
+              sx={{
+                backgroundColor: "#F69320",
+                "&:hover": {
+                  backgroundColor: "#e08416",
+                },
+              }}
+            >
+              Add Contact
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -426,13 +435,17 @@ function ContactList() {
                     <TableCell>{record.ContactPerson}</TableCell>
                     <TableCell>{record.ContactNumber}</TableCell>
                     <TableCell>{record.ContactMail}</TableCell>
+
                     <TableCell>
-                      <IconButton
-                        onClick={() => handleEditClick(record)}
-                        sx={{ color: "#F69320" }}
-                      >
-                        <Edit size={18} />
-                      </IconButton>
+                      {(user.role === "Admin" ||
+                        user.role === "Project Manager") && (
+                        <IconButton
+                          onClick={() => handleEditClick(record)}
+                          sx={{ color: "#F69320" }}
+                        >
+                          <Edit size={18} />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))

@@ -24,12 +24,14 @@ import {
 } from "@mui/material"
 import { useNavigate } from "react-router-dom"
 import { Search, Plus, Edit, X } from "lucide-react"
+import { useAuth } from "../auth/AuthContext";
 
-const API_URL = "https://namami-infotech.com/SANCHAR/src/participant"
-const ROWS_PER_PAGE_OPTIONS = [5, 10, 15]
-const DEFAULT_ROWS_PER_PAGE = 15
+const API_URL = "https://namami-infotech.com/SANCHAR/src/participant";
+const ROWS_PER_PAGE_OPTIONS = [5, 10, 15];
+const DEFAULT_ROWS_PER_PAGE = 15;
 
 const ParticipantList = () => {
+  const { user } = useAuth();
   // State management
   const [state, setState] = useState({
     records: [],
@@ -43,31 +45,31 @@ const ParticipantList = () => {
     editLoading: false,
     editError: "",
     editSuccess: "",
-  })
+  });
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   // Derived state
   const filteredRecords = useMemo(() => {
-    let result = state.records
+    let result = state.records;
     if (state.searchTerm) {
-      const term = state.searchTerm.toLowerCase()
+      const term = state.searchTerm.toLowerCase();
       result = result.filter(
         (record) =>
           record.CompanyName?.toLowerCase().includes(term) ||
           record.ContactPerson?.toLowerCase().includes(term) ||
           record.Mail?.toLowerCase().includes(term) ||
           record.Mobile?.toLowerCase().includes(term),
-      )
+      );
     }
-    return result
-  }, [state.records, state.searchTerm])
+    return result;
+  }, [state.records, state.searchTerm]);
 
   // API calls
   const fetchParticipants = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/participant_list.php`)
-      const data = await response.json()
+      const response = await fetch(`${API_URL}/participant_list.php`);
+      const data = await response.json();
 
       if (data.success) {
         setState((prev) => ({
@@ -75,30 +77,35 @@ const ParticipantList = () => {
           records: data.data,
           loading: false,
           error: "",
-        }))
+        }));
       } else {
         setState((prev) => ({
           ...prev,
           error: "No participant data found.",
           loading: false,
-        }))
+        }));
       }
     } catch (err) {
       setState((prev) => ({
         ...prev,
         error: "Failed to fetch participant data.",
         loading: false,
-      }))
+      }));
     }
-  }, [])
+  }, []);
 
   // FIXED: The main issue was here - using state.currentParticipant inside setState
   const updateParticipant = useCallback(async () => {
-    setState((prev) => ({ ...prev, editLoading: true, editError: "", editSuccess: "" }))
+    setState((prev) => ({
+      ...prev,
+      editLoading: true,
+      editError: "",
+      editSuccess: "",
+    }));
 
     try {
       // Get the current participant data before the API call to avoid stale state
-      const participantToUpdate = state.currentParticipant
+      const participantToUpdate = state.currentParticipant;
 
       const response = await fetch(`${API_URL}/edit_participant.php`, {
         method: "POST",
@@ -106,24 +113,26 @@ const ParticipantList = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(participantToUpdate),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.success) {
         setState((prev) => {
           // FIXED: Use participantToUpdate instead of state.currentParticipant
           const updatedRecords = prev.records.map((record) =>
-            record.ID === participantToUpdate.ID ? { ...participantToUpdate } : record,
-          )
+            record.ID === participantToUpdate.ID
+              ? { ...participantToUpdate }
+              : record,
+          );
 
           return {
             ...prev,
             editSuccess: "Participant updated successfully!",
             records: updatedRecords,
             editLoading: false,
-          }
-        })
+          };
+        });
 
         setTimeout(() => {
           setState((prev) => ({
@@ -131,46 +140,46 @@ const ParticipantList = () => {
             editDialogOpen: false,
             currentParticipant: null,
             editSuccess: "",
-          }))
-        }, 1500)
+          }));
+        }, 1500);
       } else {
         setState((prev) => ({
           ...prev,
           editError: data.message || "Failed to update participant",
           editLoading: false,
-        }))
+        }));
       }
     } catch (err) {
       setState((prev) => ({
         ...prev,
         editError: "An error occurred while updating participant",
         editLoading: false,
-      }))
+      }));
     }
-  }, [state.currentParticipant])
+  }, [state.currentParticipant]);
 
   // Event handlers
   const handleSearch = (e) => {
-    const value = e.target.value
+    const value = e.target.value;
     setState((prev) => ({
       ...prev,
       searchTerm: value,
       page: 0, // Reset to first page when search changes
-    }))
-  }
+    }));
+  };
 
   const handleChangePage = (_, newPage) => {
-    setState((prev) => ({ ...prev, page: newPage }))
-  }
+    setState((prev) => ({ ...prev, page: newPage }));
+  };
 
   const handleChangeRowsPerPage = (e) => {
-    const newRowsPerPage = Number.parseInt(e.target.value, 10)
+    const newRowsPerPage = Number.parseInt(e.target.value, 10);
     setState((prev) => ({
       ...prev,
       rowsPerPage: newRowsPerPage,
       page: 0, // Reset to first page when rows per page changes
-    }))
-  }
+    }));
+  };
 
   const handleEditClick = (participant) => {
     setState((prev) => ({
@@ -179,8 +188,8 @@ const ParticipantList = () => {
       editDialogOpen: true,
       editError: "",
       editSuccess: "",
-    }))
-  }
+    }));
+  };
 
   const handleEditClose = () => {
     setState((prev) => ({
@@ -189,39 +198,45 @@ const ParticipantList = () => {
       currentParticipant: null,
       editError: "",
       editSuccess: "",
-    }))
-  }
+    }));
+  };
 
   const handleEditChange = (e) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setState((prev) => ({
       ...prev,
       currentParticipant: {
         ...prev.currentParticipant,
         [name]: value,
       },
-    }))
-  }
+    }));
+  };
 
   const handleEditSubmit = () => {
-    updateParticipant()
-  }
+    updateParticipant();
+  };
 
   // Effects
   useEffect(() => {
-    fetchParticipants()
-  }, [fetchParticipants])
+    fetchParticipants();
+  }, [fetchParticipants]);
 
   // Render loading state
   if (state.loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height="80vh" flexDirection="column">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        height="80vh"
+        flexDirection="column"
+      >
         <CircularProgress sx={{ color: "#F69320" }} />
         <Typography variant="h6" sx={{ mt: 2 }}>
           Loading participant data...
         </Typography>
       </Box>
-    )
+    );
   }
 
   // Main render
@@ -363,19 +378,21 @@ const ParticipantList = () => {
               },
             }}
           />
-          <Button
-            variant="contained"
-            startIcon={<Plus size={18} />}
-            onClick={() => navigate("/new-participant")}
-            sx={{
-              backgroundColor: "#F69320",
-              "&:hover": {
-                backgroundColor: "#e08416",
-              },
-            }}
-          >
-            Add Participant
-          </Button>
+          {(user.role === "Admin" || user.role === "Project Manager") && (
+            <Button
+              variant="contained"
+              startIcon={<Plus size={18} />}
+              onClick={() => navigate("/new-participant")}
+              sx={{
+                backgroundColor: "#F69320",
+                "&:hover": {
+                  backgroundColor: "#e08416",
+                },
+              }}
+            >
+              Add Participant
+            </Button>
+          )}
         </Box>
       </Box>
 
@@ -422,7 +439,6 @@ const ParticipantList = () => {
                 </TableCell>
               ))}
             </TableRow>
-           
           </TableHead>
           <TableBody>
             {filteredRecords.length === 0 ? (
@@ -454,12 +470,15 @@ const ParticipantList = () => {
                     <TableCell>{record.Mobile}</TableCell>
                     <TableCell>{record.Mail}</TableCell>
                     <TableCell>
-                      <IconButton
-                        onClick={() => handleEditClick(record)}
-                        sx={{ color: "#F69320" }}
-                      >
-                        <Edit size={18} />
-                      </IconButton>
+                      {(user.role === "Admin" ||
+                        user.role === "Project Manager") && (
+                        <IconButton
+                          onClick={() => handleEditClick(record)}
+                          sx={{ color: "#F69320" }}
+                        >
+                          <Edit size={18} />
+                        </IconButton>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -491,6 +510,6 @@ const ParticipantList = () => {
       />
     </Box>
   );
-}
+};
 
 export default ParticipantList

@@ -587,7 +587,7 @@ function TempTenderView() {
 
   // User state - check if user is admin
   const [user, setUser] = useState(null)
-  const isAdmin = user?.role === "Admin"
+  const isAdmin = user?.role === "Admin" || user?.role === "Project Manager";
 
   // Checkpoint groups
   const sections = {

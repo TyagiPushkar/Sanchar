@@ -3,8 +3,10 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx"; // Import the xlsx library
 import "./MaterialList.css";
+import { useAuth } from "../auth/AuthContext";
 
 function MaterialList() {
+  const { user } = useAuth();
   const [transactions, setTransactions] = useState([]);
   const [checkpoints, setCheckpoints] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
@@ -14,21 +16,24 @@ function MaterialList() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const navigate = useNavigate();
- 
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Fetch transactions data
         const transactionsResponse = await axios.get(
-          "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=8"
-        );
-        
-        // Fetch checkpoints data
-        const checkpointsResponse = await axios.get(
-          "https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php"
+          "https://namami-infotech.com/SANCHAR/src/menu/get_transaction.php?menuId=8",
         );
 
-        if (transactionsResponse.data.success && checkpointsResponse.data.success) {
+        // Fetch checkpoints data
+        const checkpointsResponse = await axios.get(
+          "https://namami-infotech.com/SANCHAR/src/menu/get_checkpoints.php",
+        );
+
+        if (
+          transactionsResponse.data.success &&
+          checkpointsResponse.data.success
+        ) {
           setTransactions(transactionsResponse.data.data);
           setFilteredRecords(transactionsResponse.data.data);
           setCheckpoints(checkpointsResponse.data.data);
@@ -47,15 +52,17 @@ function MaterialList() {
 
   // Get checkpoint description by ID
   const getCheckpointDescription = (checkpointId) => {
-    const checkpoint = checkpoints.find(cp => cp.CheckpointId === parseInt(checkpointId));
+    const checkpoint = checkpoints.find(
+      (cp) => cp.CheckpointId === parseInt(checkpointId),
+    );
     return checkpoint ? checkpoint.Description : `Field ${checkpointId}`;
   };
 
   // Extract all unique checkpoint IDs from all transactions
   const getAllCheckpointIds = () => {
     const allIds = new Set();
-    transactions.forEach(transaction => {
-      transaction.Details.forEach(detail => {
+    transactions.forEach((transaction) => {
+      transaction.Details.forEach((detail) => {
         allIds.add(detail.ChkId);
       });
     });
@@ -65,13 +72,13 @@ function MaterialList() {
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();
     setSearchTerm(value);
-    
-    const filtered = transactions.filter(transaction => {
-      return transaction.Details.some(detail => {
+
+    const filtered = transactions.filter((transaction) => {
+      return transaction.Details.some((detail) => {
         return detail.Value.toLowerCase().includes(value);
       });
     });
-    
+
     setFilteredRecords(filtered);
     setPage(0);
   };
@@ -88,14 +95,14 @@ function MaterialList() {
   };
 
   const getTransactionValue = (transaction, checkpointId) => {
-    const detail = transaction.Details.find(d => d.ChkId === checkpointId);
-    
+    const detail = transaction.Details.find((d) => d.ChkId === checkpointId);
+
     if (!detail) return "-";
-    
+
     // Special handling for checkpoint ID 580 (image/pdf link)
     if (checkpointId === "580") {
       return (
-        <button 
+        <button
           className="view-button"
           onClick={() => window.open(detail.Value, "_blank")}
           title="View Document"
@@ -104,32 +111,32 @@ function MaterialList() {
         </button>
       );
     }
-    
+
     return detail.Value;
   };
 
   // Function to export data to Excel
   const exportToExcel = () => {
     // Prepare data for export
-    const dataToExport = filteredRecords.map(record => {
+    const dataToExport = filteredRecords.map((record) => {
       const exportData = {};
-      
-      allCheckpointIds.forEach(checkpointId => {
-        const detail = record.Details.find(d => d.ChkId === checkpointId);
+
+      allCheckpointIds.forEach((checkpointId) => {
+        const detail = record.Details.find((d) => d.ChkId === checkpointId);
         const fieldName = getCheckpointDescription(checkpointId);
         exportData[fieldName] = detail ? detail.Value : "-";
       });
-      
+
       return exportData;
     });
 
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
+
     // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Materials");
-    
+
     // Generate Excel file and trigger download
     XLSX.writeFile(wb, "materials.xlsx");
   };
@@ -165,7 +172,7 @@ function MaterialList() {
             />
             <span className="search-icon">🔍</span>
           </div>
-          
+
           {/* Export to Excel Button */}
           <button
             onClick={exportToExcel}
@@ -175,13 +182,14 @@ function MaterialList() {
           >
             📊 Export to Excel
           </button>
-          
-          <button
-            className="action-button new-material-button"
-            onClick={() => navigate("/add-material")}
-          >
-            Add Material
-          </button>
+          {(user.role === "Admin" || user.role === "Project Manager") && (
+            <button
+              className="action-button new-material-button"
+              onClick={() => navigate("/add-material")}
+            >
+              Add Material
+            </button>
+          )}
         </div>
       </div>
 
@@ -191,8 +199,10 @@ function MaterialList() {
         <table className="material-table">
           <thead>
             <tr>
-              {allCheckpointIds.map(checkpointId => (
-                <th key={checkpointId}>{getCheckpointDescription(checkpointId)}</th>
+              {allCheckpointIds.map((checkpointId) => (
+                <th key={checkpointId}>
+                  {getCheckpointDescription(checkpointId)}
+                </th>
               ))}
               <th>Actions</th>
             </tr>
@@ -201,29 +211,37 @@ function MaterialList() {
             {currentRecords.length > 0 ? (
               currentRecords.map((record) => (
                 <tr key={record.ActivityId}>
-                  {allCheckpointIds.map(checkpointId => (
+                  {allCheckpointIds.map((checkpointId) => (
                     <td key={`${record.ActivityId}-${checkpointId}`}>
                       {getTransactionValue(record, checkpointId)}
                     </td>
                   ))}
                   <td>
-                    <button 
-                      className="edit-button"
-                      onClick={() => navigate("/edit-material", { 
-                        state: { 
-                          transaction: record, 
-                          checkpoints 
-                        } 
-                      })}
-                    >
-                      ✏️
-                    </button>
+                    {(user.role === "Admin" ||
+                      user.role === "Project Manager") && (
+                      <button
+                        className="edit-button"
+                        onClick={() =>
+                          navigate("/edit-material", {
+                            state: {
+                              transaction: record,
+                              checkpoints,
+                            },
+                          })
+                        }
+                      >
+                        ✏️
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={allCheckpointIds.length + 1} className="no-records">
+                <td
+                  colSpan={allCheckpointIds.length + 1}
+                  className="no-records"
+                >
                   No records found
                 </td>
               </tr>

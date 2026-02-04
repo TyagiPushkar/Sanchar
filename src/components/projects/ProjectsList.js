@@ -3,8 +3,10 @@ import axios from "axios";
 import "./ProjectList.css";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx"; 
+import { useAuth } from "../auth/AuthContext";
 
 function ProjectList() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ function ProjectList() {
     const fetchProjects = async () => {
       try {
         const response = await axios.get(
-          "https://namami-infotech.com/SANCHAR/src/tender/sanchar_tender.php?menuId=1"
+          "https://namami-infotech.com/SANCHAR/src/tender/sanchar_tender.php?menuId=1",
         );
         if (response.data.success) {
           setProjects(response.data.data);
@@ -46,7 +48,10 @@ function ProjectList() {
 
   const totalPages = Math.ceil(filteredProjects.length / rowsPerPage);
   const startIndex = page * rowsPerPage;
-  const currentRecords = filteredProjects.slice(startIndex, startIndex + rowsPerPage);
+  const currentRecords = filteredProjects.slice(
+    startIndex,
+    startIndex + rowsPerPage,
+  );
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -60,25 +65,24 @@ function ProjectList() {
     window.open(url, "noopener,noreferrer");
   };
 
-
-   const exportToExcel = () => {
+  const exportToExcel = () => {
     // Prepare data for export
     const dataToExport = filteredProjects.map((buyer) => {
       return {
         "Tender No": buyer.TenderNo,
         "LOA No": buyer.LOA,
-        "Buyer": buyer.BuyerName,
-        "Date": buyer.TenderDate ? formatDate(buyer.TenderDate) : "-",
+        Buyer: buyer.BuyerName,
+        Date: buyer.TenderDate ? formatDate(buyer.TenderDate) : "-",
       };
     });
 
     // Create worksheet
     const ws = XLSX.utils.json_to_sheet(dataToExport);
-    
+
     // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Buyers");
-    
+
     // Generate Excel file and trigger download
     XLSX.writeFile(wb, "LOA_Awarded.xlsx");
   };
@@ -106,13 +110,13 @@ function ProjectList() {
           className="project-search-input"
         />
         <button
-            onClick={exportToExcel}
-            className="action-button"
-            style={{ backgroundColor: "#F69320" }}
-            title="Export to Excel"
-          >
-            📊 Export to Excel
-          </button>
+          onClick={exportToExcel}
+          className="action-button"
+          style={{ backgroundColor: "#F69320" }}
+          title="Export to Excel"
+        >
+          📊 Export to Excel
+        </button>
       </div>
 
       <div className="project-table-container">
@@ -132,9 +136,15 @@ function ProjectList() {
             {currentRecords.length > 0 ? (
               currentRecords.map((project) => (
                 <tr key={project.ActivityId}>
-                  <td 
-                    onClick={() => navigate(`/tender/view/${project.ActivityId}`)} 
-                    style={{cursor:"pointer", fontWeight:"bold", color:"blue"}}
+                  <td
+                    onClick={() =>
+                      navigate(`/tender/view/${project.ActivityId}`)
+                    }
+                    style={{
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      color: "blue",
+                    }}
                   >
                     {project.TenderNo || "-"}
                   </td>
@@ -142,7 +152,8 @@ function ProjectList() {
                   <td>{project.BuyerName || "-"}</td>
                   <td>{formatDate(project.TenderDate)}</td>
                   <td>
-                    {project.TenderCopy && project.TenderCopy.endsWith(".pdf") ? (
+                    {project.TenderCopy &&
+                    project.TenderCopy.endsWith(".pdf") ? (
                       <button
                         className="project-link-button"
                         onClick={() => openInNewTab(project.TenderCopy)}
@@ -156,27 +167,31 @@ function ProjectList() {
                   <td>
                     <button
                       className="project-view-button"
-                      onClick={() =>  navigate(`/project/view/${project.TenderNo}`, {
-                        state: {
-                          tenderNo: project.TenderNo,
-                          ActivityId: project.ActivityId
-                         }
-                      })
+                      onClick={() =>
+                        navigate(`/project/view/${project.TenderNo}`, {
+                          state: {
+                            tenderNo: project.TenderNo,
+                            ActivityId: project.ActivityId,
+                          },
+                        })
                       }
                     >
                       👁️
                     </button>
                   </td>
                   <td>
-                    <button
-                      className="project-view-button"
-                      onClick={() =>  navigate(`/assign/task/${project.ActivityId}`, {
-                        state: { tenderNo: project.TenderNo }
-                      })
-                      }
-                    >
-                      📝
-                    </button>
+                    {user.role === "Project Manager" && (
+                      <button
+                        className="project-view-button"
+                        onClick={() =>
+                          navigate(`/assign/task/${project.ActivityId}`, {
+                            state: { tenderNo: project.TenderNo },
+                          })
+                        }
+                      >
+                        📝
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

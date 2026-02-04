@@ -81,7 +81,20 @@ function Sidebar() {
       "amc",
     ],
     Technician: ["technician", "projects", "amc"],
-    "Customer Support": ["customer_support", "support_ticket", "projects"],
+    "Customer Support": [
+      "admin",
+      "pm",
+      "technician",
+      "customer_support",
+      "report",
+      "tender",
+      "directory",
+      "projects",
+      "support_ticket",
+      "material",
+      "invoices",
+      "amc",
+    ],
   };
 
   // Check if user has permission for a specific feature

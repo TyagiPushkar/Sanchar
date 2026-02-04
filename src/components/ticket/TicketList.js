@@ -38,8 +38,10 @@ import {
 import CreateTicketDialog from "./CreateTicketDialog";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
+import { useAuth } from "../auth/AuthContext";
 
 const TicketList = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [tickets, setTickets] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -459,19 +461,21 @@ const TicketList = () => {
               <GetApp />
             </Button>
           )}
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setIsCreateDialogOpen(true)}
-            sx={{
-              whiteSpace: "nowrap",
-              backgroundColor: "#F69320",
-              color: "#fff",
-              "&:hover": { backgroundColor: "#F69320" },
-            }}
-          >
-            New Ticket
-          </Button>
+          
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setIsCreateDialogOpen(true)}
+                sx={{
+                  whiteSpace: "nowrap",
+                  backgroundColor: "#F69320",
+                  color: "#fff",
+                  "&:hover": { backgroundColor: "#F69320" },
+                }}
+              >
+                New Ticket
+              </Button>
+            
         </Stack>
       </Box>
 
@@ -795,7 +799,7 @@ const TicketList = () => {
                     </Box>
                   </TableCell>
 
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320", }}>
+                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
                     <strong>Assign Date</strong>
                   </TableCell>
                   <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>

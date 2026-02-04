@@ -247,7 +247,7 @@ function AMCWorkDetails() {
     navigate("/edit-amc-work", { state: { transaction, checkpoints } });
   };
 
-  const isAdmin = user?.role === "Admin";
+  const isAdmin = user?.role === "Admin" || user?.role === "Project Manager";
 
   return (
     <div className="material-list-container">

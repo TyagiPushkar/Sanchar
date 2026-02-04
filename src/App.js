@@ -61,7 +61,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Employee}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -128,7 +132,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Report}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -152,7 +160,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Tender}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -163,7 +175,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Tender}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -174,7 +190,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Tender}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -185,7 +205,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Tender}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -196,7 +220,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={ViewTender}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -207,7 +235,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={ViewLOA}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -220,7 +252,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Buyer}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -231,7 +267,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Buyer}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -242,7 +282,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Buyer}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -253,7 +297,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Buyer}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -266,7 +314,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Participant}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -277,7 +329,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Participant}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -381,7 +437,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Material}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -392,7 +452,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Material}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -403,7 +467,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Material}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -414,7 +482,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Invoices}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -425,7 +497,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Invoices}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -436,7 +512,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={Invoices}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -449,7 +529,12 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={AMCWork}
-                    allowedRoles={["Admin", "Project Manager", "Technician"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                      "Technician",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -460,7 +545,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={AMCWork}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -471,7 +560,12 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={AMCWork}
-                    allowedRoles={["Admin", "Project Manager", "Technician"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                      "Technician",
+                    ]}
                   />
                 </PrivateRoute>
               }
@@ -482,7 +576,11 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={AMCWork}
-                    allowedRoles={["Admin", "Project Manager"]}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
                   />
                 </PrivateRoute>
               }
