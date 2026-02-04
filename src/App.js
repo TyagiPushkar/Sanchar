@@ -1,111 +1,553 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
-import { AuthProvider } from './components/auth/AuthContext';
-import Login from './pages/Login';
-import theme from './styles/theme';
-import Employee from './pages/Employee';
-import Holiday from './pages/Holiday';
-import Policy from './pages/Policy';
-import Attendance from './pages/Attendance';
-import Notification from './pages/Notification';
-import Leave from './pages/Leave';
-import PrivateRoute from './components/auth/PrivateRoute';
-import EmployeeProfile from './pages/EmployeeProfile';
-import Menus from './pages/Menus';
-import Checkpoints from './pages/Checkpoints';
-import Tender from './pages/Tender';
-import Buyer from './pages/Buyer';
-import ViewTender from './pages/ViewTender';
-import Participant from './pages/Participant';
-import User from './pages/User';
-import ViewLOA from './pages/ViewLOA';
-import Projects from './pages/Projects';
-import Ticket from './pages/Ticket';
-import Material from './pages/Material';
-import Invoices from './pages/Invoices';
-import AMCWork from './pages/AMCWork';
-import Report from './pages/Report';
-import SummaryReport from './pages/Summary';
+import React, { useEffect } from "react";
+import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import { ThemeProvider } from "@mui/material/styles";
+import { AuthProvider } from "./components/auth/AuthContext";
+import Login from "./pages/Login";
+import theme from "./styles/theme";
+import Employee from "./pages/Employee";
+import Holiday from "./pages/Holiday";
+import Policy from "./pages/Policy";
+import Attendance from "./pages/Attendance";
+import Notification from "./pages/Notification";
+import Leave from "./pages/Leave";
+import PrivateRoute from "./components/auth/PrivateRoute";
+import RoleProtectedRoute from "./components/auth/RoleProtectedRoute";
+import EmployeeProfile from "./pages/EmployeeProfile";
+import Menus from "./pages/Menus";
+import Checkpoints from "./pages/Checkpoints";
+import Tender from "./pages/Tender";
+import Buyer from "./pages/Buyer";
+import ViewTender from "./pages/ViewTender";
+import Participant from "./pages/Participant";
+import User from "./pages/User";
+import ViewLOA from "./pages/ViewLOA";
+import Projects from "./pages/Projects";
+import Ticket from "./pages/Ticket";
+import Material from "./pages/Material";
+import Invoices from "./pages/Invoices";
+import AMCWork from "./pages/AMCWork";
+import Report from "./pages/Report";
+import SummaryReport from "./pages/Summary";
+import Unauthorized from "./pages/Unauthorized";
+
 function App() {
-   useEffect(() => {
-        const handleRightClick = (event) => {
-            event.preventDefault();
-        };
+  useEffect(() => {
+    const handleRightClick = (event) => {
+      event.preventDefault();
+    };
 
-        document.addEventListener('contextmenu', handleRightClick);
+    document.addEventListener("contextmenu", handleRightClick);
 
-        return () => {
-            document.removeEventListener('contextmenu', handleRightClick);
-        };
-     
-   }, []);
-  
+    return () => {
+      document.removeEventListener("contextmenu", handleRightClick);
+    };
+  }, []);
+
   return (
     <ThemeProvider theme={theme}>
       <AuthProvider>
         <Router>
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Login />} />
-            <Route path="/employees" element={<PrivateRoute element={Employee} />} />
-            <Route path="/employees/:empId" element={<PrivateRoute element={EmployeeProfile} requiredRole="HR" />} />
-            <Route path="/holiday" element={<PrivateRoute element={Holiday} />} />
-            <Route path="/policy" element={<PrivateRoute element={Policy} />} />
-            <Route path="/attendance" element={<PrivateRoute element={Attendance} />} />
-            <Route path="/notification" element={<PrivateRoute element={Notification} />} />
-            <Route path="/leave" element={<PrivateRoute element={Leave} />} />
-            <Route path="/profile" element={<PrivateRoute element={User} />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
-            <Route path="/summary" element={<PrivateRoute element={SummaryReport} />} />
-            <Route path="/report" element={<PrivateRoute element={Report} />} />
+            {/* Protected Routes */}
 
+            {/* Admin Only Routes */}
+            <Route
+              path="/employees"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Employee}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/employees/:empId"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={EmployeeProfile}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/holiday"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Holiday}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/policy"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Policy}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/menus"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Menus}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/checkpoints"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Checkpoints}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/tender" element={<PrivateRoute element={Tender} />} />
-            <Route path="/draft" element={<PrivateRoute element={Tender} />} />
-            <Route path="/create-tender" element={<PrivateRoute element={Tender} />} />
-            <Route path="/edit-draft/:ActivityId" element={<PrivateRoute element={Tender} />} />
-            <Route path="/tender/view/:activityId" element={<PrivateRoute element={ViewTender} />} />
-            <Route path="/loa/view/:activityId" element={<PrivateRoute element={ViewLOA} />} />
+            <Route
+              path="/report"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Report}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/summary"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={SummaryReport}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
+            {/* Admin & Project Manager Routes */}
+            <Route
+              path="/tender"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Tender}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/draft"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Tender}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/create-tender"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Tender}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/edit-draft/:ActivityId"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Tender}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/tender/view/:activityId"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={ViewTender}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/loa/view/:activityId"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={ViewLOA}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/consignee" element={<PrivateRoute element={Buyer} />} />
-            <Route path="/new-consignee" element={<PrivateRoute element={Buyer} />} />
-            <Route path="/contact" element={<PrivateRoute element={Buyer} />} />
-            <Route path="/directory" element={<PrivateRoute element={Buyer} />} />
-            
-            
-            <Route path="/participant" element={<PrivateRoute element={Participant} />} />
-            <Route path="/new-participant" element={<PrivateRoute element={Participant} />} />
-            
-            
-            <Route path="/projects" element={<PrivateRoute element={Projects} />} />
-            <Route path="/assign/task/:ActivityId" element={<PrivateRoute element={Projects} />} />
-            <Route path="/project/view/:TenderNo" element={<PrivateRoute element={Projects} />} />
-            <Route path="/task/view/:TaskId" element={<PrivateRoute element={Projects} />} />
+            {/* Consignee/Directory - Admin & Project Manager */}
+            <Route
+              path="/consignee"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Buyer}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/new-consignee"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Buyer}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/directory"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Buyer}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Buyer}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
+            {/* Participants - Admin Only */}
+            <Route
+              path="/participant"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Participant}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/new-participant"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Participant}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/support-ticket" element={<PrivateRoute element={Ticket} />} />
-            <Route path="/tickets/:ticketId" element={<PrivateRoute element={Ticket} />} />
+            {/* Projects - Admin, Project Manager, Technician */}
+            <Route
+              path="/projects"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Projects}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/assign/task/:ActivityId"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Projects}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/project/view/:TenderNo"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Projects}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Technician",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/task/view/:TaskId"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Projects}
+                    allowedRoles={["Admin", "Project Manager", "Technician"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
+            {/* Support Tickets - Admin & Customer Support */}
+            <Route
+              path="/support-ticket"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Ticket}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/tickets/:ticketId"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Ticket}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/material-supplied" element={<PrivateRoute element={Material} />} />
-            <Route path="/add-material" element={<PrivateRoute element={Material} />} />
-            <Route path="/edit-material" element={<PrivateRoute element={Material} />} />
+            {/* Material & Invoices - Admin & Project Manager */}
+            <Route
+              path="/material-supplied"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Material}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/add-material"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Material}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/edit-material"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Material}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/invoices"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Invoices}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/add-invoice"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Invoices}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/edit-invoice"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Invoices}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/invoices" element={<PrivateRoute element={Invoices} />} />
-            <Route path="/add-invoice" element={<PrivateRoute element={Invoices} />} />
-            <Route path="/edit-invoice" element={<PrivateRoute element={Invoices} />} />
+            {/* AMC Work - Admin, Project Manager, Technician */}
+            <Route
+              path="/amc-work"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={AMCWork}
+                    allowedRoles={["Admin", "Project Manager", "Technician"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/add-amc-work"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={AMCWork}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/details"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={AMCWork}
+                    allowedRoles={["Admin", "Project Manager", "Technician"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/edit-amc-work"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={AMCWork}
+                    allowedRoles={["Admin", "Project Manager"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/amc-work" element={<PrivateRoute element={AMCWork} />} />
-            <Route path="/add-amc-work" element={<PrivateRoute element={AMCWork} />} />
-            <Route path="/details" element={<PrivateRoute element={AMCWork} />} />
-            <Route path="/edit-amc-work" element={<PrivateRoute element={AMCWork} />} />
+            {/* Common Routes for All Authenticated Users */}
+            <Route
+              path="/attendance"
+              element={
+                <PrivateRoute>
+                  <Attendance />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/notification"
+              element={
+                <PrivateRoute>
+                  <Notification />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/leave"
+              element={
+                <PrivateRoute>
+                  <Leave />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <PrivateRoute>
+                  <User />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/menus" element={<PrivateRoute element={Menus} />} />
-            <Route path="/add-menu" element={<PrivateRoute element={Menus} />} />
+            {/* Add Menu/Checkpoint Routes - Admin Only */}
+            <Route
+              path="/add-menu"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Menus}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/add-checkpoint"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Checkpoints}
+                    allowedRoles={["Admin"]}
+                  />
+                </PrivateRoute>
+              }
+            />
 
-            <Route path="/checkpoints" element={<PrivateRoute element={Checkpoints} />} />
-            <Route path="/add-checkpoint" element={<PrivateRoute element={Checkpoints} />} />
+            {/* Catch-all route */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </AuthProvider>

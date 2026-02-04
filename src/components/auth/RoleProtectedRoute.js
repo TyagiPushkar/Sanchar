@@ -1,9 +1,10 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import Unauthorized from "../../pages/Unauthorized";
 import { CircularProgress, Box } from "@mui/material";
 
-function PrivateRoute({ children }) {
+function RoleProtectedRoute({ element: Element, allowedRoles, ...rest }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -19,7 +20,18 @@ function PrivateRoute({ children }) {
     );
   }
 
-  return user ? children : <Navigate to="/" replace />;
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Check if user has required role
+  const userRole = user.Role || user.role || "";
+
+  if (!allowedRoles.includes(userRole)) {
+    return <Unauthorized />;
+  }
+
+  return <Element {...rest} />;
 }
 
-export default PrivateRoute;
+export default RoleProtectedRoute;

@@ -591,12 +591,11 @@ function DraftList() {
             />
             <span className="search-icon">🔍</span>
           </div>
-          
         </div>
 
         <div className="draft-list-actions">
           {/* Filter Toggle Button */}
-<button
+          <button
             className={`action-button filter-toggle-button ${selectedStages.length > 0 ? "active-filters" : ""}`}
             onClick={toggleFilters}
             title="Toggle Filters"
