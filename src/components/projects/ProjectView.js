@@ -125,6 +125,7 @@ export default function StationPhaseTable() {
   const [reassignLoading, setReassignLoading] = useState(false)
   const [toast, setToast] = useState({ show: false, message: "", type: "success" })
   const [completionDate, setCompletionDate] = useState(null)
+const [targetDate, setTargetDate] = useState("");
 
   const phases = [
     {
@@ -238,45 +239,56 @@ export default function StationPhaseTable() {
   }
 
   const handleReassignTask = async () => {
-    if (!selectedTask || !selectedEmployee) return
+    if (!selectedTask || !selectedEmployee || !targetDate) return;
 
-    setReassignLoading(true)
+    setReassignLoading(true);
     try {
       const response = await axios.post(
         "https://namami-infotech.com/SANCHAR/src/task/edit_task.php",
         {
           TaskId: selectedTask.Id,
           EmpName: selectedEmployee.Name,
-          EmpId: selectedEmployee.EmpId
-        }
-      )
+          EmpId: selectedEmployee.EmpId,
+          TargetDate: targetDate, // ✅ added
+        },
+      );
 
       if (response.data.success) {
-        setTasks(tasks.map(task => 
-          task.Id === selectedTask.Id 
-            ? { ...task, EmpName: selectedEmployee.Name, EmpId: selectedEmployee.EmpId }
-            : task
-        ))
-        
+        setTasks(
+          tasks.map((task) =>
+            task.Id === selectedTask.Id
+              ? {
+                  ...task,
+                  EmpName: selectedEmployee.Name,
+                  EmpId: selectedEmployee.EmpId,
+                  TargetDate: targetDate, // ✅ update UI
+                }
+              : task,
+          ),
+        );
+
         setToast({
           show: true,
           message: "Task reassigned successfully!",
-          type: "success"
-        })
-        setReassignDialogOpen(false)
+          type: "success",
+        });
+
+        setReassignDialogOpen(false);
+        setTargetDate(""); // reset
       } else {
-        throw new Error(response.data.message || "Failed to reassign task")
+        throw new Error(response.data.message || "Failed to reassign task");
       }
     } catch (err) {
       setToast({
         show: true,
         message: err.message || "Error reassigning task",
-        type: "error"
-      })
+        type: "error",
+      });
     } finally {
-      setReassignLoading(false)
+      setReassignLoading(false);
     }
-  }
+  };
+
 
   const formatDate = (dateString, format = "dd-mm-yyyy") => {
     if (!dateString) return "N/A"
@@ -362,15 +374,35 @@ export default function StationPhaseTable() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 0 }}>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Header */}
-        <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: 'wrap' }}>
+        <Box
+          sx={{
+            mb: 4,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <Box>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700, color: "#F69320" }}>
+            <Typography
+              variant="h4"
+              component="h1"
+              gutterBottom
+              sx={{ fontWeight: 700, color: "#F69320" }}
+            >
               Tender No: {tenderNo || "N/A"}
             </Typography>
             {completionDate && (
-              <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              >
                 <CalendarToday fontSize="small" color="action" />
                 Project Completion Date: {formatDate(completionDate)}
               </Typography>
@@ -389,19 +421,38 @@ export default function StationPhaseTable() {
         {/* Project Overview Stats */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
           <Grid item xs={12} sm={6} md={3}>
-            <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
               <StyledCard>
                 <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <Box>
-                      <Typography color="text.secondary" gutterBottom variant="body2">
+                      <Typography
+                        color="text.secondary"
+                        gutterBottom
+                        variant="body2"
+                      >
                         Total Stations
                       </Typography>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: "#1976d2" }}>
+                      <Typography
+                        variant="h4"
+                        component="div"
+                        sx={{ fontWeight: 700, color: "#1976d2" }}
+                      >
                         {stats.totalStations}
                       </Typography>
                     </Box>
-                    <LocationOn sx={{ fontSize: 40, color: "#1976d2", opacity: 0.7 }} />
+                    <LocationOn
+                      sx={{ fontSize: 40, color: "#1976d2", opacity: 0.7 }}
+                    />
                   </Box>
                 </CardContent>
               </StyledCard>
@@ -409,19 +460,38 @@ export default function StationPhaseTable() {
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
               <StyledCard>
                 <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <Box>
-                      <Typography color="text.secondary" gutterBottom variant="body2">
+                      <Typography
+                        color="text.secondary"
+                        gutterBottom
+                        variant="body2"
+                      >
                         Completed Phases
                       </Typography>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: "#2e7d32" }}>
+                      <Typography
+                        variant="h4"
+                        component="div"
+                        sx={{ fontWeight: 700, color: "#2e7d32" }}
+                      >
                         {stats.completedPhases}/{stats.totalPhases}
                       </Typography>
                     </Box>
-                    <CheckCircle sx={{ fontSize: 40, color: "#2e7d32", opacity: 0.7 }} />
+                    <CheckCircle
+                      sx={{ fontSize: 40, color: "#2e7d32", opacity: 0.7 }}
+                    />
                   </Box>
                 </CardContent>
               </StyledCard>
@@ -429,19 +499,38 @@ export default function StationPhaseTable() {
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
               <StyledCard>
                 <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <Box>
-                      <Typography color="text.secondary" gutterBottom variant="body2">
+                      <Typography
+                        color="text.secondary"
+                        gutterBottom
+                        variant="body2"
+                      >
                         Total Tasks
                       </Typography>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: "#f57c00" }}>
+                      <Typography
+                        variant="h4"
+                        component="div"
+                        sx={{ fontWeight: 700, color: "#f57c00" }}
+                      >
                         {stats.totalTasks}
                       </Typography>
                     </Box>
-                    <Assignment sx={{ fontSize: 40, color: "#f57c00", opacity: 0.7 }} />
+                    <Assignment
+                      sx={{ fontSize: 40, color: "#f57c00", opacity: 0.7 }}
+                    />
                   </Box>
                 </CardContent>
               </StyledCard>
@@ -449,19 +538,38 @@ export default function StationPhaseTable() {
           </Grid>
 
           <Grid item xs={12} sm={6} md={3}>
-            <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.2 }}>
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              transition={{ duration: 0.2 }}
+            >
               <StyledCard>
                 <CardContent>
-                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
                     <Box>
-                      <Typography color="text.secondary" gutterBottom variant="body2">
+                      <Typography
+                        color="text.secondary"
+                        gutterBottom
+                        variant="body2"
+                      >
                         Overall Progress
                       </Typography>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700, color: "#1565c0" }}>
+                      <Typography
+                        variant="h4"
+                        component="div"
+                        sx={{ fontWeight: 700, color: "#1565c0" }}
+                      >
                         {Math.round(stats.overallProgress)}%
                       </Typography>
                     </Box>
-                    <Dashboard sx={{ fontSize: 40, color: "#1565c0", opacity: 0.7 }} />
+                    <Dashboard
+                      sx={{ fontSize: 40, color: "#1565c0", opacity: 0.7 }}
+                    />
                   </Box>
                 </CardContent>
               </StyledCard>
@@ -471,7 +579,9 @@ export default function StationPhaseTable() {
 
         {stations.length === 0 ? (
           <Alert severity="info">
-            <Typography variant="body1">No stations found for this tender.</Typography>
+            <Typography variant="body1">
+              No stations found for this tender.
+            </Typography>
           </Alert>
         ) : (
           <StyledTableContainer component={Paper}>
@@ -497,9 +607,12 @@ export default function StationPhaseTable() {
                       </Box>
                     </TableCell>
                     {phases.map((phase) => {
-                      const completed = isPhaseCompleted(station, phase)
-                      const phaseTasks = getPhaseTasksForStation(station, phase)
-                      const hasTask = phaseTasks.length > 0
+                      const completed = isPhaseCompleted(station, phase);
+                      const phaseTasks = getPhaseTasksForStation(
+                        station,
+                        phase,
+                      );
+                      const hasTask = phaseTasks.length > 0;
 
                       return (
                         <PhaseCell
@@ -510,31 +623,43 @@ export default function StationPhaseTable() {
                         >
                           {completed ? (
                             <Box>
-                              <CheckCircle sx={{ color: "success.main", fontSize: 28 }} />
+                              <CheckCircle
+                                sx={{ color: "success.main", fontSize: 28 }}
+                              />
                               <Typography variant="caption" display="block">
                                 {formatDate(
-                                  tasks.find(t => 
-                                    t.Station === station && 
-                                    t.Status?.toLowerCase() === "complete" &&
-                                    phase.milestones.some(m => 
-                                      t.Milestone?.toLowerCase().includes(m.toLowerCase())
-                                    )
+                                  tasks.find(
+                                    (t) =>
+                                      t.Station === station &&
+                                      t.Status?.toLowerCase() === "complete" &&
+                                      phase.milestones.some((m) =>
+                                        t.Milestone?.toLowerCase().includes(
+                                          m.toLowerCase(),
+                                        ),
+                                      ),
                                   )?.UpdateDateTime,
-                                  "dd-mm-yyyy"
+                                  "dd-mm-yyyy",
                                 )}
                               </Typography>
-                              
                             </Box>
                           ) : hasTask ? (
-                            <Info sx={{ color: "warning.main", fontSize: 28 }} />
+                            <Info
+                              sx={{ color: "warning.main", fontSize: 28 }}
+                            />
                           ) : (
-                            <Cancel sx={{ color: "text.disabled", fontSize: 28 }} />
+                            <Cancel
+                              sx={{ color: "text.disabled", fontSize: 28 }}
+                            />
                           )}
                           <Typography variant="body2" sx={{ mt: 0 }}>
-                            {completed ? "Completed" : hasTask ? "In Progress" : "Not Started"}
+                            {completed
+                              ? "Completed"
+                              : hasTask
+                                ? "In Progress"
+                                : "Not Started"}
                           </Typography>
                         </PhaseCell>
-                      )
+                      );
                     })}
                   </TableRow>
                 ))}
@@ -544,14 +669,26 @@ export default function StationPhaseTable() {
         )}
 
         {/* Task Details Dialog */}
-        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
-          <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Dialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Box>
               <Typography variant="h6">
                 {selectedPhase?.name} Tasks - {selectedStation}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {phaseTasks.length} task{phaseTasks.length !== 1 ? "s" : ""} found
+                {phaseTasks.length} task{phaseTasks.length !== 1 ? "s" : ""}{" "}
+                found
               </Typography>
             </Box>
             <IconButton onClick={() => setDialogOpen(false)}>
@@ -561,13 +698,18 @@ export default function StationPhaseTable() {
           <DialogContent dividers>
             {phaseTasks.length === 0 ? (
               <Alert severity="info">
-                <Typography variant="body1">No tasks found for this phase and station.</Typography>
+                <Typography variant="body1">
+                  No tasks found for this phase and station.
+                </Typography>
               </Alert>
             ) : (
               <List>
                 {phaseTasks.map((task) => (
                   <Box key={task.Id}>
-                    <ClickableListItem alignItems="flex-start" onClick={() => handleTaskClick(task.Id)}>
+                    <ClickableListItem
+                      alignItems="flex-start"
+                      onClick={() => handleTaskClick(task.Id)}
+                    >
                       <ListItemIcon>
                         {task.Status?.toLowerCase() === "complete" ? (
                           <CheckCircle color="success" />
@@ -585,34 +727,91 @@ export default function StationPhaseTable() {
                           <Box sx={{ mt: 1 }}>
                             <Grid container spacing={2}>
                               <Grid item xs={12} sm={6}>
-                                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                                  <Person sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                                  <Typography variant="body2" color="text.secondary">
-                                    Assigned to: {task.EmpName || "N/A"} ({task.EmpId})
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    mb: 0.5,
+                                  }}
+                                >
+                                  <Person
+                                    sx={{
+                                      fontSize: 16,
+                                      mr: 1,
+                                      color: "text.secondary",
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    Assigned to: {task.EmpName || "N/A"} (
+                                    {task.EmpId})
                                   </Typography>
                                 </Box>
                               </Grid>
                               <Grid item xs={12} sm={6}>
-                                <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                                  <CalendarToday sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                                  <Typography variant="body2" color="text.secondary">
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    mb: 0.5,
+                                  }}
+                                >
+                                  <CalendarToday
+                                    sx={{
+                                      fontSize: 16,
+                                      mr: 1,
+                                      color: "text.secondary",
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
                                     Target Date: {formatDate(task.TargetDate)}
                                   </Typography>
                                 </Box>
                               </Grid>
-                              {task.Status?.toLowerCase() === "complete" && task.UpdateDateTime && (
-                                <Grid item xs={12} sm={6}>
-                                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
-                                    <CheckCircle sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} />
-                                    <Typography variant="body2" color="text.secondary">
-                                      Completed on: {formatDate(task.UpdateDateTime, "dd-mm-yyyy")}
-                                    </Typography>
-                                  </Box>
-                                </Grid>
-                              )}
+                              {task.Status?.toLowerCase() === "complete" &&
+                                task.UpdateDateTime && (
+                                  <Grid item xs={12} sm={6}>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        mb: 0.5,
+                                      }}
+                                    >
+                                      <CheckCircle
+                                        sx={{
+                                          fontSize: 16,
+                                          mr: 1,
+                                          color: "text.secondary",
+                                        }}
+                                      />
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        Completed on:{" "}
+                                        {formatDate(
+                                          task.UpdateDateTime,
+                                          "dd-mm-yyyy",
+                                        )}
+                                      </Typography>
+                                    </Box>
+                                  </Grid>
+                                )}
                               {completionDate && (
                                 <Grid item xs={12} sm={6}>
-                                  <Box sx={{ display: "flex", alignItems: "center", mb: 0.5 }}>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      mb: 0.5,
+                                    }}
+                                  >
                                     {/* <VerifiedUser sx={{ fontSize: 16, mr: 1, color: "text.secondary" }} /> */}
                                     {/* <Typography variant="body2" color="text.secondary">
                                       Project Target: {completionDate}
@@ -622,24 +821,34 @@ export default function StationPhaseTable() {
                               )}
                             </Grid>
                             {task.Status?.toLowerCase() !== "complete" && (
-                              <Box sx={{ mt: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
-                              <Chip
-                                label={task.Status || "Unknown"}
-                                size="small"
-                                color={task.Status?.toLowerCase() === "complete" ? "success" : "warning"}
-                                variant="outlined"
-                              />
-                              <Button 
-                                size="small" 
-                                variant="outlined"
-                                onClick={(e) => handleReassignClick(task, e)}
-                                sx={{ ml: 1 }}
+                              <Box
+                                sx={{
+                                  mt: 1,
+                                  display: "flex",
+                                  gap: 1,
+                                  alignItems: "center",
+                                }}
                               >
-                                Reassign
-                              </Button>
-                            </Box>
+                                <Chip
+                                  label={task.Status || "Unknown"}
+                                  size="small"
+                                  color={
+                                    task.Status?.toLowerCase() === "complete"
+                                      ? "success"
+                                      : "warning"
+                                  }
+                                  variant="outlined"
+                                />
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={(e) => handleReassignClick(task, e)}
+                                  sx={{ ml: 1 }}
+                                >
+                                  Reassign
+                                </Button>
+                              </Box>
                             )}
-                            
                           </Box>
                         }
                       />
@@ -653,7 +862,12 @@ export default function StationPhaseTable() {
         </Dialog>
 
         {/* Reassign Dialog */}
-        <Dialog open={reassignDialogOpen} onClose={() => setReassignDialogOpen(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={reassignDialogOpen}
+          onClose={() => setReassignDialogOpen(false)}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>Reassign Task</DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
             <Box mb={3}>
@@ -661,7 +875,8 @@ export default function StationPhaseTable() {
                 Task: {selectedTask?.Milestone}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Current Assignee: {selectedTask?.EmpName} ({selectedTask?.EmpId})
+                Current Assignee: {selectedTask?.EmpName} ({selectedTask?.EmpId}
+                )
               </Typography>
             </Box>
 
@@ -671,24 +886,31 @@ export default function StationPhaseTable() {
               value={selectedEmployee}
               onChange={(_, newValue) => setSelectedEmployee(newValue)}
               renderInput={(params) => (
-                <TextField {...params} label="Select Employee" variant="outlined" fullWidth />
+                <TextField
+                  {...params}
+                  label="Select Employee"
+                  variant="outlined"
+                  fullWidth
+                />
               )}
               renderOption={(props, option) => (
                 <Box component="li" {...props}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     {option.Pic ? (
-                      <img 
-                        src={option.Pic} 
+                      <img
+                        src={option.Pic}
                         alt={option.Name}
                         style={{
                           width: 40,
                           height: 40,
-                          borderRadius: '50%',
-                          objectFit: 'cover'
+                          borderRadius: "50%",
+                          objectFit: "cover",
                         }}
                       />
                     ) : (
-                      <Person sx={{ width: 40, height: 40, color: 'action.active' }} />
+                      <Person
+                        sx={{ width: 40, height: 40, color: "action.active" }}
+                      />
                     )}
                     <Box>
                       <Typography>{option.Name}</Typography>
@@ -704,15 +926,32 @@ export default function StationPhaseTable() {
               loadingText="Loading employees..."
               noOptionsText="No employees found"
             />
+            <TextField
+              label="Target Date"
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              sx={{ mt: 2 }}
+            />
           </DialogContent>
-          <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <Box
+            sx={{ p: 2, display: "flex", justifyContent: "flex-end", gap: 1 }}
+          >
             <Button onClick={() => setReassignDialogOpen(false)}>Cancel</Button>
             <Button
               variant="contained"
               onClick={handleReassignTask}
               disabled={!selectedEmployee || reassignLoading}
               sx={{ bgcolor: "#F69320" }}
-              startIcon={reassignLoading ? <CircularProgress size={20} color="inherit" /> : null}
+              startIcon={
+                reassignLoading ? (
+                  <CircularProgress size={20} color="inherit" />
+                ) : null
+              }
             >
               {reassignLoading ? "Reassigning..." : "Confirm Reassign"}
             </Button>
@@ -722,7 +961,7 @@ export default function StationPhaseTable() {
 
       {/* Toast Notification */}
       {toast.show && (
-        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999 }}>
+        <Box sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999 }}>
           <motion.div
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
@@ -731,7 +970,7 @@ export default function StationPhaseTable() {
           >
             <Alert
               severity={toast.type}
-              onClose={() => setToast({...toast, show: false})}
+              onClose={() => setToast({ ...toast, show: false })}
               sx={{ minWidth: 300, boxShadow: 3 }}
             >
               {toast.message}
@@ -740,5 +979,5 @@ export default function StationPhaseTable() {
         </Box>
       )}
     </Container>
-  )
+  );
 }
