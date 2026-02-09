@@ -26,6 +26,8 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
     remark: "",
     LOA: ""
   })
+  const [loaList, setLoaList] = useState([]);
+
   const [technicians, setTechnicians] = useState([])
   const [stations, setStations] = useState([])
   const [loading, setLoading] = useState(false)
@@ -45,15 +47,21 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       setDataLoading(true)
       
       // Fetch technicians
-      const [techResponse, stationResponse] = await Promise.all([
-        fetch("https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1"),
-        fetch("https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php")
-      ])
+      const [techResponse, stationResponse, loaResponse] = await Promise.all([
+        fetch(
+          "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
+        ),
+        fetch("https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php"),
+        fetch("https://namami-infotech.com/SANCHAR/src/menu/get_loa.php"),
+      ]);
 
-      const [techData, stationData] = await Promise.all([
+
+      const [techData, stationData, loaData] = await Promise.all([
         techResponse.json(),
-        stationResponse.json()
-      ])
+        stationResponse.json(),
+        loaResponse.json(),
+      ]);
+
 
       if (techData.success) {
         setTechnicians(techData.data.filter(emp => emp.Role === "Technician" && emp.IsActive === 1))
@@ -62,6 +70,10 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       if (stationData.success) {
         setStations(stationData.data)
       }
+      if (loaData.success) {
+        setLoaList(loaData.data); // array of strings
+      }
+
     } catch (error) {
       console.error("Error fetching data:", error)
       setSnackbar({
@@ -167,26 +179,44 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
               <CircularProgress />
             </Box>
           ) : (
-              <Box sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}>
-                 <TextField
-                label="LOA"
-                value={formData.LOA}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, LOA: e.target.value }))
-                  if (errors.LOA) setErrors(prev => ({ ...prev, LOA: "" }))
+            <Box
+              sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}
+            >
+              <Autocomplete
+                options={loaList}
+                value={formData.LOA || null}
+                onChange={(e, newValue) => {
+                  setFormData((prev) => ({ ...prev, LOA: newValue || "" }));
+                  if (errors.LOA) setErrors((prev) => ({ ...prev, LOA: "" }));
                 }}
-                error={!!errors.LOA}
-                helperText={errors.LOA}
-                required
-                fullWidth
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="LOA"
+                    error={!!errors.LOA}
+                    helperText={errors.LOA}
+                    required
+                    fullWidth
+                  />
+                )}
               />
+
               <Autocomplete
                 options={stations}
-                getOptionLabel={(option) => `${option.StationName} - ${option.ZoneName}`}
-                value={stations.find(s => s.StationName === formData.station) || null}
+                getOptionLabel={(option) =>
+                  `${option.StationName} - ${option.ZoneName}`
+                }
+                value={
+                  stations.find((s) => s.StationName === formData.station) ||
+                  null
+                }
                 onChange={(e, newValue) => {
-                  setFormData(prev => ({ ...prev, station: newValue?.StationName || "" }))
-                  if (errors.station) setErrors(prev => ({ ...prev, station: "" }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    station: newValue?.StationName || "",
+                  }));
+                  if (errors.station)
+                    setErrors((prev) => ({ ...prev, station: "" }));
                 }}
                 renderInput={(params) => (
                   <TextField
@@ -203,8 +233,12 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                 label="Contact Person"
                 value={formData.contactPerson}
                 onChange={(e) => {
-                  setFormData(prev => ({ ...prev, contactPerson: e.target.value }))
-                  if (errors.contactPerson) setErrors(prev => ({ ...prev, contactPerson: "" }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    contactPerson: e.target.value,
+                  }));
+                  if (errors.contactPerson)
+                    setErrors((prev) => ({ ...prev, contactPerson: "" }));
                 }}
                 error={!!errors.contactPerson}
                 helperText={errors.contactPerson}
@@ -212,14 +246,16 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                 fullWidth
               />
 
-             
-
               <TextField
                 label="Contact Number"
                 value={formData.contactNumber}
                 onChange={(e) => {
-                  setFormData(prev => ({ ...prev, contactNumber: e.target.value }))
-                  if (errors.contactNumber) setErrors(prev => ({ ...prev, contactNumber: "" }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    contactNumber: e.target.value,
+                  }));
+                  if (errors.contactNumber)
+                    setErrors((prev) => ({ ...prev, contactNumber: "" }));
                 }}
                 error={!!errors.contactNumber}
                 helperText={errors.contactNumber}
@@ -230,10 +266,16 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
               <Autocomplete
                 options={technicians}
                 getOptionLabel={(option) => `${option.Name} (${option.EmpId})`}
-                value={technicians.find(t => t.EmpId === formData.empId) || null}
+                value={
+                  technicians.find((t) => t.EmpId === formData.empId) || null
+                }
                 onChange={(e, newValue) => {
-                  setFormData(prev => ({ ...prev, empId: newValue?.EmpId || "" }))
-                  if (errors.empId) setErrors(prev => ({ ...prev, empId: "" }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    empId: newValue?.EmpId || "",
+                  }));
+                  if (errors.empId)
+                    setErrors((prev) => ({ ...prev, empId: "" }));
                 }}
                 renderInput={(params) => (
                   <TextField
@@ -249,7 +291,9 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
               <TextField
                 label="Remarks (Optional)"
                 value={formData.remark}
-                onChange={(e) => setFormData(prev => ({ ...prev, remark: e.target.value }))}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, remark: e.target.value }))
+                }
                 multiline
                 rows={3}
                 fullWidth
@@ -259,10 +303,12 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={onClose} disabled={loading}>Cancel</Button>
-          <LoadingButton 
-            onClick={handleSubmit} 
-            loading={loading} 
+          <Button onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <LoadingButton
+            onClick={handleSubmit}
+            loading={loading}
             variant="contained"
             disabled={dataLoading}
           >
@@ -274,17 +320,17 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
       >
         <Alert
           severity={snackbar.severity}
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
     </>
-  )
+  );
 }
 
 export default CreateTicketDialog
