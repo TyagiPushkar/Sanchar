@@ -222,7 +222,19 @@ function AMCWorkDetails() {
     }
     
     // Check if this is a document field that should show a view button
-    const documentCheckpointIds = ["599", "603", "609", "613", "619", "623", "629", "633"];
+    const documentCheckpointIds = [
+      "599",
+      "603",
+      "609",
+      "613",
+      "619",
+      "623",
+      "629",
+      "633",
+      "671",
+      "650",
+      "654",
+    ];
     if (documentCheckpointIds.includes(checkpointId.toString()) && detail.Value) {
       return (
         <button 
