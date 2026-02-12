@@ -51,9 +51,8 @@ function AMCWorkDetails() {
       'start', 'Start', 'START',
       'end', 'End', 'END',
       'done', 'Done', 'DONE',
-      'raised', 'Raised', 'RAISED',
-      'recd', 'Recd', 'RECD',
-      'payment', 'Payment', 'PAYMENT'
+      'raised', 'Raised', 'RAISED'
+      
     ];
     
     return dateKeywords.some(keyword => fieldName.includes(keyword));
