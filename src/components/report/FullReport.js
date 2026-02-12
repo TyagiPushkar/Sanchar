@@ -723,6 +723,9 @@ return (
                 Goods Bill Received Amount
               </th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>
+                Goods Bill Amount Diffrence
+              </th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>
                 Billing Cycle
               </th>
               <th style={{ border: "1px solid #ddd", minWidth: "140px" }}>
@@ -891,6 +894,10 @@ return (
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {getStatusValue(loaNumber, "657")}
+                    </td>
+                    <td style={{ border: "1px solid #ddd" }}>
+                      {getStatusValue(loaNumber, "656") -
+                        getStatusValue(loaNumber, "657")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {getStatusValue(loaNumber, "594")}
