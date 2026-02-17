@@ -180,7 +180,12 @@ const [targetDate, setTargetDate] = useState("");
         }
 
         if (employeesResponse.data.success) {
-          setEmployees(employeesResponse.data.data)
+          const filteredEmployees = employeesResponse.data.data.filter(
+            (emp) => emp.Role === "Technician" && emp.IsActive === 1,
+          );
+
+          setEmployees(filteredEmployees);
+
         } else {
           console.error("Failed to fetch employees:", employeesResponse.data.message)
         }

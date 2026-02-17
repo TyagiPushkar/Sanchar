@@ -29,6 +29,7 @@ import AMCWork from "./pages/AMCWork";
 import Report from "./pages/Report";
 import SummaryReport from "./pages/Summary";
 import Unauthorized from "./pages/Unauthorized";
+import PMWork from "./pages/PMWork";
 
 function App() {
   useEffect(() => {
@@ -430,6 +431,21 @@ function App() {
               }
             />
 
+            <Route
+              path="/pm-work"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={PMWork}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
             {/* Material & Invoices - Admin & Project Manager */}
             <Route
               path="/material-supplied"

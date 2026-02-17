@@ -39,7 +39,8 @@ import AssessmentIcon from "@mui/icons-material/Assessment";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import SettingsIcon from "@mui/icons-material/Settings";
-
+import ConstructionIcon from "@mui/icons-material/Construction";
+import CardMembershipIcon from "@mui/icons-material/CardMembership";
 function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
@@ -176,6 +177,12 @@ function Sidebar() {
       icon: <SupportAgentIcon />,
       feature: "support_ticket",
     },
+    // {
+    //   path: "/pm-work",
+    //   name: "PM Work",
+    //   icon: <ConstructionIcon />,
+    //   feature: "pm",
+    // },
     {
       path: "/material-supplied",
       name: "Material Supplied",
@@ -398,8 +405,6 @@ function Sidebar() {
               </Collapse>
             </List>
           )}
-
-          
         </Drawer>
       </Box>
     </Box>

@@ -726,6 +726,9 @@ return (
                 Goods Bill Amount Diffrence
               </th>
               <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>
+                Goods Bill Remark
+              </th>
+              <th style={{ border: "1px solid #ddd", minWidth: "120px" }}>
                 Billing Cycle
               </th>
               <th style={{ border: "1px solid #ddd", minWidth: "140px" }}>
@@ -900,6 +903,9 @@ return (
                         getStatusValue(loaNumber, "657")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
+                      {getStatusValue(loaNumber, "678")}
+                    </td>
+                    <td style={{ border: "1px solid #ddd" }}>
                       {getStatusValue(loaNumber, "594")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
@@ -920,13 +926,13 @@ return (
                       {formatDate(getStatusValue(loaNumber, "602"))}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "596")}
+                      {getStatusValue(loaNumber, "600")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {getStatusValue(loaNumber, "660")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "596") -
+                      {getStatusValue(loaNumber, "600") -
                         getStatusValue(loaNumber, "660")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
@@ -942,13 +948,13 @@ return (
                       {formatDate(getStatusValue(loaNumber, "612"))}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "606")}
+                      {getStatusValue(loaNumber, "610")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {getStatusValue(loaNumber, "663")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "606") -
+                      {getStatusValue(loaNumber, "610") -
                         getStatusValue(loaNumber, "663")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
@@ -964,13 +970,13 @@ return (
                       {formatDate(getStatusValue(loaNumber, "622"))}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "616")}
+                      {getStatusValue(loaNumber, "620")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {getStatusValue(loaNumber, "666")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "616") -
+                      {getStatusValue(loaNumber, "620") -
                         getStatusValue(loaNumber, "666")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
@@ -986,13 +992,13 @@ return (
                       {formatDate(getStatusValue(loaNumber, "632"))}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "626")}
+                      {getStatusValue(loaNumber, "630")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
                       {getStatusValue(loaNumber, "669")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
-                      {getStatusValue(loaNumber, "626") -
+                      {getStatusValue(loaNumber, "630") -
                         getStatusValue(loaNumber, "669")}
                     </td>
                     <td style={{ border: "1px solid #ddd" }}>
