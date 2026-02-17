@@ -70,7 +70,7 @@ export default function LoginPage() {
         }
         login(response.data.data);
         setTimeout(() => {
-          navigate("/profile");
+          navigate("/report");
         }, 1000);
         setLoading(false);
       } else {

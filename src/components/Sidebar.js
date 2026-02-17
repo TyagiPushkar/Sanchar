@@ -56,6 +56,7 @@ function Sidebar() {
     Admin: [
       "admin",
       "pm",
+      "rm",
       "technician",
       "customer_support",
       "report",
@@ -70,6 +71,7 @@ function Sidebar() {
     "Project Manager": [
       "admin",
       "pm",
+      "rm",
       "technician",
       "customer_support",
       "report",
@@ -85,6 +87,7 @@ function Sidebar() {
     "Customer Support": [
       "admin",
       "pm",
+      "rm",
       "technician",
       "customer_support",
       "report",
@@ -177,12 +180,12 @@ function Sidebar() {
       icon: <SupportAgentIcon />,
       feature: "support_ticket",
     },
-    // {
-    //   path: "/pm-work",
-    //   name: "PM Work",
-    //   icon: <ConstructionIcon />,
-    //   feature: "pm",
-    // },
+    {
+      path: "/pm-work",
+      name: "PM Work",
+      icon: <ConstructionIcon />,
+      feature: "pm",
+    },
     {
       path: "/material-supplied",
       name: "Material Supplied",
@@ -200,6 +203,12 @@ function Sidebar() {
       name: "AMC Work",
       icon: <EngineeringIcon />,
       feature: "amc",
+    },
+    {
+      path: "/rm-work",
+      name: "RM Work",
+      icon: <CardMembershipIcon />,
+      feature: "rm",
     },
     { path: "/menus", name: "Menus", icon: <SettingsIcon />, feature: "menus" },
     {

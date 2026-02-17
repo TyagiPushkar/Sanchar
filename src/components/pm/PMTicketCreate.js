@@ -15,22 +15,26 @@ import {
   Snackbar,
   Autocomplete,
   Chip,
+  Checkbox,
 } from "@mui/material";
 import { LoadingButton } from "@mui/lab";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+
+const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
+const checkedIcon = <CheckBoxIcon fontSize="small" />;
 
 const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
   const [formData, setFormData] = useState({
     empId: "",
-    station: [], // Changed to array for multiselect
-    contactPerson: "",
-    contactNumber: "",
+    stations: [], // Will store selected station objects
     remark: "",
-    LOA: "",
+    loa: "", // Changed from LOA to loa to match API
   });
-  const [loaList, setLoaList] = useState([]);
 
+  const [loaOptions, setLoaOptions] = useState([]); // Will store LOA objects with stations
   const [technicians, setTechnicians] = useState([]);
-  const [stations, setStations] = useState([]);
+  const [availableStations, setAvailableStations] = useState([]); // Station objects for selected LOA
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [errors, setErrors] = useState({});
@@ -51,19 +55,17 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
     try {
       setDataLoading(true);
 
-      // Fetch technicians
-      const [techResponse, stationResponse, loaResponse] = await Promise.all([
+      // Fetch technicians and station list with LOA
+      const [techResponse, stationResponse] = await Promise.all([
         fetch(
           "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
         ),
-        fetch("https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php"),
-        fetch("https://namami-infotech.com/SANCHAR/src/menu/get_loa.php"),
+        fetch("https://namami-infotech.com/SANCHAR/src/buyer/station_list.php"),
       ]);
 
-      const [techData, stationData, loaData] = await Promise.all([
+      const [techData, stationData] = await Promise.all([
         techResponse.json(),
         stationResponse.json(),
-        loaResponse.json(),
       ]);
 
       if (techData.success) {
@@ -75,10 +77,7 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
       }
 
       if (stationData.success) {
-        setStations(stationData.data);
-      }
-      if (loaData.success) {
-        setLoaList(loaData.data); // array of strings
+        setLoaOptions(stationData.data);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -92,32 +91,53 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
     }
   };
 
+  // Update available stations when LOA changes
+  useEffect(() => {
+    if (formData.loa) {
+      const selectedLoaObj = loaOptions.find(
+        (item) => item.LOA === formData.loa,
+      );
+      // Convert station strings to objects for consistent handling
+      const stationsAsObjects = (selectedLoaObj?.Stations || []).map(
+        (station) => ({
+          StationName: station,
+          ZoneName: "", // Zone info might not be available from this API
+        }),
+      );
+      setAvailableStations(stationsAsObjects);
+
+      // Clear selected stations
+      setFormData((prev) => ({
+        ...prev,
+        stations: [],
+      }));
+    } else {
+      setAvailableStations([]);
+      setFormData((prev) => ({
+        ...prev,
+        stations: [],
+      }));
+    }
+  }, [formData.loa, loaOptions]);
+
   const resetForm = () => {
     setFormData({
       empId: "",
-      station: [], // Reset to empty array
-      contactPerson: "",
-      contactNumber: "",
+      stations: [],
       remark: "",
-      LOA: "",
+      loa: "",
     });
     setErrors({});
+    setAvailableStations([]);
   };
 
   const validateForm = () => {
     const newErrors = {};
     if (!formData.empId) newErrors.empId = "Technician is required";
-    if (!formData.station || formData.station.length === 0) {
-      newErrors.station = "At least one station is required";
+    if (!formData.stations || formData.stations.length === 0) {
+      newErrors.stations = "At least one station is required";
     }
-    if (!formData.contactPerson?.trim())
-      newErrors.contactPerson = "Contact person is required";
-    if (!formData.LOA?.trim()) newErrors.LOA = "LOA is required";
-    if (!formData.contactNumber?.trim()) {
-      newErrors.contactNumber = "Contact number is required";
-    } else if (formData.contactNumber.replace(/\D/g, "").length < 10) {
-      newErrors.contactNumber = "Invalid contact number";
-    }
+    if (!formData.loa?.trim()) newErrors.loa = "LOA is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -132,20 +152,18 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
         (tech) => tech.EmpId === formData.empId,
       );
 
-      // Extract just the station names for the array
-      const stationNames = formData.station.map((s) => s.StationName);
+      // Extract station names for the payload
+      const stationNames = formData.stations.map((s) => s.StationName);
 
       const payload = {
         Milestone: "PM",
         MenuId: "11",
         EmpName: selectedTechnician?.Name || "",
         EmpId: formData.empId,
-        Stations: stationNames, // This will be an array of station names
+        Stations: stationNames, // Array of station names
         Status: "Assigned",
         Remark: formData.remark || "",
-        ContactPerson: formData.contactPerson,
-        ContactNumber: formData.contactNumber,
-        LOA: formData.LOA,
+        LOA: formData.loa,
       };
 
       const response = await fetch(
@@ -188,9 +206,9 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle>
-          <Typography variant="h6">Create Support Ticket</Typography>
+          <Typography variant="h6">Assign PM WORK</Typography>
           <Typography variant="body2" color="text.secondary">
-            Assign a technician to resolve an issue
+            Assign a technician for PM Work
           </Typography>
         </DialogTitle>
 
@@ -203,97 +221,85 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
             <Box
               sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}
             >
+              {/* LOA Selection */}
               <Autocomplete
-                options={loaList}
-                value={formData.LOA || null}
+                options={loaOptions
+                  .map((item) => item.LOA)
+                  .filter((loa) => loa)} // Filter out empty LOA
+                value={formData.loa || null}
                 onChange={(e, newValue) => {
-                  setFormData((prev) => ({ ...prev, LOA: newValue || "" }));
-                  if (errors.LOA) setErrors((prev) => ({ ...prev, LOA: "" }));
+                  setFormData((prev) => ({ ...prev, loa: newValue || "" }));
+                  if (errors.loa) setErrors((prev) => ({ ...prev, loa: "" }));
                 }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="LOA"
-                    error={!!errors.LOA}
-                    helperText={errors.LOA}
+                    error={!!errors.loa}
+                    helperText={errors.loa}
                     required
                     fullWidth
                   />
                 )}
               />
 
+              {/* Station Selection with Checkboxes inside Autocomplete */}
               <Autocomplete
                 multiple
-                options={stations}
-                getOptionLabel={(option) =>
-                  `${option.StationName} - ${option.ZoneName}`
-                }
-                value={formData.station}
+                options={availableStations}
+                disableCloseOnSelect
+                getOptionLabel={(option) => option.StationName}
+                value={formData.stations}
                 onChange={(e, newValue) => {
                   setFormData((prev) => ({
                     ...prev,
-                    station: newValue,
+                    stations: newValue,
                   }));
-                  if (errors.station)
-                    setErrors((prev) => ({ ...prev, station: "" }));
+                  if (errors.stations) {
+                    setErrors((prev) => ({ ...prev, stations: "" }));
+                  }
                 }}
+                renderOption={(props, option, { selected }) => (
+                  <li {...props}>
+                    <Checkbox
+                      icon={icon}
+                      checkedIcon={checkedIcon}
+                      style={{ marginRight: 8 }}
+                      checked={selected}
+                    />
+                    {option.StationName}
+                  </li>
+                )}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Stations"
-                    error={!!errors.station}
-                    helperText={errors.station}
+                    error={!!errors.stations}
+                    helperText={errors.stations}
                     required
-                    placeholder="Select stations"
+                    placeholder={
+                      availableStations.length > 0
+                        ? "Select stations"
+                        : "Select LOA first"
+                    }
                   />
                 )}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip
-                      key={option.StationName}
                       label={option.StationName}
                       size="small"
                       {...getTagProps({ index })}
                     />
                   ))
                 }
-                filterSelectedOptions
+                disabled={!formData.loa || availableStations.length === 0}
+                noOptionsText={
+                  !formData.loa ? "Select LOA first" : "No stations available"
+                }
               />
 
-              <TextField
-                label="Contact Person"
-                value={formData.contactPerson}
-                onChange={(e) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    contactPerson: e.target.value,
-                  }));
-                  if (errors.contactPerson)
-                    setErrors((prev) => ({ ...prev, contactPerson: "" }));
-                }}
-                error={!!errors.contactPerson}
-                helperText={errors.contactPerson}
-                required
-                fullWidth
-              />
-
-              <TextField
-                label="Contact Number"
-                value={formData.contactNumber}
-                onChange={(e) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    contactNumber: e.target.value,
-                  }));
-                  if (errors.contactNumber)
-                    setErrors((prev) => ({ ...prev, contactNumber: "" }));
-                }}
-                error={!!errors.contactNumber}
-                helperText={errors.contactNumber}
-                required
-                fullWidth
-              />
-
+              {/* Technician Selection */}
               <Autocomplete
                 options={technicians}
                 getOptionLabel={(option) => `${option.Name} (${option.EmpId})`}
@@ -317,17 +323,6 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
                     required
                   />
                 )}
-              />
-
-              <TextField
-                label="Remarks (Optional)"
-                value={formData.remark}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, remark: e.target.value }))
-                }
-                multiline
-                rows={3}
-                fullWidth
               />
             </Box>
           )}

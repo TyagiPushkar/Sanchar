@@ -480,160 +480,7 @@ const PMWorkList = () => {
       </Box>
 
       {/* Status Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#2196f3",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#1976d2" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "" }));
-              setSearchTerm("");
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.total}
-              </Typography>
-              <Typography variant="body2">Total Tickets</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#4caf50",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#388e3c" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "Assigned" }));
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.assigned}
-              </Typography>
-              <Typography variant="body2">Assigned</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#ff9800",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#f57c00" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "Complete" }));
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.complete}
-              </Typography>
-              <Typography variant="body2">Complete</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#9c27b0",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#7b1fa2" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "Closed" }));
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.closed}
-              </Typography>
-              <Typography variant="body2">Closed</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      
 
       {/* Export All Button - Only show when there are active filters */}
       {hasActiveFilters && hasAnyData && (
@@ -751,31 +598,7 @@ const PMWorkList = () => {
                     </Box>
                   </TableCell>
 
-                  {/* Contact Person Column with Filter */}
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <strong>Contact Person</strong>
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
-                        onClick={(e) => handleFilterClick(e, "ContactPerson")}
-                      >
-                        <FilterList fontSize="small" />
-                      </IconButton>
-                      {columnFilters.ContactPerson && (
-                        <Chip
-                          label={columnFilters.ContactPerson}
-                          size="small"
-                          onDelete={() => clearColumnFilter("ContactPerson")}
-                          sx={{ backgroundColor: "#fff", color: "#F69320" }}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <strong>Contact Number</strong>
-                  </TableCell>
+                 
 
                   {/* Status Column with Filter */}
                   <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
@@ -829,8 +652,7 @@ const PMWorkList = () => {
                       </TableCell>
                       <TableCell>{ticket.EmpName}</TableCell>
                       <TableCell>{ticket.Station}</TableCell>
-                      <TableCell>{ticket.ContactPerson}</TableCell>
-                      <TableCell>{ticket.ContactNumber}</TableCell>
+                      
                       <TableCell>
                         <Chip
                           label={ticket.Status}

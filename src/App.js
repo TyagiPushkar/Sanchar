@@ -30,6 +30,7 @@ import Report from "./pages/Report";
 import SummaryReport from "./pages/Summary";
 import Unauthorized from "./pages/Unauthorized";
 import PMWork from "./pages/PMWork";
+import RMWork from "./pages/RMWork";
 
 function App() {
   useEffect(() => {
@@ -437,6 +438,21 @@ function App() {
                 <PrivateRoute>
                   <RoleProtectedRoute
                     element={PMWork}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/rm-work"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={RMWork}
                     allowedRoles={[
                       "Admin",
                       "Project Manager",
