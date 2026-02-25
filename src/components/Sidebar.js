@@ -36,6 +36,7 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import EngineeringIcon from "@mui/icons-material/Engineering";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import DashboardIcon from '@mui/icons-material/Dashboard';
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import ManageAccountsIcon from "@mui/icons-material/ManageAccounts";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -156,6 +157,12 @@ function Sidebar() {
 
   // Filtered routes based on role
   const filteredRoutes = [
+    {
+      path: "/dashboard",
+      name: "Dashboard",
+      icon: <DashboardIcon />,
+      feature: "report",
+    },
     {
       path: "/report",
       name: "Report",

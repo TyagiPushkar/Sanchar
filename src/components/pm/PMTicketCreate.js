@@ -29,10 +29,12 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
     empId: "",
     stations: [], // Will store selected station objects
     remark: "",
-    loa: "", // Changed from LOA to loa to match API
+    loa: "",
+    section: "", // New field for section
   });
 
-  const [loaOptions, setLoaOptions] = useState([]); // Will store LOA objects with stations
+  const [loaOptions, setLoaOptions] = useState([]); // Will store LOA objects with sections
+  const [sectionOptions, setSectionOptions] = useState([]); // Sections for selected LOA
   const [technicians, setTechnicians] = useState([]);
   const [availableStations, setAvailableStations] = useState([]); // Station objects for selected LOA
   const [loading, setLoading] = useState(false);
@@ -55,17 +57,24 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
     try {
       setDataLoading(true);
 
-      // Fetch technicians and station list with LOA
-      const [techResponse, stationResponse] = await Promise.all([
-        fetch(
-          "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
-        ),
-        fetch("https://namami-infotech.com/SANCHAR/src/buyer/station_list.php"),
-      ]);
+      // Fetch technicians, station list with LOA, and section list
+      const [techResponse, stationResponse, sectionResponse] =
+        await Promise.all([
+          fetch(
+            "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
+          ),
+          fetch(
+            "https://namami-infotech.com/SANCHAR/src/buyer/station_list.php",
+          ),
+          fetch(
+            "https://namami-infotech.com/SANCHAR/src/buyer/section_list.php",
+          ),
+        ]);
 
-      const [techData, stationData] = await Promise.all([
+      const [techData, stationData, sectionData] = await Promise.all([
         techResponse.json(),
         stationResponse.json(),
+        sectionResponse.json(),
       ]);
 
       if (techData.success) {
@@ -79,6 +88,11 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
       if (stationData.success) {
         setLoaOptions(stationData.data);
       }
+
+      if (sectionData.success) {
+        // Store section data for later use when LOA is selected
+        setSectionOptions(sectionData.data);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       setSnackbar({
@@ -91,17 +105,30 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
     }
   };
 
-  // Update available stations when LOA changes
+  // Update sections when LOA changes
   useEffect(() => {
     if (formData.loa) {
+      // Find sections for selected LOA from section_list.php data
+      const selectedLoaSection = sectionOptions.find(
+        (item) => item.LOA === formData.loa,
+      );
+
+      // Set sections as strings array
+      setFormData((prev) => ({
+        ...prev,
+        sections: selectedLoaSection?.Sections || [],
+        section: "", // Reset selected section when LOA changes
+      }));
+
+      // Get stations for this LOA from station_list.php
       const selectedLoaObj = loaOptions.find(
         (item) => item.LOA === formData.loa,
       );
+
       // Convert station strings to objects for consistent handling
       const stationsAsObjects = (selectedLoaObj?.Stations || []).map(
         (station) => ({
           StationName: station,
-          ZoneName: "", // Zone info might not be available from this API
         }),
       );
       setAvailableStations(stationsAsObjects);
@@ -112,13 +139,31 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
         stations: [],
       }));
     } else {
-      setAvailableStations([]);
       setFormData((prev) => ({
         ...prev,
+        sections: [],
+        section: "",
         stations: [],
       }));
+      setAvailableStations([]);
     }
-  }, [formData.loa, loaOptions]);
+  }, [formData.loa, loaOptions, sectionOptions]);
+
+  // Filter stations based on selected section
+  const getFilteredStations = () => {
+    if (!formData.section || !availableStations.length) {
+      return availableStations;
+    }
+    // This assumes station names might contain section information
+    // You may need to adjust this logic based on how stations are related to sections
+    return availableStations.filter(
+      (station) =>
+        station.StationName.includes(formData.section) ||
+        station.StationName.includes(
+          formData.section.replace(/\s*\([^)]*\)\s*/, ""),
+        ), // Remove code in parentheses for matching
+    );
+  };
 
   const resetForm = () => {
     setFormData({
@@ -126,6 +171,7 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
       stations: [],
       remark: "",
       loa: "",
+      section: "",
     });
     setErrors({});
     setAvailableStations([]);
@@ -138,6 +184,7 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
       newErrors.stations = "At least one station is required";
     }
     if (!formData.loa?.trim()) newErrors.loa = "LOA is required";
+    if (!formData.section?.trim()) newErrors.section = "Section is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -164,6 +211,7 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
         Status: "Assigned",
         Remark: formData.remark || "",
         LOA: formData.loa,
+        Section: formData.section, // Include section in payload
       };
 
       const response = await fetch(
@@ -202,6 +250,11 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
     }
   };
 
+  // Filter LOAs that have sections (remove empty LOA entries)
+  const filteredLoaOptions = loaOptions.filter(
+    (item) => item.LOA && item.LOA.trim() !== "",
+  );
+
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -223,9 +276,7 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
             >
               {/* LOA Selection */}
               <Autocomplete
-                options={loaOptions
-                  .map((item) => item.LOA)
-                  .filter((loa) => loa)} // Filter out empty LOA
+                options={filteredLoaOptions.map((item) => item.LOA)}
                 value={formData.loa || null}
                 onChange={(e, newValue) => {
                   setFormData((prev) => ({ ...prev, loa: newValue || "" }));
@@ -243,10 +294,42 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
                 )}
               />
 
+              {/* Section Selection - New Dropdown */}
+              <Autocomplete
+                options={formData.sections || []}
+                value={formData.section || null}
+                onChange={(e, newValue) => {
+                  setFormData((prev) => ({ ...prev, section: newValue || "" }));
+                  if (errors.section)
+                    setErrors((prev) => ({ ...prev, section: "" }));
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Section"
+                    error={!!errors.section}
+                    helperText={errors.section}
+                    required
+                    fullWidth
+                    placeholder={
+                      formData.loa ? "Select section" : "Select LOA first"
+                    }
+                  />
+                )}
+                disabled={!formData.loa || formData.sections?.length === 0}
+                noOptionsText={
+                  !formData.loa
+                    ? "Select LOA first"
+                    : formData.sections?.length === 0
+                      ? "No sections available for this LOA"
+                      : "No options"
+                }
+              />
+
               {/* Station Selection with Checkboxes inside Autocomplete */}
               <Autocomplete
                 multiple
-                options={availableStations}
+                options={getFilteredStations()}
                 disableCloseOnSelect
                 getOptionLabel={(option) => option.StationName}
                 value={formData.stations}
@@ -278,9 +361,11 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
                     helperText={errors.stations}
                     required
                     placeholder={
-                      availableStations.length > 0
+                      getFilteredStations().length > 0
                         ? "Select stations"
-                        : "Select LOA first"
+                        : formData.section
+                          ? "No stations in this section"
+                          : "Select LOA and Section first"
                     }
                   />
                 )}
@@ -293,9 +378,17 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
                     />
                   ))
                 }
-                disabled={!formData.loa || availableStations.length === 0}
+                disabled={
+                  !formData.section || getFilteredStations().length === 0
+                }
                 noOptionsText={
-                  !formData.loa ? "Select LOA first" : "No stations available"
+                  !formData.loa
+                    ? "Select LOA first"
+                    : !formData.section
+                      ? "Select section first"
+                      : getFilteredStations().length === 0
+                        ? "No stations in this section"
+                        : "No stations available"
                 }
               />
 

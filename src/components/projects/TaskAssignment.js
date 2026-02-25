@@ -203,43 +203,61 @@ const filterAvailableStations = () => {
   );
 };
 
-  useEffect(() => {
-    // Fetch stations
-    fetch(`https://namami-infotech.com/SANCHAR/src/tender/tender_stations.php?ActivityId=${ActivityId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.stations)) {
-          const stationObjects = data.stations.map((stationName, index) => ({
-            id: (index + 1).toString(),
-            name: stationName,
-            location: `Location for ${stationName}`,
-          }))
-          setStations(stationObjects)
-        } else {
-          setStations([])
-        }
-      })
-      .catch(() => setStations([]))
+   useEffect(() => {
+     // 🔴 ONLY THIS SECTION CHANGES - Fetch stations with new response format
+     fetch(
+       `https://namami-infotech.com/SANCHAR/src/tender/tender_stations.php?ActivityId=${ActivityId}`,
+     )
+       .then((res) => res.json())
+       .then((data) => {
+         if (data.success) {
+           // Handle both old and new response formats
+           let stationObjects = [];
 
-    // Fetch technicians
-    fetch("https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1")
-  .then((res) => res.json())
-  .then((data) => {
-    if (data.success) {
-      const technicians = data.data.filter(
-        (emp) => emp.Role === "Technician" && emp.IsActive === 1,
-      );
-      setTechnicians(technicians);
-    } else {
-      setTechnicians([]);
-    }
-  })
-  .catch(() => setTechnicians([]));
+           if (Array.isArray(data.data)) {
+             // New format: { data: [{ station, section }] }
+             stationObjects = data.data.map((item, index) => ({
+               id: (index + 1).toString(),
+               name: item.station,
+               location: `Section: ${item.section}`, // You can use section info here
+               section: item.section, // Store section for potential future use
+             }));
+           } else if (Array.isArray(data.stations)) {
+             // Old format: { stations: [...] }
+             stationObjects = data.stations.map((stationName, index) => ({
+               id: (index + 1).toString(),
+               name: stationName,
+               location: `Location for ${stationName}`,
+             }));
+           }
 
+           setStations(stationObjects);
+         } else {
+           setStations([]);
+         }
+       })
+       .catch(() => setStations([]));
 
-    // Fetch existing tasks
-    fetchExistingTasks()
-  }, [ActivityId, tenderNo])
+     // Fetch technicians (NO CHANGE)
+     fetch(
+       "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
+     )
+       .then((res) => res.json())
+       .then((data) => {
+         if (data.success) {
+           const technicians = data.data.filter(
+             (emp) => emp.Role === "Technician" && emp.IsActive === 1,
+           );
+           setTechnicians(technicians);
+         } else {
+           setTechnicians([]);
+         }
+       })
+       .catch(() => setTechnicians([]));
+
+     // Fetch existing tasks (NO CHANGE)
+     fetchExistingTasks();
+   }, [ActivityId, tenderNo]);
 
   // Update available stations when milestone or existing tasks change
   useEffect(() => {

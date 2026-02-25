@@ -34,7 +34,11 @@ import {
   FilterList,
   Clear,
   GetApp,
+  DateRange,
 } from "@mui/icons-material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import CreateTicketDialog from "./CreateTicketDialog";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
@@ -51,6 +55,10 @@ const TicketList = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [error, setError] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
+
+  // Date filter states
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
 
   // Column filter states
   const [columnFilters, setColumnFilters] = useState({
@@ -73,7 +81,7 @@ const TicketList = () => {
 
   useEffect(() => {
     applyFilters();
-  }, [tickets, searchTerm, columnFilters]);
+  }, [tickets, searchTerm, columnFilters, fromDate, toDate]);
 
   // Calculate status counts for ALL tickets
   const allStatusCounts = useMemo(() => {
@@ -182,6 +190,31 @@ const TicketList = () => {
       );
     }
 
+    // Apply date filter
+    if (fromDate || toDate) {
+      filteredTickets = filteredTickets.filter((ticket) => {
+        const ticketDate = new Date(ticket.Date);
+        ticketDate.setHours(0, 0, 0, 0);
+
+        if (fromDate && toDate) {
+          const from = new Date(fromDate);
+          from.setHours(0, 0, 0, 0);
+          const to = new Date(toDate);
+          to.setHours(23, 59, 59, 999);
+          return ticketDate >= from && ticketDate <= to;
+        } else if (fromDate) {
+          const from = new Date(fromDate);
+          from.setHours(0, 0, 0, 0);
+          return ticketDate >= from;
+        } else if (toDate) {
+          const to = new Date(toDate);
+          to.setHours(23, 59, 59, 999);
+          return ticketDate <= to;
+        }
+        return true;
+      });
+    }
+
     // Apply column filters
     Object.keys(columnFilters).forEach((column) => {
       const filterValue = columnFilters[column];
@@ -222,6 +255,13 @@ const TicketList = () => {
       Status: "",
     });
     setSearchTerm("");
+    setFromDate(null);
+    setToDate(null);
+  };
+
+  const clearDateFilter = () => {
+    setFromDate(null);
+    setToDate(null);
   };
 
   const handleFilterClick = (event, column) => {
@@ -396,7 +436,9 @@ const TicketList = () => {
 
   const hasActiveFilters =
     Object.values(columnFilters).some((filter) => filter !== "") ||
-    searchTerm !== "";
+    searchTerm !== "" ||
+    fromDate !== null ||
+    toDate !== null;
   const hasFilteredData = filtered.length > 0;
   const hasAnyData = tickets.length > 0;
 
@@ -406,550 +448,618 @@ const TicketList = () => {
     : allStatusCounts;
 
   return (
-    <Box sx={{ p: 0 }}>
-      {/* Header */}
-      <Box
-        sx={{
-          mb: 3,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <Typography variant="h4" component="h1" fontWeight="bold">
-          Support Tickets
-        </Typography>
-
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          sx={{ minWidth: { xs: "100%", sm: "auto" } }}
-        >
-          <TextField
-            placeholder="Search by Station, Technician, or Contact Person"
-            value={searchTerm}
-            onChange={handleSearch}
-            size="small"
-            sx={{ minWidth: 300 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-          />
-          {hasActiveFilters && (
-            <Button
-              variant="outlined"
-              startIcon={<Clear />}
-              onClick={clearAllFilters}
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              Clear
-            </Button>
-          )}
-          {hasAnyData && (
-            <Button
-              variant="outlined"
-              onClick={exportToExcel}
-              disabled={exportLoading || !hasFilteredData}
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              <GetApp />
-            </Button>
-          )}
-          
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setIsCreateDialogOpen(true)}
-                sx={{
-                  whiteSpace: "nowrap",
-                  backgroundColor: "#F69320",
-                  color: "#fff",
-                  "&:hover": { backgroundColor: "#F69320" },
-                }}
-              >
-                New Ticket
-              </Button>
-            
-        </Stack>
-      </Box>
-
-      {/* Status Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#2196f3",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#1976d2" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "" }));
-              setSearchTerm("");
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.total}
-              </Typography>
-              <Typography variant="body2">Total Tickets</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#4caf50",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#388e3c" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "Assigned" }));
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.assigned}
-              </Typography>
-              <Typography variant="body2">Assigned</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#ff9800",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#f57c00" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "Complete" }));
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.complete}
-              </Typography>
-              <Typography variant="body2">Complete</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} sm={6} md={3}>
-          <Card
-            sx={{
-              backgroundColor: "#9c27b0",
-              color: "white",
-              cursor: "pointer",
-              "&:hover": { backgroundColor: "#7b1fa2" },
-              position: "relative",
-            }}
-            onClick={() => {
-              setColumnFilters((prev) => ({ ...prev, Status: "Closed" }));
-            }}
-          >
-            <CardContent sx={{ textAlign: "center" }}>
-              <Typography variant="h4" fontWeight="bold">
-                {displayCounts.closed}
-              </Typography>
-              <Typography variant="body2">Closed</Typography>
-              {hasActiveFilters && (
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    borderRadius: "4px",
-                    px: 0.5,
-                    fontSize: "0.7rem",
-                  }}
-                >
-                  Filtered
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Export All Button - Only show when there are active filters */}
-      {hasActiveFilters && hasAnyData && (
-        <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
-          <Button
-            variant="outlined"
-            onClick={exportAllToExcel}
-            disabled={exportLoading}
-            startIcon={<GetApp />}
-            size="small"
-          >
-            Export All Data ({tickets.length} records)
-          </Button>
-        </Box>
-      )}
-
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Loading State */}
-      {loading ? (
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <Box sx={{ p: 0 }}>
+        {/* Header */}
         <Box
           sx={{
+            mb: 3,
             display: "flex",
-            flexDirection: "column",
+            justifyContent: "space-between",
             alignItems: "center",
-            py: 8,
+            flexWrap: "wrap",
+            gap: 2,
           }}
         >
-          <CircularProgress size={40} sx={{ mb: 2 }} />
-          <Typography color="text.secondary">Loading tickets...</Typography>
-        </Box>
-      ) : (
-        <>
-          {/* Table */}
-          <TableContainer
-            component={Paper}
-            variant="outlined"
-            sx={{ mb: 3, maxHeight: "69vh", overflow: "auto" }}
+          <Typography variant="h4" component="h1" fontWeight="bold">
+            Support Tickets
+          </Typography>
+
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            sx={{ minWidth: { xs: "100%", sm: "auto" } }}
           >
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "#F69320", color: "#fff" }}>
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <strong>ID</strong>
-                  </TableCell>
+            {/* Search Field */}
+            <TextField
+              placeholder="Search by Station, Technician, or Contact Person"
+              value={searchTerm}
+              onChange={handleSearch}
+              size="small"
+              sx={{ minWidth: 250 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-                  {/* LOA Column with Filter */}
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <strong>LOA</strong>
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
-                        onClick={(e) => handleFilterClick(e, "LOA")}
-                      >
-                        <FilterList fontSize="small" />
-                      </IconButton>
-                      {columnFilters.LOA && (
-                        <Chip
-                          label={columnFilters.LOA}
-                          size="small"
-                          onDelete={() => clearColumnFilter("LOA")}
-                          sx={{ backgroundColor: "#fff", color: "#F69320" }}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-
-                  {/* Technician Column with Filter */}
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <strong>Technician</strong>
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
-                        onClick={(e) => handleFilterClick(e, "EmpName")}
-                      >
-                        <FilterList fontSize="small" />
-                      </IconButton>
-                      {columnFilters.EmpName && (
-                        <Chip
-                          label={columnFilters.EmpName}
-                          size="small"
-                          onDelete={() => clearColumnFilter("EmpName")}
-                          sx={{ backgroundColor: "#fff", color: "#F69320" }}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-
-                  {/* Station Column with Filter */}
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <strong>Station</strong>
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
-                        onClick={(e) => handleFilterClick(e, "Station")}
-                      >
-                        <FilterList fontSize="small" />
-                      </IconButton>
-                      {columnFilters.Station && (
-                        <Chip
-                          label={columnFilters.Station}
-                          size="small"
-                          onDelete={() => clearColumnFilter("Station")}
-                          sx={{ backgroundColor: "#fff", color: "#F69320" }}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-
-                  {/* Contact Person Column with Filter */}
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <strong>Contact Person</strong>
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#fff", backgroundColor: "#F69320" }}
-                        onClick={(e) => handleFilterClick(e, "ContactPerson")}
-                      >
-                        <FilterList fontSize="small" />
-                      </IconButton>
-                      {columnFilters.ContactPerson && (
-                        <Chip
-                          label={columnFilters.ContactPerson}
-                          size="small"
-                          onDelete={() => clearColumnFilter("ContactPerson")}
-                          sx={{ backgroundColor: "#fff", color: "#F69320" }}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <strong>Contact Number</strong>
-                  </TableCell>
-
-                  {/* Status Column with Filter */}
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                      <strong>Status</strong>
-                      <IconButton
-                        size="small"
-                        sx={{ color: "#fff" }}
-                        onClick={(e) => handleFilterClick(e, "Status")}
-                      >
-                        <FilterList fontSize="small" />
-                      </IconButton>
-                      {columnFilters.Status && (
-                        <Chip
-                          label={columnFilters.Status}
-                          size="small"
-                          onDelete={() => clearColumnFilter("Status")}
-                          sx={{ backgroundColor: "#fff", color: "#F69320" }}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <strong>Assign Date</strong>
-                  </TableCell>
-                  <TableCell sx={{ color: "#fff", backgroundColor: "#F69320" }}>
-                    <strong>Action Date</strong>
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedTickets.length > 0 ? (
-                  paginatedTickets.map((ticket) => (
-                    <TableRow key={ticket.Id} hover>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {ticket.Id}
-                        </Typography>
-                      </TableCell>
-                      <TableCell
-                        onClick={() => handleViewTicket(ticket.Id)}
-                        sx={{
-                          cursor: "pointer",
-                          "&:hover": {
-                            color: "#4020f6ff",
-                          },
-                        }}
-                      >
-                        {ticket.LOA}
-                      </TableCell>
-                      <TableCell>{ticket.EmpName}</TableCell>
-                      <TableCell>{ticket.Station}</TableCell>
-                      <TableCell>{ticket.ContactPerson}</TableCell>
-                      <TableCell>{ticket.ContactNumber}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={ticket.Status}
-                          color={getStatusColor(ticket.Status)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        {new Date(ticket.Date).toLocaleDateString("en-GB")}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(ticket.UpdateDateTime).toLocaleDateString(
-                          "en-GB",
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
-                      <Typography color="text.secondary">
-                        No tickets found.{" "}
-                        {hasActiveFilters && "Try clearing some filters."}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
+            {/* Date Range Filter */}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <DatePicker
+                label="From Date"
+                value={fromDate}
+                onChange={(newValue) => setFromDate(newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} size="small" sx={{ width: 140 }} />
                 )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          {/* Filter Popover */}
-          <Popover
-            open={Boolean(filterAnchorEl)}
-            anchorEl={filterAnchorEl}
-            onClose={handleFilterClose}
-            anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "left",
-            }}
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "left",
-            }}
-          >
-            <Box sx={{ p: 2, minWidth: 200 }}>
-              {currentFilterColumn === "Status" ? (
-                <FormControl fullWidth size="small">
-                  <InputLabel>Select Status</InputLabel>
-                  <Select
-                    value={columnFilters.Status}
-                    label="Select Status"
-                    onChange={(e) =>
-                      handleColumnFilterChange("Status", e.target.value)
-                    }
-                  >
-                    <MenuItem value="">All Statuses</MenuItem>
-                    {getUniqueValues("Status").map((status) => (
-                      <MenuItem key={status} value={status}>
-                        {status}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              ) : (
-                <TextField
-                  label={`Filter ${currentFilterColumn}`}
-                  value={columnFilters[currentFilterColumn] || ""}
-                  onChange={(e) =>
-                    handleColumnFilterChange(
-                      currentFilterColumn,
-                      e.target.value,
-                    )
-                  }
+              />
+              <DatePicker
+                label="To Date"
+                value={toDate}
+                onChange={(newValue) => setToDate(newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} size="small" sx={{ width: 140 }} />
+                )}
+              />
+              {(fromDate || toDate) && (
+                <IconButton
                   size="small"
-                  fullWidth
-                  autoFocus
-                />
+                  onClick={clearDateFilter}
+                  color="primary"
+                >
+                  <Clear />
+                </IconButton>
               )}
-            </Box>
-          </Popover>
+            </Stack>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Box
+            {hasActiveFilters && (
+              <Button
+                variant="outlined"
+                startIcon={<Clear />}
+                onClick={clearAllFilters}
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                Clear
+              </Button>
+            )}
+            {hasAnyData && (
+              <Button
+                variant="outlined"
+                onClick={exportToExcel}
+                disabled={exportLoading || !hasFilteredData}
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                <GetApp />
+              </Button>
+            )}
+
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setIsCreateDialogOpen(true)}
               sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                flexWrap: "wrap",
-                gap: 2,
+                whiteSpace: "nowrap",
+                backgroundColor: "#F69320",
+                color: "#fff",
+                "&:hover": { backgroundColor: "#F69320" },
               }}
             >
-              <Typography variant="body2" color="text.secondary">
-                Showing {startIndex + 1} to{" "}
-                {Math.min(endIndex, filtered.length)} of {filtered.length}{" "}
-                tickets
-                {hasActiveFilters && ` (Filtered from ${tickets.length} total)`}
-              </Typography>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={(event, value) => setPage(value)}
-                color="primary"
-                showFirstButton
-                showLastButton
-              />
-            </Box>
-          )}
-        </>
-      )}
+              New Ticket
+            </Button>
+          </Stack>
+        </Box>
 
-      {/* Create Ticket Dialog */}
-      <CreateTicketDialog
-        open={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        onTicketCreated={handleTicketCreated}
-      />
-    </Box>
+        {/* Status Summary Cards */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                backgroundColor: "#2196f3",
+                color: "white",
+                cursor: "pointer",
+                "&:hover": { backgroundColor: "#1976d2" },
+                position: "relative",
+              }}
+              onClick={() => {
+                setColumnFilters((prev) => ({ ...prev, Status: "" }));
+                setSearchTerm("");
+                setFromDate(null);
+                setToDate(null);
+              }}
+            >
+              <CardContent sx={{ textAlign: "center" }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {displayCounts.total}
+                </Typography>
+                <Typography variant="body2">Total Tickets</Typography>
+                {hasActiveFilters && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                      borderRadius: "4px",
+                      px: 0.5,
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    Filtered
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                backgroundColor: "#4caf50",
+                color: "white",
+                cursor: "pointer",
+                "&:hover": { backgroundColor: "#388e3c" },
+                position: "relative",
+              }}
+              onClick={() => {
+                setColumnFilters((prev) => ({ ...prev, Status: "Assigned" }));
+              }}
+            >
+              <CardContent sx={{ textAlign: "center" }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {displayCounts.assigned}
+                </Typography>
+                <Typography variant="body2">Assigned</Typography>
+                {hasActiveFilters && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                      borderRadius: "4px",
+                      px: 0.5,
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    Filtered
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                backgroundColor: "#ff9800",
+                color: "white",
+                cursor: "pointer",
+                "&:hover": { backgroundColor: "#f57c00" },
+                position: "relative",
+              }}
+              onClick={() => {
+                setColumnFilters((prev) => ({ ...prev, Status: "Complete" }));
+              }}
+            >
+              <CardContent sx={{ textAlign: "center" }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {displayCounts.complete}
+                </Typography>
+                <Typography variant="body2">Complete</Typography>
+                {hasActiveFilters && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                      borderRadius: "4px",
+                      px: 0.5,
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    Filtered
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <Card
+              sx={{
+                backgroundColor: "#9c27b0",
+                color: "white",
+                cursor: "pointer",
+                "&:hover": { backgroundColor: "#7b1fa2" },
+                position: "relative",
+              }}
+              onClick={() => {
+                setColumnFilters((prev) => ({ ...prev, Status: "Closed" }));
+              }}
+            >
+              <CardContent sx={{ textAlign: "center" }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {displayCounts.closed}
+                </Typography>
+                <Typography variant="body2">Closed</Typography>
+                {hasActiveFilters && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: "absolute",
+                      top: 4,
+                      right: 4,
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                      borderRadius: "4px",
+                      px: 0.5,
+                      fontSize: "0.7rem",
+                    }}
+                  >
+                    Filtered
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Export All Button - Only show when there are active filters */}
+        {hasActiveFilters && hasAnyData && (
+          <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              variant="outlined"
+              onClick={exportAllToExcel}
+              disabled={exportLoading}
+              startIcon={<GetApp />}
+              size="small"
+            >
+              Export All Data ({tickets.length} records)
+            </Button>
+          </Box>
+        )}
+
+        {/* Error Alert */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError("")}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Loading State */}
+        {loading ? (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              py: 8,
+            }}
+          >
+            <CircularProgress size={40} sx={{ mb: 2 }} />
+            <Typography color="text.secondary">Loading tickets...</Typography>
+          </Box>
+        ) : (
+          <>
+            {/* Table */}
+            <TableContainer
+              component={Paper}
+              variant="outlined"
+              sx={{ mb: 3, maxHeight: "69vh", overflow: "auto" }}
+            >
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "#F69320", color: "#fff" }}>
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <strong>ID</strong>
+                    </TableCell>
+
+                    {/* LOA Column with Filter */}
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <strong>LOA</strong>
+                        <IconButton
+                          size="small"
+                          sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                          onClick={(e) => handleFilterClick(e, "LOA")}
+                        >
+                          <FilterList fontSize="small" />
+                        </IconButton>
+                        {columnFilters.LOA && (
+                          <Chip
+                            label={columnFilters.LOA}
+                            size="small"
+                            onDelete={() => clearColumnFilter("LOA")}
+                            sx={{ backgroundColor: "#fff", color: "#F69320" }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+
+                    {/* Technician Column with Filter */}
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <strong>Technician</strong>
+                        <IconButton
+                          size="small"
+                          sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                          onClick={(e) => handleFilterClick(e, "EmpName")}
+                        >
+                          <FilterList fontSize="small" />
+                        </IconButton>
+                        {columnFilters.EmpName && (
+                          <Chip
+                            label={columnFilters.EmpName}
+                            size="small"
+                            onDelete={() => clearColumnFilter("EmpName")}
+                            sx={{ backgroundColor: "#fff", color: "#F69320" }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+
+                    {/* Station Column with Filter */}
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <strong>Station</strong>
+                        <IconButton
+                          size="small"
+                          sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                          onClick={(e) => handleFilterClick(e, "Station")}
+                        >
+                          <FilterList fontSize="small" />
+                        </IconButton>
+                        {columnFilters.Station && (
+                          <Chip
+                            label={columnFilters.Station}
+                            size="small"
+                            onDelete={() => clearColumnFilter("Station")}
+                            sx={{ backgroundColor: "#fff", color: "#F69320" }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+
+                    {/* Contact Person Column with Filter */}
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <strong>Contact Person</strong>
+                        <IconButton
+                          size="small"
+                          sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                          onClick={(e) => handleFilterClick(e, "ContactPerson")}
+                        >
+                          <FilterList fontSize="small" />
+                        </IconButton>
+                        {columnFilters.ContactPerson && (
+                          <Chip
+                            label={columnFilters.ContactPerson}
+                            size="small"
+                            onDelete={() => clearColumnFilter("ContactPerson")}
+                            sx={{ backgroundColor: "#fff", color: "#F69320" }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <strong>Contact Number</strong>
+                    </TableCell>
+
+                    {/* Status Column with Filter */}
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <strong>Status</strong>
+                        <IconButton
+                          size="small"
+                          sx={{ color: "#fff" }}
+                          onClick={(e) => handleFilterClick(e, "Status")}
+                        >
+                          <FilterList fontSize="small" />
+                        </IconButton>
+                        {columnFilters.Status && (
+                          <Chip
+                            label={columnFilters.Status}
+                            size="small"
+                            onDelete={() => clearColumnFilter("Status")}
+                            sx={{ backgroundColor: "#fff", color: "#F69320" }}
+                          />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <strong>Remarks</strong>
+                    </TableCell>
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <strong>Assign Date</strong>
+                    </TableCell>
+                    <TableCell
+                      sx={{ color: "#fff", backgroundColor: "#F69320" }}
+                    >
+                      <strong>Action Date</strong>
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {paginatedTickets.length > 0 ? (
+                    paginatedTickets.map((ticket) => (
+                      <TableRow key={ticket.Id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight="medium">
+                            {ticket.Id}
+                          </Typography>
+                        </TableCell>
+                        <TableCell
+                          onClick={() => handleViewTicket(ticket.Id)}
+                          sx={{
+                            cursor: "pointer",
+                            "&:hover": {
+                              color: "#4020f6ff",
+                            },
+                          }}
+                        >
+                          {ticket.LOA}
+                        </TableCell>
+                        <TableCell>{ticket.EmpName}</TableCell>
+                        <TableCell>{ticket.Station}</TableCell>
+                        <TableCell>{ticket.ContactPerson}</TableCell>
+                        <TableCell>{ticket.ContactNumber}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={ticket.Status}
+                            color={getStatusColor(ticket.Status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>{ticket.Remark}</TableCell>
+                        <TableCell>
+                          {new Date(ticket.Date).toLocaleDateString("en-GB")}
+                        </TableCell>
+                        <TableCell>
+                          {new Date(ticket.UpdateDateTime).toLocaleDateString(
+                            "en-GB",
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
+                        <Typography color="text.secondary">
+                          No tickets found.{" "}
+                          {hasActiveFilters && "Try clearing some filters."}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            {/* Filter Popover */}
+            <Popover
+              open={Boolean(filterAnchorEl)}
+              anchorEl={filterAnchorEl}
+              onClose={handleFilterClose}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "left",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "left",
+              }}
+            >
+              <Box sx={{ p: 2, minWidth: 200 }}>
+                {currentFilterColumn === "Status" ? (
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Select Status</InputLabel>
+                    <Select
+                      value={columnFilters.Status}
+                      label="Select Status"
+                      onChange={(e) =>
+                        handleColumnFilterChange("Status", e.target.value)
+                      }
+                    >
+                      <MenuItem value="">All Statuses</MenuItem>
+                      {getUniqueValues("Status").map((status) => (
+                        <MenuItem key={status} value={status}>
+                          {status}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <TextField
+                    label={`Filter ${currentFilterColumn}`}
+                    value={columnFilters[currentFilterColumn] || ""}
+                    onChange={(e) =>
+                      handleColumnFilterChange(
+                        currentFilterColumn,
+                        e.target.value,
+                      )
+                    }
+                    size="small"
+                    fullWidth
+                    autoFocus
+                  />
+                )}
+              </Box>
+            </Popover>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 2,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Showing {startIndex + 1} to{" "}
+                  {Math.min(endIndex, filtered.length)} of {filtered.length}{" "}
+                  tickets
+                  {hasActiveFilters &&
+                    ` (Filtered from ${tickets.length} total)`}
+                </Typography>
+                <Pagination
+                  count={totalPages}
+                  page={page}
+                  onChange={(event, value) => setPage(value)}
+                  color="primary"
+                  showFirstButton
+                  showLastButton
+                />
+              </Box>
+            )}
+          </>
+        )}
+
+        {/* Create Ticket Dialog */}
+        <CreateTicketDialog
+          open={isCreateDialogOpen}
+          onClose={() => setIsCreateDialogOpen(false)}
+          onTicketCreated={handleTicketCreated}
+        />
+      </Box>
+    </LocalizationProvider>
   );
 };
 
