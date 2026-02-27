@@ -327,6 +327,7 @@ const TicketList = () => {
         "Contact Person": ticket.ContactPerson,
         "Contact Number": ticket.ContactNumber,
         Status: ticket.Status,
+        Remark: ticket.Remark,
         "Assign Date": new Date(ticket.Date).toLocaleDateString("en-GB"),
         "Action Date": new Date(ticket.UpdateDateTime).toLocaleDateString(
           "en-GB",
@@ -346,6 +347,7 @@ const TicketList = () => {
         { wch: 20 }, // Contact Person
         { wch: 15 }, // Contact Number
         { wch: 12 }, // Status
+        { wch: 50 }, // Remark
         { wch: 12 }, // Assign Date
         { wch: 12 }, // Action Date
       ];
@@ -385,6 +387,7 @@ const TicketList = () => {
         "Contact Person": ticket.ContactPerson,
         "Contact Number": ticket.ContactNumber,
         Status: ticket.Status,
+        Remark: ticket.Remark,
         "Assign Date": new Date(ticket.Date).toLocaleDateString("en-GB"),
         "Action Date": new Date(ticket.UpdateDateTime).toLocaleDateString(
           "en-GB",
@@ -404,6 +407,7 @@ const TicketList = () => {
         { wch: 20 }, // Contact Person
         { wch: 15 }, // Contact Number
         { wch: 12 }, // Status
+        { wch: 50 }, // Remark
         { wch: 12 }, // Assign Date
         { wch: 12 }, // Action Date
       ];

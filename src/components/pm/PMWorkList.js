@@ -23,10 +23,19 @@ import {
   FormControl,
   InputLabel,
   Select,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   Grid,
   Card,
   CardContent,
   Divider,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
 } from "@mui/material";
 import {
   Search,
@@ -36,6 +45,11 @@ import {
   Clear,
   GetApp,
   DateRange,
+  Upload,
+  CloudUpload,
+  Download,
+  CheckCircle,
+  Error,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
@@ -56,6 +70,15 @@ const PMWorkList = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [error, setError] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
+
+  // Bulk task states
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [bulkResults, setBulkResults] = useState(null);
+  const [bulkError, setBulkError] = useState("");
+  const [bulkPreview, setBulkPreview] = useState([]);
 
   // Date range filter state
   const [dateRange, setDateRange] = useState({
@@ -208,13 +231,13 @@ const PMWorkList = () => {
     if (dateRange.from || dateRange.to) {
       filteredTickets = filteredTickets.filter((ticket) => {
         const ticketDate = new Date(ticket.Date);
-        ticketDate.setHours(0, 0, 0, 0); // Normalize to start of day
+        ticketDate.setHours(0, 0, 0, 0);
 
         if (dateRange.from && dateRange.to) {
           const fromDate = new Date(dateRange.from);
           fromDate.setHours(0, 0, 0, 0);
           const toDate = new Date(dateRange.to);
-          toDate.setHours(23, 59, 59, 999); // End of the day
+          toDate.setHours(23, 59, 59, 999);
           return ticketDate >= fromDate && ticketDate <= toDate;
         } else if (dateRange.from) {
           const fromDate = new Date(dateRange.from);
@@ -317,7 +340,6 @@ const PMWorkList = () => {
     setExportLoading(true);
 
     try {
-      // Prepare data for export
       const exportData = filtered.map((ticket) => ({
         "Ticket ID": ticket.Id,
         LOA: ticket.LOA,
@@ -332,34 +354,29 @@ const PMWorkList = () => {
             : new Date(ticket.UpdateDateTime).toLocaleDateString("en-GB"),
       }));
 
-      // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(exportData);
 
-      // Set column widths
       const colWidths = [
-        { wch: 10 }, // Ticket ID
-        { wch: 15 }, // LOA
-        { wch: 20 }, // Technician
-        { wch: 15 }, // Section
-        { wch: 25 }, // Station
-        { wch: 12 }, // Status
-        { wch: 12 }, // Assign Date
-        { wch: 12 }, // Visit Date
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
       ];
       ws["!cols"] = colWidths;
 
-      // Add worksheet to workbook
       XLSX.utils.book_append_sheet(wb, ws, "PM Work Tickets");
 
-      // Generate file name with timestamp
       const timestamp = new Date()
         .toISOString()
         .slice(0, 19)
         .replace(/:/g, "-");
       const fileName = `pm_work_tickets_${timestamp}.xlsx`;
 
-      // Export the file
       XLSX.writeFile(wb, fileName);
     } catch (error) {
       console.error("Error exporting to Excel:", error);
@@ -374,7 +391,6 @@ const PMWorkList = () => {
     setExportLoading(true);
 
     try {
-      // Prepare all data for export
       const exportData = tickets.map((ticket) => ({
         "Ticket ID": ticket.Id,
         LOA: ticket.LOA,
@@ -389,34 +405,29 @@ const PMWorkList = () => {
             : new Date(ticket.UpdateDateTime).toLocaleDateString("en-GB"),
       }));
 
-      // Create workbook and worksheet
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(exportData);
 
-      // Set column widths
       const colWidths = [
-        { wch: 10 }, // Ticket ID
-        { wch: 15 }, // LOA
-        { wch: 20 }, // Technician
-        { wch: 15 }, // Section
-        { wch: 25 }, // Station
-        { wch: 12 }, // Status
-        { wch: 12 }, // Assign Date
-        { wch: 12 }, // Visit Date
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
       ];
       ws["!cols"] = colWidths;
 
-      // Add worksheet to workbook
       XLSX.utils.book_append_sheet(wb, ws, "All PM Work Tickets");
 
-      // Generate file name with timestamp
       const timestamp = new Date()
         .toISOString()
         .slice(0, 19)
         .replace(/:/g, "-");
       const fileName = `all_pm_work_tickets_${timestamp}.xlsx`;
 
-      // Export the file
       XLSX.writeFile(wb, fileName);
     } catch (error) {
       console.error("Error exporting to Excel:", error);
@@ -424,6 +435,229 @@ const PMWorkList = () => {
     } finally {
       setExportLoading(false);
     }
+  };
+
+  // Parse Excel file to JSON
+  const parseExcelToJSON = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+
+          // Get first worksheet
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+          // Convert to JSON
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+          // Map the Excel columns to the required format
+          const tasks = jsonData.map((row, index) => ({
+            LOA: row["LOA"]?.toString().trim() || "",
+            Section: row["Section"]?.toString().trim() || "",
+            Station: row["Station"]?.toString().trim() || "",
+            EmpId: row["EmpId"]?.toString().trim() || "",
+            EmpName: row["EmpName"]?.toString().trim() || "",
+            Remark: row["Remark"]?.toString().trim() || "",
+            ContactPerson: row["ContactPerson"]?.toString().trim() || "",
+            ContactNumber: row["ContactNumber"]?.toString().trim() || "",
+          }));
+
+          resolve(tasks);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  // Validate task data
+  const validateTaskData = (tasks) => {
+    const errors = [];
+    const validTasks = [];
+
+    tasks.forEach((task, index) => {
+      const rowNum = index + 2; // +2 because Excel row numbers start at 1 and header is row 1
+      const rowErrors = [];
+
+      if (!task.LOA) {
+        rowErrors.push("LOA is required");
+      }
+      if (!task.Section) {
+        rowErrors.push("Section is required");
+      }
+      if (!task.Station) {
+        rowErrors.push("Station is required");
+      }
+      if (!task.EmpId) {
+        rowErrors.push("EmpId is required");
+      }
+      if (!task.EmpName) {
+        rowErrors.push("EmpName is required");
+      }
+
+      if (rowErrors.length > 0) {
+        errors.push(`Row ${rowNum}: ${rowErrors.join(", ")}`);
+      } else {
+        validTasks.push(task);
+      }
+    });
+
+    return { validTasks, errors };
+  };
+
+  // Download sample Excel for bulk tasks
+  const downloadSampleBulkExcel = () => {
+    try {
+      const sampleData = [
+        {
+          LOA: "LOA-001",
+          Section: "North Division",
+          Station: "Central Station",
+          EmpId: "EMP001",
+          EmpName: "Rahul Sharma",
+        },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+
+      const colWidths = [
+        { wch: 15 }, // LOA
+        { wch: 20 }, // Section
+        { wch: 25 }, // Station
+        { wch: 15 }, // EmpId
+        { wch: 20 }, // EmpName
+      ];
+      ws["!cols"] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, "Sample Bulk Tasks");
+      XLSX.writeFile(wb, "sample_bulk_pm_tasks.xlsx");
+    } catch (error) {
+      console.error("Error downloading sample:", error);
+      setError("Failed to download sample file");
+    }
+  };
+
+  // Handle file selection for bulk upload
+  const handleBulkFileChange = async (event) => {
+    const file = event.target.files[0];
+    setBulkFile(file);
+    setBulkError("");
+    setBulkResults(null);
+
+    // Preview the data
+    if (file) {
+      try {
+        const tasks = await parseExcelToJSON(file);
+        setBulkPreview(tasks.slice(0, 5)); // Show first 5 rows as preview
+      } catch (error) {
+        console.error("Error parsing file for preview:", error);
+        setBulkError("Error reading file. Please check the format.");
+      }
+    } else {
+      setBulkPreview([]);
+    }
+  };
+
+  // Upload bulk tasks
+  const handleBulkUpload = async () => {
+    if (!bulkFile) {
+      setBulkError("Please select a file to upload");
+      return;
+    }
+
+    setBulkUploading(true);
+    setBulkProgress(0);
+    setBulkError("");
+    setBulkResults(null);
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      setBulkProgress((prev) => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return prev;
+        }
+        return prev + 10;
+      });
+    }, 500);
+
+    try {
+      // Parse Excel file to JSON
+      const tasks = await parseExcelToJSON(bulkFile);
+
+      if (tasks.length === 0) {
+        throw new Error("No data found in the Excel file");
+      }
+
+      // Validate the data
+      const { validTasks, errors } = validateTaskData(tasks);
+
+      if (validTasks.length === 0) {
+        throw new Error("No valid tasks found. Please check the errors below.");
+      }
+
+      // Prepare the payload as per API requirement
+      const payload = { tasks: validTasks };
+
+      // Send JSON data to API
+      const response = await fetch(
+        "https://namami-infotech.com/SANCHAR/src/pm/bulk_pm_create.php",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      clearInterval(progressInterval);
+      setBulkProgress(100);
+
+      const data = await response.json();
+
+      if (data.success) {
+        setBulkResults({
+          success: validTasks.length - errors.length,
+          failed: errors.length,
+          total: tasks.length,
+          errors: errors,
+          apiErrors: data.errors || [],
+        });
+        // Refresh tickets list after successful bulk upload
+        fetchTickets();
+
+        // Clear preview after successful upload
+        setBulkPreview([]);
+        setBulkFile(null);
+      } else {
+        setBulkError(data.message || "Failed to create bulk tasks");
+      }
+    } catch (error) {
+      clearInterval(progressInterval);
+      console.error("Error in bulk upload:", error);
+      setBulkError(error.message || "Error processing file or uploading tasks");
+    } finally {
+      setBulkUploading(false);
+    }
+  };
+
+  // Close bulk dialog and reset states
+  const handleCloseBulkDialog = () => {
+    setIsBulkDialogOpen(false);
+    setBulkFile(null);
+    setBulkUploading(false);
+    setBulkProgress(0);
+    setBulkResults(null);
+    setBulkError("");
+    setBulkPreview([]);
   };
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage);
@@ -482,7 +716,6 @@ const PMWorkList = () => {
               }}
             />
 
-            {/* Date Range Filter */}
             <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
               <DatePicker
                 label="From Date"
@@ -539,6 +772,16 @@ const PMWorkList = () => {
                 Export
               </Button>
             )}
+
+            {/* Bulk Task Button */}
+            <Button
+              variant="outlined"
+              startIcon={<CloudUpload />}
+              onClick={() => setIsBulkDialogOpen(true)}
+              sx={{ whiteSpace: "nowrap" }}
+            >
+              Bulk Task
+            </Button>
 
             <Button
               variant="contained"
@@ -894,6 +1137,272 @@ const PMWorkList = () => {
           onClose={() => setIsCreateDialogOpen(false)}
           onTicketCreated={handleTicketCreated}
         />
+
+        {/* Bulk Task Dialog */}
+        <Dialog
+          open={isBulkDialogOpen}
+          onClose={handleCloseBulkDialog}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CloudUpload sx={{ color: "#F69320" }} />
+              <Typography variant="h6">Bulk Create PM Tasks</Typography>
+            </Box>
+          </DialogTitle>
+          <DialogContent dividers>
+            {/* Sample Download Section */}
+            <Card variant="outlined" sx={{ mb: 3, bgcolor: "#f5f5f5" }}>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                  Step 1: Download Sample Template
+                </Typography>
+
+                <Button
+                  variant="outlined"
+                  startIcon={<Download />}
+                  onClick={downloadSampleBulkExcel}
+                  size="small"
+                >
+                  Download Sample Excel
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Upload Section */}
+            <Card variant="outlined" sx={{ mb: 3 }}>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                  Step 2: Upload Your Excel File
+                </Typography>
+
+                <Box
+                  sx={{
+                    border: "2px dashed #ccc",
+                    borderRadius: 2,
+                    p: 3,
+                    textAlign: "center",
+                    bgcolor: "#fafafa",
+                    mb: 2,
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleBulkFileChange}
+                    style={{ display: "none" }}
+                    id="bulk-file-upload"
+                  />
+                  <label htmlFor="bulk-file-upload">
+                    <Button
+                      variant="contained"
+                      component="span"
+                      startIcon={<Upload />}
+                      sx={{ mb: 2 }}
+                    >
+                      Choose File
+                    </Button>
+                  </label>
+
+                  {bulkFile && (
+                    <Box sx={{ mt: 2 }}>
+                      <Chip
+                        label={bulkFile.name}
+                        onDelete={() => setBulkFile(null)}
+                        color="primary"
+                        variant="outlined"
+                      />
+                      <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ mt: 1 }}
+                      >
+                        Size: {(bulkFile.size / 1024).toFixed(2)} KB
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Data Preview */}
+                {bulkPreview.length > 0 && !bulkResults && (
+                  <Box sx={{ mt: 2, mb: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Preview (First {bulkPreview.length} rows):
+                    </Typography>
+                    <Paper
+                      variant="outlined"
+                      sx={{ p: 1, maxHeight: 150, overflow: "auto" }}
+                    >
+                      <List dense>
+                        {bulkPreview.map((item, index) => (
+                          <ListItem key={index}>
+                            <ListItemText
+                              primary={`${item.LOA} - ${item.EmpName} (${item.Station})`}
+                              secondary={`Section: ${item.Section}, EmpId: ${item.EmpId}`}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Paper>
+                  </Box>
+                )}
+
+                {/* Upload Progress */}
+                {bulkUploading && (
+                  <Box sx={{ width: "100%", mt: 2 }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={bulkProgress}
+                    />
+                    <Typography
+                      variant="caption"
+                      sx={{ mt: 1, display: "block" }}
+                    >
+                      Processing... {bulkProgress}%
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Error Message */}
+                {bulkError && (
+                  <Alert severity="error" sx={{ mt: 2 }}>
+                    {bulkError}
+                  </Alert>
+                )}
+
+                {/* Results Section */}
+                {bulkResults && (
+                  <Box sx={{ mt: 3 }}>
+                    <Typography
+                      variant="subtitle1"
+                      gutterBottom
+                      fontWeight="bold"
+                    >
+                      Upload Results
+                    </Typography>
+
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                      <Grid item xs={4}>
+                        <Card variant="outlined" sx={{ bgcolor: "#e8f5e8" }}>
+                          <CardContent>
+                            <Typography variant="h6" color="success.main">
+                              {bulkResults.success || 0}
+                            </Typography>
+                            <Typography variant="body2">Successful</Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Card variant="outlined" sx={{ bgcolor: "#ffebee" }}>
+                          <CardContent>
+                            <Typography variant="h6" color="error.main">
+                              {bulkResults.failed || 0}
+                            </Typography>
+                            <Typography variant="body2">Failed</Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                      <Grid item xs={4}>
+                        <Card variant="outlined" sx={{ bgcolor: "#fff3e0" }}>
+                          <CardContent>
+                            <Typography variant="h6" color="warning.main">
+                              {bulkResults.total || 0}
+                            </Typography>
+                            <Typography variant="body2">Total</Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+                    </Grid>
+
+                    {/* Validation Errors */}
+                    {bulkResults.errors && bulkResults.errors.length > 0 && (
+                      <>
+                        <Typography
+                          variant="subtitle2"
+                          gutterBottom
+                          sx={{ mt: 2, color: "error.main" }}
+                        >
+                          Validation Errors:
+                        </Typography>
+                        <Paper
+                          variant="outlined"
+                          sx={{ maxHeight: 200, overflow: "auto", p: 1 }}
+                        >
+                          <List dense>
+                            {bulkResults.errors.map((error, index) => (
+                              <ListItem key={index}>
+                                <ListItemIcon sx={{ minWidth: 36 }}>
+                                  <Error color="error" fontSize="small" />
+                                </ListItemIcon>
+                                <ListItemText
+                                  primary={error}
+                                  primaryTypographyProps={{ variant: "body2" }}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Paper>
+                      </>
+                    )}
+
+                    {/* API Errors */}
+                    {bulkResults.apiErrors &&
+                      bulkResults.apiErrors.length > 0 && (
+                        <>
+                          <Typography
+                            variant="subtitle2"
+                            gutterBottom
+                            sx={{ mt: 2, color: "warning.main" }}
+                          >
+                            API Errors:
+                          </Typography>
+                          <Paper
+                            variant="outlined"
+                            sx={{ maxHeight: 200, overflow: "auto", p: 1 }}
+                          >
+                            <List dense>
+                              {bulkResults.apiErrors.map((error, index) => (
+                                <ListItem key={index}>
+                                  <ListItemIcon sx={{ minWidth: 36 }}>
+                                    <Error color="warning" fontSize="small" />
+                                  </ListItemIcon>
+                                  <ListItemText
+                                    primary={error}
+                                    primaryTypographyProps={{
+                                      variant: "body2",
+                                    }}
+                                  />
+                                </ListItem>
+                              ))}
+                            </List>
+                          </Paper>
+                        </>
+                      )}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseBulkDialog}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={handleBulkUpload}
+              disabled={!bulkFile || bulkUploading}
+              sx={{
+                backgroundColor: "#F69320",
+                color: "#fff",
+                "&:hover": { backgroundColor: "#F69320" },
+                "&.Mui-disabled": {
+                  backgroundColor: "#ffb74d",
+                },
+              }}
+            >
+              {bulkUploading ? "Processing..." : "Upload & Create Tasks"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </LocalizationProvider>
   );
