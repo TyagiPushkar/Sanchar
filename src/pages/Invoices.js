@@ -7,6 +7,7 @@ import { Box, useMediaQuery, useTheme, Container } from "@mui/material"
 import InvoicesList from "../components/invoices/InvoicesList"
 import AddInvoices from "../components/invoices/AddInvoices"
 import EditInvoice from "../components/invoices/EditInvoice"
+import InvoiceManagement from "../components/invoices/InvoiceManagement"
 
 
 function Invoices() {
@@ -20,14 +21,14 @@ function Invoices() {
   // Determine which component to render based on the URL
   const renderContent = () => {
       if (currentPath.includes("/invoices")) {
-          return <InvoicesList />
+          return <InvoiceManagement />
       } else if (currentPath.includes("/add-invoice")) {
           return <AddInvoices />
     }
     else if (currentPath.includes("/edit-invoice")) {
           return <EditInvoice />
       }
-    return <InvoicesList /> // Default fallback
+    return <InvoiceManagement /> // Default fallback
   }
 
   // Calculate sidebar width based on state and screen size

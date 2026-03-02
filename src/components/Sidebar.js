@@ -211,12 +211,7 @@ function Sidebar() {
       icon: <EngineeringIcon />,
       feature: "amc",
     },
-    {
-      path: "/rm-work",
-      name: "RM Work",
-      icon: <CardMembershipIcon />,
-      feature: "rm",
-    },
+    
     { path: "/menus", name: "Menus", icon: <SettingsIcon />, feature: "menus" },
     {
       path: "/checkpoints",
