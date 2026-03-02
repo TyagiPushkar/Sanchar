@@ -38,6 +38,8 @@ import {
   MenuItem,
   FormHelperText,
 } from "@mui/material";
+import * as XLSX from "xlsx";
+
 import {
   Add as AddIcon,
   Edit as EditIcon,
@@ -472,7 +474,68 @@ const InvoiceManagement = () => {
       setActionLoading(false);
     }
   };
+ const handleExportToExcel = () => {
+   try {
+     // Prepare data for export
+     const exportData = filteredInvoices.map((invoice, index) => ({
+       "S.No.": index + 1,
+       "Invoice Number": invoice.invoice_number || "-",
+       "Invoice ID": invoice.id,
+       LOA: invoice.loa,
+       Section: invoice.section,
+       Station: invoice.station,
+       "Bill Type": invoice.bill_type || "-",
+       "Invoice Amount": parseFloat(invoice.invoice_amount || 0).toFixed(2),
+       "Amount Received": parseFloat(invoice.amount_received || 0).toFixed(2),
+       Balance: (
+         parseFloat(invoice.invoice_amount || 0) -
+         parseFloat(invoice.amount_received || 0)
+       ).toFixed(2),
+       Date: formatDate(invoice.date_invoice),
+       Status:
+         invoice.amount_received === "0"
+           ? "Unpaid"
+           : parseFloat(invoice.amount_received) <
+               parseFloat(invoice.invoice_amount)
+             ? "Partial"
+             : "Paid",
+       "RM ID": invoice.rm_id || "-",
+       "MB ID": invoice.mb_id || "-",
+       "No. of RX": invoice.no_of_rx || "-",
+       "RX Amount": parseFloat(invoice.rx_amount || 0).toFixed(2),
+       "No. of TX": invoice.no_of_tx || "-",
+       "TX Amount": parseFloat(invoice.tx_amount || 0).toFixed(2),
+     }));
 
+     // Create worksheet
+     const ws = XLSX.utils.json_to_sheet(exportData);
+
+     // Create workbook
+     const wb = XLSX.utils.book_new();
+     XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+
+     // Generate filename with current date
+     const date = new Date();
+     const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+     const filename = `Invoices_${dateStr}.xlsx`;
+
+     // Save file
+     XLSX.writeFile(wb, filename);
+
+     setSnackbar({
+       open: true,
+       message: `Exported ${exportData.length} invoices successfully`,
+       severity: "success",
+     });
+   } catch (error) {
+     console.error("Error exporting to Excel:", error);
+     setSnackbar({
+       open: true,
+       message: "Failed to export invoices",
+       severity: "error",
+     });
+   }
+ };
   const handleViewDetails = (invoice) => {
     setDetailDialog({ open: true, invoice });
   };
@@ -605,17 +668,35 @@ const InvoiceManagement = () => {
               )}
             </Typography>
           </Box>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleOpenCreateDialog}
-            sx={{
-              backgroundColor: colors.primary,
-              "&:hover": { backgroundColor: "#115293" },
-            }}
-          >
-            Create Invoice
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+    <Button
+      variant="outlined"
+      startIcon={<DownloadIcon />}
+      onClick={handleExportToExcel}
+      disabled={filteredInvoices.length === 0}
+      sx={{
+        borderColor: colors.success,
+        color: colors.success,
+        '&:hover': {
+          borderColor: colors.success,
+          backgroundColor: 'rgba(76, 175, 80, 0.04)',
+        },
+      }}
+    >
+      Export to Excel
+    </Button>
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={handleOpenCreateDialog}
+      sx={{
+        backgroundColor: colors.primary,
+        "&:hover": { backgroundColor: "#115293" },
+      }}
+    >
+      Create Invoice
+    </Button>
+  </Box>
         </Box>
 
         {/* Filters */}
