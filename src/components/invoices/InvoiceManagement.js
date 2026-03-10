@@ -37,6 +37,9 @@ import {
   Select,
   MenuItem,
   FormHelperText,
+  Checkbox,
+  ListItemText,
+  OutlinedInput,
 } from "@mui/material";
 import * as XLSX from "xlsx";
 
@@ -69,6 +72,17 @@ const colors = {
   headerBg: "#F69320",
 };
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
 const InvoiceManagement = () => {
   // State for invoices data
   const [invoices, setInvoices] = useState([]);
@@ -99,11 +113,11 @@ const InvoiceManagement = () => {
     data: null,
   });
 
-  // Form state for create/edit - Added invoice_number
+  // Form state for create/edit - Updated for multi-select
   const [formData, setFormData] = useState({
     LOA: "",
-    Section: "",
-    Station: "",
+    Section: [], // Now array for multi-select
+    Station: [], // Now array for multi-select
     BillType: "",
     NoOfRx: "",
     RxAmount: "",
@@ -114,7 +128,10 @@ const InvoiceManagement = () => {
     InvoiceAmount: "",
     DateInvoice: new Date().toISOString().split("T")[0],
     AmountReceived: "",
-    InvoiceNumber: "", // New field
+    InvoiceNumber: "",
+    TaxDeduction: "",
+    PenaltyDeduction: "",
+    Remarks: "",
   });
 
   // File upload states
@@ -184,7 +201,10 @@ const InvoiceManagement = () => {
           inv.section?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           inv.station?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           inv.bill_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          inv.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()),
+          inv.invoice_number
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          inv.remarks?.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
 
@@ -282,8 +302,8 @@ const InvoiceManagement = () => {
   const handleOpenCreateDialog = () => {
     setFormData({
       LOA: "",
-      Section: "",
-      Station: "",
+      Section: [], // Initialize as empty array
+      Station: [], // Initialize as empty array
       BillType: "",
       NoOfRx: "",
       RxAmount: "",
@@ -295,6 +315,9 @@ const InvoiceManagement = () => {
       DateInvoice: new Date().toISOString().split("T")[0],
       AmountReceived: "",
       InvoiceNumber: "",
+      TaxDeduction: "",
+      PenaltyDeduction: "",
+      Remarks: "",
     });
     setFiles({ rm_copy: null, mb_copy: null, invoice_copy: null });
     setFileNames({ rm_copy: "", mb_copy: "", invoice_copy: "" });
@@ -305,10 +328,18 @@ const InvoiceManagement = () => {
   };
 
   const handleOpenEditDialog = (invoice) => {
+    // Parse comma-separated strings back to arrays for editing
+    const sections = invoice.section
+      ? invoice.section.split(",").map((s) => s.trim())
+      : [];
+    const stations = invoice.station
+      ? invoice.station.split(",").map((s) => s.trim())
+      : [];
+
     setFormData({
       LOA: invoice.loa || "",
-      Section: invoice.section || "",
-      Station: invoice.station || "",
+      Section: sections,
+      Station: stations,
       BillType: invoice.bill_type || "",
       NoOfRx: invoice.no_of_rx || "",
       RxAmount: invoice.rx_amount || "",
@@ -321,6 +352,9 @@ const InvoiceManagement = () => {
         invoice.date_invoice || new Date().toISOString().split("T")[0],
       AmountReceived: invoice.amount_received || "",
       InvoiceNumber: invoice.invoice_number || "",
+      TaxDeduction: invoice.tax_deduction || "",
+      PenaltyDeduction: invoice.penalty_deduction || "",
+      Remarks: invoice.remarks || "",
     });
     setFiles({ rm_copy: null, mb_copy: null, invoice_copy: null });
     setFileNames({ rm_copy: "", mb_copy: "", invoice_copy: "" });
@@ -353,6 +387,32 @@ const InvoiceManagement = () => {
     }
   };
 
+  // Handle multi-select change for Sections
+  const handleSectionChange = (event) => {
+    const { value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      Section: typeof value === "string" ? value.split(",") : value,
+    }));
+
+    if (formErrors.Section) {
+      setFormErrors((prev) => ({ ...prev, Section: null }));
+    }
+  };
+
+  // Handle multi-select change for Stations
+  const handleStationChange = (event) => {
+    const { value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      Station: typeof value === "string" ? value.split(",") : value,
+    }));
+
+    if (formErrors.Station) {
+      setFormErrors((prev) => ({ ...prev, Station: null }));
+    }
+  };
+
   const handleFileChange = (e, fileType) => {
     const file = e.target.files[0];
     if (file) {
@@ -371,8 +431,10 @@ const InvoiceManagement = () => {
     const errors = {};
 
     if (!formData.LOA) errors.LOA = "LOA is required";
-    if (!formData.Section) errors.Section = "Section is required";
-    if (!formData.Station) errors.Station = "Station is required";
+    if (!formData.Section || formData.Section.length === 0)
+      errors.Section = "At least one section is required";
+    if (!formData.Station || formData.Station.length === 0)
+      errors.Station = "At least one station is required";
     if (!formData.InvoiceAmount)
       errors.InvoiceAmount = "Invoice amount is required";
     if (!formData.InvoiceNumber)
@@ -391,6 +453,25 @@ const InvoiceManagement = () => {
       errors.InvoiceAmount = "Must be a number";
     if (formData.AmountReceived && isNaN(formData.AmountReceived))
       errors.AmountReceived = "Must be a number";
+    if (formData.TaxDeduction && isNaN(formData.TaxDeduction))
+      errors.TaxDeduction = "Must be a number";
+    if (formData.PenaltyDeduction && isNaN(formData.PenaltyDeduction))
+      errors.PenaltyDeduction = "Must be a number";
+
+    // Validate amount received + tax deduction + penalty deduction <= invoice amount
+    const invoiceAmount = parseFloat(formData.InvoiceAmount) || 0;
+    const amountReceived = parseFloat(formData.AmountReceived) || 0;
+    const taxDeduction = parseFloat(formData.TaxDeduction) || 0;
+    const penaltyDeduction = parseFloat(formData.PenaltyDeduction) || 0;
+
+    const totalDeductions = amountReceived + taxDeduction + penaltyDeduction;
+
+    if (totalDeductions > invoiceAmount) {
+      errors.AmountReceived =
+        "Total of Amount Received + Tax Deduction + Penalty Deduction cannot exceed Invoice Amount";
+      errors.TaxDeduction = " ";
+      errors.PenaltyDeduction = " ";
+    }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -411,14 +492,17 @@ const InvoiceManagement = () => {
 
       const formPayload = new FormData();
 
-      // Add all text fields
+      // Add all text fields - convert arrays to comma-separated strings
       Object.keys(formData).forEach((key) => {
-        if (
-          formData[key] !== null &&
-          formData[key] !== undefined &&
-          formData[key] !== ""
-        ) {
-          formPayload.append(key, formData[key]);
+        if (formData[key] !== null && formData[key] !== undefined) {
+          if (Array.isArray(formData[key])) {
+            // Convert array to comma-separated string
+            if (formData[key].length > 0) {
+              formPayload.append(key, formData[key].join(", "));
+            }
+          } else if (formData[key] !== "") {
+            formPayload.append(key, formData[key]);
+          }
         }
       });
 
@@ -474,68 +558,79 @@ const InvoiceManagement = () => {
       setActionLoading(false);
     }
   };
- const handleExportToExcel = () => {
-   try {
-     // Prepare data for export
-     const exportData = filteredInvoices.map((invoice, index) => ({
-       "S.No.": index + 1,
-       "Invoice Number": invoice.invoice_number || "-",
-       "Invoice ID": invoice.id,
-       LOA: invoice.loa,
-       Section: invoice.section,
-       Station: invoice.station,
-       "Bill Type": invoice.bill_type || "-",
-       "Invoice Amount": parseFloat(invoice.invoice_amount || 0).toFixed(2),
-       "Amount Received": parseFloat(invoice.amount_received || 0).toFixed(2),
-       Balance: (
-         parseFloat(invoice.invoice_amount || 0) -
-         parseFloat(invoice.amount_received || 0)
-       ).toFixed(2),
-       Date: formatDate(invoice.date_invoice),
-       Status:
-         invoice.amount_received === "0"
-           ? "Unpaid"
-           : parseFloat(invoice.amount_received) <
-               parseFloat(invoice.invoice_amount)
-             ? "Partial"
-             : "Paid",
-       "RM ID": invoice.rm_id || "-",
-       "MB ID": invoice.mb_id || "-",
-       "No. of RX": invoice.no_of_rx || "-",
-       "RX Amount": parseFloat(invoice.rx_amount || 0).toFixed(2),
-       "No. of TX": invoice.no_of_tx || "-",
-       "TX Amount": parseFloat(invoice.tx_amount || 0).toFixed(2),
-     }));
 
-     // Create worksheet
-     const ws = XLSX.utils.json_to_sheet(exportData);
+  const handleExportToExcel = () => {
+    try {
+      // Prepare data for export
+      const exportData = filteredInvoices.map((invoice, index) => {
+        const invoiceAmount = parseFloat(invoice.invoice_amount || 0);
+        const amountReceived = parseFloat(invoice.amount_received || 0);
+        const taxDeduction = parseFloat(invoice.tax_deduction || 0);
+        const penaltyDeduction = parseFloat(invoice.penalty_deduction || 0);
+        const netPayable = amountReceived + taxDeduction + penaltyDeduction;
+        const balance = invoiceAmount - netPayable;
 
-     // Create workbook
-     const wb = XLSX.utils.book_new();
-     XLSX.utils.book_append_sheet(wb, ws, "Invoices");
+        return {
+          "S.No.": index + 1,
+          "Invoice Number": invoice.invoice_number || "-",
+          "Invoice ID": invoice.id,
+          LOA: invoice.loa,
+          Section: invoice.section || "-",
+          Station: invoice.station || "-",
+          "Bill Type": invoice.bill_type || "-",
+          "Invoice Amount": invoiceAmount.toFixed(2),
+          "Amount Received": amountReceived.toFixed(2),
+          "Tax Deduction": taxDeduction.toFixed(2),
+          "Penalty Deduction": penaltyDeduction.toFixed(2),
+          "Net Payable": netPayable.toFixed(2),
+          Balance: balance.toFixed(2),
+          Date: formatDate(invoice.date_invoice),
+          Status:
+            amountReceived === 0 && taxDeduction === 0 && penaltyDeduction === 0
+              ? "Unpaid"
+              : netPayable < invoiceAmount
+                ? "Partial"
+                : "Paid",
+          "RM ID": invoice.rm_id || "-",
+          "MB ID": invoice.mb_id || "-",
+          "No. of RX": invoice.no_of_rx || "-",
+          "RX Amount": parseFloat(invoice.rx_amount || 0).toFixed(2),
+          "No. of TX": invoice.no_of_tx || "-",
+          "TX Amount": parseFloat(invoice.tx_amount || 0).toFixed(2),
+          Remarks: invoice.remarks || "-",
+        };
+      });
 
-     // Generate filename with current date
-     const date = new Date();
-     const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
-     const filename = `Invoices_${dateStr}.xlsx`;
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData);
 
-     // Save file
-     XLSX.writeFile(wb, filename);
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Invoices");
 
-     setSnackbar({
-       open: true,
-       message: `Exported ${exportData.length} invoices successfully`,
-       severity: "success",
-     });
-   } catch (error) {
-     console.error("Error exporting to Excel:", error);
-     setSnackbar({
-       open: true,
-       message: "Failed to export invoices",
-       severity: "error",
-     });
-   }
- };
+      // Generate filename with current date
+      const date = new Date();
+      const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getDate().toString().padStart(2, "0")}`;
+      const filename = `Invoices_${dateStr}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+
+      setSnackbar({
+        open: true,
+        message: `Exported ${exportData.length} invoices successfully`,
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to export invoices",
+        severity: "error",
+      });
+    }
+  };
+
   const handleViewDetails = (invoice) => {
     setDetailDialog({ open: true, invoice });
   };
@@ -571,7 +666,7 @@ const InvoiceManagement = () => {
   };
 
   const formatCurrency = (amount) => {
-    if (!amount) return "-";
+    if (!amount && amount !== 0) return "-";
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
@@ -590,9 +685,13 @@ const InvoiceManagement = () => {
 
   const getStatusChip = (invoice) => {
     const amountReceived = parseFloat(invoice.amount_received || 0);
+    const taxDeduction = parseFloat(invoice.tax_deduction || 0);
+    const penaltyDeduction = parseFloat(invoice.penalty_deduction || 0);
     const invoiceAmount = parseFloat(invoice.invoice_amount || 0);
 
-    if (amountReceived === 0) {
+    const netPayable = amountReceived + taxDeduction + penaltyDeduction;
+
+    if (netPayable === 0) {
       return (
         <Chip
           label="Unpaid"
@@ -600,7 +699,7 @@ const InvoiceManagement = () => {
           sx={{ backgroundColor: colors.error, color: "white" }}
         />
       );
-    } else if (amountReceived < invoiceAmount) {
+    } else if (netPayable < invoiceAmount) {
       return (
         <Chip
           label="Partial"
@@ -617,6 +716,13 @@ const InvoiceManagement = () => {
         />
       );
     }
+  };
+
+  const calculateNetPayable = (invoice) => {
+    const amountReceived = parseFloat(invoice.amount_received || 0);
+    const taxDeduction = parseFloat(invoice.tax_deduction || 0);
+    const penaltyDeduction = parseFloat(invoice.penalty_deduction || 0);
+    return amountReceived + taxDeduction + penaltyDeduction;
   };
 
   if (loading) {
@@ -668,35 +774,35 @@ const InvoiceManagement = () => {
               )}
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-    <Button
-      variant="outlined"
-      startIcon={<DownloadIcon />}
-      onClick={handleExportToExcel}
-      disabled={filteredInvoices.length === 0}
-      sx={{
-        borderColor: colors.success,
-        color: colors.success,
-        '&:hover': {
-          borderColor: colors.success,
-          backgroundColor: 'rgba(76, 175, 80, 0.04)',
-        },
-      }}
-    >
-      Export to Excel
-    </Button>
-    <Button
-      variant="contained"
-      startIcon={<AddIcon />}
-      onClick={handleOpenCreateDialog}
-      sx={{
-        backgroundColor: colors.primary,
-        "&:hover": { backgroundColor: "#115293" },
-      }}
-    >
-      Create Invoice
-    </Button>
-  </Box>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={handleExportToExcel}
+              disabled={filteredInvoices.length === 0}
+              sx={{
+                borderColor: colors.success,
+                color: colors.success,
+                "&:hover": {
+                  borderColor: colors.success,
+                  backgroundColor: "rgba(76, 175, 80, 0.04)",
+                },
+              }}
+            >
+              Export to Excel
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleOpenCreateDialog}
+              sx={{
+                backgroundColor: colors.primary,
+                "&:hover": { backgroundColor: "#115293" },
+              }}
+            >
+              Create Invoice
+            </Button>
+          </Box>
         </Box>
 
         {/* Filters */}
@@ -803,7 +909,6 @@ const InvoiceManagement = () => {
                     <TableCell sx={{ color: "#fff", fontWeight: 600 }}>
                       Invoice #
                     </TableCell>
-
                     <TableCell sx={{ color: "#fff", fontWeight: 600 }}>
                       LOA
                     </TableCell>
@@ -815,6 +920,9 @@ const InvoiceManagement = () => {
                     </TableCell>
                     <TableCell sx={{ color: "#fff", fontWeight: 600 }}>
                       Bill Type
+                    </TableCell>
+                    <TableCell sx={{ color: "#fff", fontWeight: 600 }}>
+                      TX/RX
                     </TableCell>
                     <TableCell
                       sx={{ color: "#fff", fontWeight: 600 }}
@@ -828,9 +936,21 @@ const InvoiceManagement = () => {
                     >
                       Received
                     </TableCell>
-                    <TableCell sx={{ color: "#fff", fontWeight: 600 }}>
-                      Date
+                    <TableCell
+                      sx={{ color: "#fff", fontWeight: 600 }}
+                      align="right"
+                    >
+                      Tax Ded.
                     </TableCell>
+                    <TableCell
+                      sx={{ color: "#fff", fontWeight: 600 }}
+                      align="right"
+                    >
+                      Penalty
+                    </TableCell>
+                    {/* <TableCell sx={{ color: "#fff", fontWeight: 600 }}>
+                      Date
+                    </TableCell> */}
                     <TableCell sx={{ color: "#fff", fontWeight: 600 }}>
                       Status
                     </TableCell>
@@ -865,18 +985,24 @@ const InvoiceManagement = () => {
                             {invoice.invoice_number || "-"}
                           </Typography>
                         </TableCell>
-
                         <TableCell sx={{ color: colors.textPrimary }}>
                           {invoice.loa}
                         </TableCell>
                         <TableCell sx={{ color: colors.textPrimary }}>
-                          {invoice.section}
+                          {invoice.section && invoice.section.length > 30
+                            ? `${invoice.section.substring(0, 30)}...`
+                            : invoice.section || "-"}
                         </TableCell>
                         <TableCell sx={{ color: colors.textPrimary }}>
-                          {invoice.station}
+                          {invoice.station && invoice.station.length > 30
+                            ? `${invoice.station.substring(0, 30)}...`
+                            : invoice.station || "-"}
                         </TableCell>
                         <TableCell sx={{ color: colors.textSecondary }}>
                           {invoice.bill_type || "-"}
+                        </TableCell>
+                        <TableCell sx={{ color: colors.textSecondary }}>
+                          {invoice.no_of_tx || "-"}/{invoice.no_of_rx || "-"}
                         </TableCell>
                         <TableCell align="right" sx={{ fontWeight: 500 }}>
                           {formatCurrency(invoice.invoice_amount)}
@@ -887,9 +1013,21 @@ const InvoiceManagement = () => {
                         >
                           {formatCurrency(invoice.amount_received)}
                         </TableCell>
-                        <TableCell>
-                          {formatDate(invoice.date_invoice)}
+                        <TableCell
+                          align="right"
+                          sx={{ color: colors.warning, fontWeight: 500 }}
+                        >
+                          {formatCurrency(invoice.tax_deduction)}
                         </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ color: colors.error, fontWeight: 500 }}
+                        >
+                          {formatCurrency(invoice.penalty_deduction)}
+                        </TableCell>
+                        {/* <TableCell>
+                          {formatDate(invoice.date_invoice)}
+                        </TableCell> */}
                         <TableCell>{getStatusChip(invoice)}</TableCell>
                         <TableCell align="center">
                           <Box
@@ -972,7 +1110,7 @@ const InvoiceManagement = () => {
         </DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0 }}>
-            {/* Invoice Number - New Field */}
+            {/* Invoice Number */}
             <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
@@ -996,8 +1134,8 @@ const InvoiceManagement = () => {
                   setFormData((prev) => ({
                     ...prev,
                     LOA: newValue || "",
-                    Section: "",
-                    Station: "",
+                    Section: [],
+                    Station: [],
                   }));
                 }}
                 renderInput={(params) => (
@@ -1012,56 +1150,75 @@ const InvoiceManagement = () => {
               />
             </Grid>
 
-            {/* Section Autocomplete - Filtered by LOA */}
+            {/* Section Multi-Select */}
             <Grid item xs={12} md={6}>
-              <Autocomplete
-                options={filteredSections}
-                value={formData.Section}
-                onChange={(event, newValue) => {
-                  setFormData((prev) => ({ ...prev, Section: newValue || "" }));
-                }}
-                disabled={!formData.LOA}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Section *"
-                    size="small"
-                    error={!!formErrors.Section}
-                    helperText={
-                      formErrors.Section ||
-                      (!formData.LOA ? "Select LOA first" : "")
-                    }
-                  />
+              <FormControl fullWidth size="small" error={!!formErrors.Section}>
+                <InputLabel id="section-multiselect-label">
+                  Sections *
+                </InputLabel>
+                <Select
+                  labelId="section-multiselect-label"
+                  multiple
+                  value={formData.Section}
+                  onChange={handleSectionChange}
+                  input={<OutlinedInput label="Sections *" />}
+                  renderValue={(selected) => selected.join(", ")}
+                  MenuProps={MenuProps}
+                  disabled={!formData.LOA}
+                >
+                  {filteredSections.map((section) => (
+                    <MenuItem key={section} value={section}>
+                      <Checkbox
+                        checked={formData.Section.indexOf(section) > -1}
+                      />
+                      <ListItemText primary={section} />
+                    </MenuItem>
+                  ))}
+                </Select>
+                {formErrors.Section && (
+                  <FormHelperText>{formErrors.Section}</FormHelperText>
                 )}
-              />
+                {!formData.LOA && (
+                  <FormHelperText>Select LOA first</FormHelperText>
+                )}
+              </FormControl>
             </Grid>
 
-            {/* Station Autocomplete - Filtered by LOA */}
+            {/* Station Multi-Select */}
             <Grid item xs={12} md={6}>
-              <Autocomplete
-                options={filteredStations}
-                value={formData.Station}
-                onChange={(event, newValue) => {
-                  setFormData((prev) => ({ ...prev, Station: newValue || "" }));
-                }}
-                disabled={!formData.LOA}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Station *"
-                    size="small"
-                    error={!!formErrors.Station}
-                    helperText={
-                      formErrors.Station ||
-                      (!formData.LOA ? "Select LOA first" : "")
-                    }
-                  />
+              <FormControl fullWidth size="small" error={!!formErrors.Station}>
+                <InputLabel id="station-multiselect-label">
+                  Stations *
+                </InputLabel>
+                <Select
+                  labelId="station-multiselect-label"
+                  multiple
+                  value={formData.Station}
+                  onChange={handleStationChange}
+                  input={<OutlinedInput label="Stations *" />}
+                  renderValue={(selected) => selected.join(", ")}
+                  MenuProps={MenuProps}
+                  disabled={!formData.LOA}
+                >
+                  {filteredStations.map((station) => (
+                    <MenuItem key={station} value={station}>
+                      <Checkbox
+                        checked={formData.Station.indexOf(station) > -1}
+                      />
+                      <ListItemText primary={station} />
+                    </MenuItem>
+                  ))}
+                </Select>
+                {formErrors.Station && (
+                  <FormHelperText>{formErrors.Station}</FormHelperText>
                 )}
-              />
+                {!formData.LOA && (
+                  <FormHelperText>Select LOA first</FormHelperText>
+                )}
+              </FormControl>
             </Grid>
 
             {/* Bill Type */}
-            {/* Bill Type Dropdown */}
             <Grid item xs={12} md={4}>
               <FormControl fullWidth size="small" error={!!formErrors.BillType}>
                 <InputLabel>Bill Type</InputLabel>
@@ -1200,6 +1357,153 @@ const InvoiceManagement = () => {
                 error={!!formErrors.AmountReceived}
                 helperText={formErrors.AmountReceived}
               />
+            </Grid>
+
+            {/* Tax Deduction */}
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Tax Deduction"
+                name="TaxDeduction"
+                type="number"
+                value={formData.TaxDeduction}
+                onChange={handleInputChange}
+                error={!!formErrors.TaxDeduction}
+                helperText={formErrors.TaxDeduction}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">₹</InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+
+            {/* Penalty Deduction */}
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Penalty Deduction"
+                name="PenaltyDeduction"
+                type="number"
+                value={formData.PenaltyDeduction}
+                onChange={handleInputChange}
+                error={!!formErrors.PenaltyDeduction}
+                helperText={formErrors.PenaltyDeduction}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">₹</InputAdornment>
+                  ),
+                }}
+              />
+            </Grid>
+
+            {/* Remarks */}
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                size="small"
+                label="Remarks"
+                name="Remarks"
+                value={formData.Remarks}
+                onChange={handleInputChange}
+                error={!!formErrors.Remarks}
+                helperText={formErrors.Remarks}
+                multiline
+                rows={2}
+                placeholder="Enter any additional remarks or notes"
+              />
+            </Grid>
+
+            {/* Summary of Deductions */}
+            <Grid item xs={12}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  backgroundColor: colors.background,
+                  borderRadius: 1,
+                }}
+              >
+                <Typography variant="subtitle2" gutterBottom>
+                  Payment Summary
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={3}>
+                    <Typography variant="caption" color="textSecondary">
+                      Invoice Amount:
+                    </Typography>
+                    <Typography variant="body2" fontWeight={600}>
+                      {formatCurrency(formData.InvoiceAmount)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="caption" color="textSecondary">
+                      Amount Received:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.success }}>
+                      {formatCurrency(formData.AmountReceived)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="caption" color="textSecondary">
+                      Tax Deduction:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.warning }}>
+                      {formatCurrency(formData.TaxDeduction)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={3}>
+                    <Typography variant="caption" color="textSecondary">
+                      Penalty Deduction:
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: colors.error }}>
+                      {formatCurrency(formData.PenaltyDeduction)}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Divider sx={{ my: 1 }} />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="textSecondary">
+                      Net Payable:
+                    </Typography>
+                    <Typography variant="h6">
+                      {formatCurrency(
+                        (parseFloat(formData.AmountReceived) || 0) +
+                          (parseFloat(formData.TaxDeduction) || 0) +
+                          (parseFloat(formData.PenaltyDeduction) || 0),
+                      )}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" color="textSecondary">
+                      Balance:
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        color:
+                          (parseFloat(formData.InvoiceAmount) || 0) -
+                            ((parseFloat(formData.AmountReceived) || 0) +
+                              (parseFloat(formData.TaxDeduction) || 0) +
+                              (parseFloat(formData.PenaltyDeduction) || 0)) >
+                          0
+                            ? colors.warning
+                            : colors.success,
+                      }}
+                    >
+                      {formatCurrency(
+                        (parseFloat(formData.InvoiceAmount) || 0) -
+                          ((parseFloat(formData.AmountReceived) || 0) +
+                            (parseFloat(formData.TaxDeduction) || 0) +
+                            (parseFloat(formData.PenaltyDeduction) || 0)),
+                      )}
+                    </Typography>
+                  </Grid>
+                </Grid>
+              </Paper>
             </Grid>
 
             {/* File Uploads */}
@@ -1392,6 +1696,7 @@ const InvoiceManagement = () => {
                 sx={{ mb: 2 }}
               >
                 <Tab label="Invoice Details" />
+                <Tab label="Payment Details" />
                 <Tab label="Documents" />
               </Tabs>
 
@@ -1418,7 +1723,7 @@ const InvoiceManagement = () => {
                       Section
                     </Typography>
                     <Typography variant="body1" gutterBottom>
-                      {detailDialog.invoice.section}
+                      {detailDialog.invoice.section || "-"}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -1426,7 +1731,7 @@ const InvoiceManagement = () => {
                       Station
                     </Typography>
                     <Typography variant="body1" gutterBottom>
-                      {detailDialog.invoice.station}
+                      {detailDialog.invoice.station || "-"}
                     </Typography>
                   </Grid>
                   <Grid item xs={6}>
@@ -1435,6 +1740,14 @@ const InvoiceManagement = () => {
                     </Typography>
                     <Typography variant="body1" gutterBottom>
                       {detailDialog.invoice.bill_type || "-"}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="subtitle2" color="textSecondary">
+                      Date
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                      {formatDate(detailDialog.invoice.date_invoice)}
                     </Typography>
                   </Grid>
 
@@ -1495,62 +1808,168 @@ const InvoiceManagement = () => {
                       {detailDialog.invoice.mb_id || "-"}
                     </Typography>
                   </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      Date
-                    </Typography>
-                    <Typography variant="body1" gutterBottom>
-                      {formatDate(detailDialog.invoice.date_invoice)}
-                    </Typography>
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <Divider sx={{ my: 1 }} />
-                  </Grid>
-
-                  <Grid item xs={4}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      Invoice Amount
-                    </Typography>
-                    <Typography variant="h6" sx={{ color: colors.primary }}>
-                      {formatCurrency(detailDialog.invoice.invoice_amount)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      Amount Received
-                    </Typography>
-                    <Typography variant="h6" sx={{ color: colors.success }}>
-                      {formatCurrency(detailDialog.invoice.amount_received)}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <Typography variant="subtitle2" color="textSecondary">
-                      Balance
-                    </Typography>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        color:
-                          parseFloat(detailDialog.invoice.invoice_amount) -
-                            parseFloat(
-                              detailDialog.invoice.amount_received || 0,
-                            ) >
-                          0
-                            ? colors.warning
-                            : colors.success,
-                      }}
-                    >
-                      {formatCurrency(
-                        parseFloat(detailDialog.invoice.invoice_amount) -
-                          parseFloat(detailDialog.invoice.amount_received || 0),
-                      )}
-                    </Typography>
-                  </Grid>
                 </Grid>
               )}
 
               {tabValue === 1 && (
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Typography variant="h6" gutterBottom>
+                      Payment Summary
+                    </Typography>
+                  </Grid>
+
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="subtitle2"
+                          color="textSecondary"
+                          gutterBottom
+                        >
+                          Invoice Amount
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: colors.primary }}>
+                          {formatCurrency(detailDialog.invoice.invoice_amount)}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="subtitle2"
+                          color="textSecondary"
+                          gutterBottom
+                        >
+                          Amount Received
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: colors.success }}>
+                          {formatCurrency(detailDialog.invoice.amount_received)}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="subtitle2"
+                          color="textSecondary"
+                          gutterBottom
+                        >
+                          Tax Deduction
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: colors.warning }}>
+                          {formatCurrency(detailDialog.invoice.tax_deduction)}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={6}>
+                    <Card variant="outlined">
+                      <CardContent>
+                        <Typography
+                          variant="subtitle2"
+                          color="textSecondary"
+                          gutterBottom
+                        >
+                          Penalty Deduction
+                        </Typography>
+                        <Typography variant="h5" sx={{ color: colors.error }}>
+                          {formatCurrency(
+                            detailDialog.invoice.penalty_deduction,
+                          )}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Card
+                      variant="outlined"
+                      sx={{ backgroundColor: colors.background }}
+                    >
+                      <CardContent>
+                        <Grid container spacing={2}>
+                          <Grid item xs={4}>
+                            <Typography
+                              variant="subtitle2"
+                              color="textSecondary"
+                            >
+                              Net Payable
+                            </Typography>
+                            <Typography variant="h6">
+                              {formatCurrency(
+                                calculateNetPayable(detailDialog.invoice),
+                              )}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={4}>
+                            <Typography
+                              variant="subtitle2"
+                              color="textSecondary"
+                            >
+                              Balance
+                            </Typography>
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                color:
+                                  parseFloat(
+                                    detailDialog.invoice.invoice_amount,
+                                  ) -
+                                    calculateNetPayable(detailDialog.invoice) >
+                                  0
+                                    ? colors.warning
+                                    : colors.success,
+                              }}
+                            >
+                              {formatCurrency(
+                                parseFloat(
+                                  detailDialog.invoice.invoice_amount,
+                                ) - calculateNetPayable(detailDialog.invoice),
+                              )}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={4}>
+                            <Typography
+                              variant="subtitle2"
+                              color="textSecondary"
+                            >
+                              Status
+                            </Typography>
+                            <Box sx={{ mt: 1 }}>
+                              {getStatusChip(detailDialog.invoice)}
+                            </Box>
+                          </Grid>
+                        </Grid>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography
+                      variant="subtitle2"
+                      color="textSecondary"
+                      gutterBottom
+                    >
+                      Remarks
+                    </Typography>
+                    <Paper variant="outlined" sx={{ p: 2 }}>
+                      <Typography>
+                        {detailDialog.invoice.remarks || "No remarks added"}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              )}
+
+              {tabValue === 2 && (
                 <Grid container spacing={2}>
                   <Grid item xs={12} md={4}>
                     <Card variant="outlined">

@@ -230,7 +230,7 @@ const DashboardData = () => {
     ) || 0;
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 0 }}>
       {/* Header */}
       <Box
         sx={{
@@ -269,7 +269,7 @@ const DashboardData = () => {
       {/* Summary Cards */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Total Summary Card */}
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} md={3}>
           <Card
             elevation={0}
             sx={{
@@ -311,7 +311,7 @@ const DashboardData = () => {
 
         {/* Category Summary Cards */}
         {dashboardData?.summary?.map((item) => (
-          <Grid item xs={12} md={4} key={item.category}>
+          <Grid item xs={12} md={3} key={item.category}>
             <Card
               elevation={0}
               sx={{
@@ -396,115 +396,7 @@ const DashboardData = () => {
         ))}
       </Grid>
 
-      {/* Charts Section */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Bar Chart */}
-        <Grid item xs={12} md={7}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              gutterBottom
-              sx={{ color: colors.textPrimary }}
-            >
-              Amount Distribution by Category
-            </Typography>
-            <Box sx={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: colors.textSecondary, fontSize: 12 }}
-                  />
-                  <YAxis
-                    tick={{ fill: colors.textSecondary, fontSize: 12 }}
-                    tickFormatter={(value) =>
-                      `₹${(value / 1000000).toFixed(1)}M`
-                    }
-                  />
-                  <RechartsTooltip
-                    formatter={(value) => [formatCurrency(value), "Amount"]}
-                    contentStyle={{
-                      backgroundColor: colors.paper,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 4,
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="amount" name="Amount" fill={colors.primary}>
-                    {chartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={CATEGORY_COLORS[entry.category]}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Pie Chart */}
-        <Grid item xs={12} md={5}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              border: `1px solid ${colors.border}`,
-              borderRadius: 2,
-            }}
-          >
-            <Typography
-              variant="h6"
-              gutterBottom
-              sx={{ color: colors.textPrimary }}
-            >
-              Records Distribution
-            </Typography>
-            <Box sx={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name}: ${(percent * 100).toFixed(1)}%`
-                    }
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={CATEGORY_COLORS[entry.category]}
-                      />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    formatter={(value) => [formatCurrency(value), "Amount"]}
-                    contentStyle={{
-                      backgroundColor: colors.paper,
-                      border: `1px solid ${colors.border}`,
-                      borderRadius: 4,
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+     
 
       {/* Detailed Tables */}
       <Grid container spacing={3}>
@@ -535,7 +427,7 @@ const DashboardData = () => {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <PendingIcon sx={{ color: colors.pending }} />
                   <Typography variant="h6" sx={{ color: colors.textPrimary }}>
-                    First Supply Pending (
+                    Goods Supply Payment Pending (
                     {dashboardData?.first_supply_pending?.length || 0})
                   </Typography>
                 </Box>
@@ -644,7 +536,7 @@ const DashboardData = () => {
                     <TableRow sx={{ backgroundColor: colors.background }}>
                       {/* <TableCell>Activity ID</TableCell> */}
                       <TableCell>LOA Number</TableCell>
-                      <TableCell>AMC Year</TableCell>
+                      <TableCell>AMC</TableCell>
                       <TableCell>Bill Start Date</TableCell>
                       <TableCell align="right">Bill Amount</TableCell>
                       <TableCell>Last Updated</TableCell>
