@@ -230,7 +230,7 @@ const DashboardData = () => {
     ) || 0;
 
   return (
-    <Box sx={{ p: 0 }}>
+    <Box sx={{ pb: 2 }}>
       {/* Header */}
       <Box
         sx={{
@@ -396,8 +396,6 @@ const DashboardData = () => {
         ))}
       </Grid>
 
-     
-
       {/* Detailed Tables */}
       <Grid container spacing={3}>
         {/* First Supply Pending Table */}
@@ -435,12 +433,19 @@ const DashboardData = () => {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: colors.background }}>
+                    <TableRow
+                      sx={{ backgroundColor: colors.pending, color: "white" }}
+                    >
                       {/* <TableCell>Activity ID</TableCell> */}
-                      <TableCell>LOA Number</TableCell>
-                      <TableCell>Bill Raised Date</TableCell>
-                      <TableCell align="right">Bill Amount</TableCell>
-                      <TableCell>Last Updated</TableCell>
+                      <TableCell sx={{ color: "white" }}>LOA Number</TableCell>
+                      <TableCell sx={{ color: "white" }}>Invoice No.</TableCell>
+                      <TableCell sx={{ color: "white" }}>Tx/Rx Qty.</TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Invoice Amount
+                      </TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Received Amount
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -458,7 +463,7 @@ const DashboardData = () => {
                           </Typography>
                         </TableCell> */}
                         <TableCell>
-                          <Tooltip title={item.LOA_Number}>
+                          <Tooltip title={item.loa}>
                             <Typography
                               variant="body2"
                               sx={{
@@ -468,26 +473,25 @@ const DashboardData = () => {
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {item.LOA_Number}
+                              {item.loa}
                             </Typography>
                           </Tooltip>
                         </TableCell>
+                        <TableCell>{item.invoice_number}</TableCell>
                         <TableCell>
-                          {formatDate(item.bill_raised_date)}
+                          {item.no_of_tx}/{item.no_of_rx}
                         </TableCell>
                         <TableCell
-                          align="right"
                           sx={{ fontWeight: 500, color: colors.pending }}
                         >
-                          {formatCurrency(item.bill_amount)}
+                          {formatCurrency(item.invoice_amount)}
                         </TableCell>
                         <TableCell>
-                          <Typography
-                            variant="caption"
-                            sx={{ color: colors.textSecondary }}
-                          >
-                            {new Date(item.last_updated).toLocaleString()}
-                          </Typography>
+                          {formatCurrency(
+                            +item.amount_received +
+                              +item.penalty_deduction +
+                              +item.tax_deduction,
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -533,13 +537,18 @@ const DashboardData = () => {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: colors.background }}>
+                    <TableRow sx={{ backgroundColor: colors.info }}>
                       {/* <TableCell>Activity ID</TableCell> */}
-                      <TableCell>LOA Number</TableCell>
-                      <TableCell>AMC</TableCell>
-                      <TableCell>Bill Start Date</TableCell>
-                      <TableCell align="right">Bill Amount</TableCell>
-                      <TableCell>Last Updated</TableCell>
+                      <TableCell sx={{ color: "white" }}>LOA Number</TableCell>
+                      <TableCell sx={{ color: "white" }}>Period</TableCell>
+                      <TableCell sx={{ color: "white" }}>AMC</TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Bill Start Date
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: "white" }}>
+                        Bill Amount
+                      </TableCell>
+                      <TableCell sx={{ color: "white" }}>Remarks</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -571,6 +580,7 @@ const DashboardData = () => {
                             </Typography>
                           </Tooltip>
                         </TableCell>
+                        <TableCell>{item.period}</TableCell>
                         <TableCell>
                           <Chip
                             label={item.amc_year}
@@ -596,7 +606,7 @@ const DashboardData = () => {
                             variant="caption"
                             sx={{ color: colors.textSecondary }}
                           >
-                            {new Date(item.last_updated).toLocaleString()}
+                            {item.remarks}
                           </Typography>
                         </TableCell>
                       </TableRow>
@@ -642,15 +652,20 @@ const DashboardData = () => {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: colors.background }}>
+                    <TableRow sx={{ backgroundColor: colors.error }}>
                       {/* <TableCell>Activity ID</TableCell> */}
-                      <TableCell>LOA Number</TableCell>
-                      <TableCell>AMC Year</TableCell>
-                      <TableCell>Invoice Date</TableCell>
-                      <TableCell>Invoice Number</TableCell>
-                      <TableCell align="right">Bill Amount</TableCell>
-                      <TableCell align="center">Ageing (Days)</TableCell>
-                      <TableCell>Last Updated</TableCell>
+                      <TableCell sx={{ color: "white" }}>LOA Number</TableCell>
+                      <TableCell sx={{ color: "white" }}>Period</TableCell>
+                      <TableCell sx={{ color: "white" }}>AMC</TableCell>
+                      <TableCell sx={{ color: "white" }}>Invoice Date</TableCell>
+                      <TableCell sx={{ color: "white" }}>Invoice Number</TableCell>
+                      <TableCell align="right" sx={{ color: "white" }}>
+                        Bill Amount
+                      </TableCell>
+                      <TableCell align="center" sx={{ color: "white" }}>
+                        Ageing (Days)
+                      </TableCell>
+                      <TableCell sx={{ color: "white" }}>Remarks</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -682,6 +697,7 @@ const DashboardData = () => {
                             </Typography>
                           </Tooltip>
                         </TableCell>
+                        <TableCell>{item.period}</TableCell>
                         <TableCell>
                           <Chip
                             label={item.amc_year}
@@ -693,6 +709,7 @@ const DashboardData = () => {
                             }}
                           />
                         </TableCell>
+
                         <TableCell>{formatDate(item.invoice_date)}</TableCell>
                         <TableCell>
                           <Chip
@@ -727,7 +744,7 @@ const DashboardData = () => {
                             variant="caption"
                             sx={{ color: colors.textSecondary }}
                           >
-                            {new Date(item.last_updated).toLocaleString()}
+                            {item.remarks}
                           </Typography>
                         </TableCell>
                       </TableRow>
