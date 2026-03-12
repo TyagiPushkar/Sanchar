@@ -50,6 +50,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import CompletedWork from "../work-status/CompletedWork";
 
 // Color palette
 const colors = {
@@ -781,6 +782,7 @@ const DashboardData = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
+      <CompletedWork/>
     </Box>
   );
 };

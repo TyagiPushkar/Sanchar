@@ -68,6 +68,7 @@ function Sidebar() {
       "material",
       "invoices",
       "amc",
+      "work"
     ],
     "Project Manager": [
       "admin",
@@ -83,6 +84,7 @@ function Sidebar() {
       "material",
       "invoices",
       "amc",
+      "work"
     ],
     Technician: ["technician", "projects", "amc"],
     "Customer Support": [
@@ -99,6 +101,7 @@ function Sidebar() {
       "material",
       "invoices",
       "amc",
+      "work"
     ],
   };
 
@@ -211,7 +214,12 @@ function Sidebar() {
       icon: <EngineeringIcon />,
       feature: "amc",
     },
-    
+    {
+      path: "/work-status",
+      name: "Work Status",
+      icon: <EngineeringIcon />,
+      feature: "work",
+    },
     { path: "/menus", name: "Menus", icon: <SettingsIcon />, feature: "menus" },
     {
       path: "/checkpoints",

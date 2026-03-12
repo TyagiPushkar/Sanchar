@@ -1792,7 +1792,7 @@ const InvoiceManagement = () => {
                     <Divider sx={{ my: 1 }} />
                   </Grid>
 
-                  <Grid item xs={4}>
+                  <Grid item xs={12}>
                     <Typography variant="subtitle2" color="textSecondary">
                       RM ID
                     </Typography>
@@ -1800,7 +1800,7 @@ const InvoiceManagement = () => {
                       {detailDialog.invoice.rm_id || "-"}
                     </Typography>
                   </Grid>
-                  <Grid item xs={4}>
+                  <Grid item xs={12}>
                     <Typography variant="subtitle2" color="textSecondary">
                       MB ID
                     </Typography>

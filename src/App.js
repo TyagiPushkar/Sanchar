@@ -19,6 +19,7 @@ import Tender from "./pages/Tender";
 import Buyer from "./pages/Buyer";
 import ViewTender from "./pages/ViewTender";
 import Participant from "./pages/Participant";
+import Work from "./pages/Work";
 import User from "./pages/User";
 import ViewLOA from "./pages/ViewLOA";
 import Projects from "./pages/Projects";
@@ -356,7 +357,21 @@ function App() {
                 </PrivateRoute>
               }
             />
-
+            <Route
+              path="/work-status"
+              element={
+                <PrivateRoute>
+                  <RoleProtectedRoute
+                    element={Work}
+                    allowedRoles={[
+                      "Admin",
+                      "Project Manager",
+                      "Customer Support",
+                    ]}
+                  />
+                </PrivateRoute>
+              }
+            />
             {/* Projects - Admin, Project Manager, Technician */}
             <Route
               path="/projects"

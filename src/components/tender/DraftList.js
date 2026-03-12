@@ -170,11 +170,11 @@ function DraftList() {
     return true;
   };
 
-  // Function to update tender status via API
   const updateTenderStatus = async (activityId) => {
     setUpdatingStatus((prev) => ({ ...prev, [activityId]: true }));
 
     try {
+      // First API call - Update tender status
       const response = await axios.post(
         "https://namami-infotech.com/SANCHAR/src/menu/update_tender_status.php",
         {
@@ -188,6 +188,23 @@ function DraftList() {
       );
 
       if (response.data.success) {
+        // Second API call - Get work status after successful update
+        try {
+          const workStatusResponse = await axios.get(
+            `https://namami-infotech.com/SANCHAR/src/work-status/insert_work_status.php?ActivityId=${activityId}`,
+          );
+
+          console.log("Work status response:", workStatusResponse.data);
+
+          // You can handle the work status response data here
+          // For example, if you need to update state with this data:
+          // setWorkStatusData(workStatusResponse.data);
+        } catch (workStatusErr) {
+          console.error("Error fetching work status:", workStatusErr);
+          // Don't show alert for this as it's a secondary call
+          // You might want to handle this silently or show a non-blocking notification
+        }
+
         // Update the local state to reflect the change
         setTempRecords((prevRecords) =>
           prevRecords.map((record) =>
