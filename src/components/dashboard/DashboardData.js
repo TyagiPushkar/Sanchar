@@ -658,10 +658,14 @@ const DashboardData = () => {
                       <TableCell sx={{ color: "white" }}>LOA Number</TableCell>
                       <TableCell sx={{ color: "white" }}>Period</TableCell>
                       <TableCell sx={{ color: "white" }}>AMC</TableCell>
-                      <TableCell sx={{ color: "white" }}>Invoice Date</TableCell>
-                      <TableCell sx={{ color: "white" }}>Invoice Number</TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Invoice Date
+                      </TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Invoice Number
+                      </TableCell>
                       <TableCell align="right" sx={{ color: "white" }}>
-                        Bill Amount
+                        Invoice Amount
                       </TableCell>
                       <TableCell align="center" sx={{ color: "white" }}>
                         Ageing (Days)
@@ -782,7 +786,7 @@ const DashboardData = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-      <CompletedWork/>
+      <CompletedWork />
     </Box>
   );
 };
