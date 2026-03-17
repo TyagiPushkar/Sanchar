@@ -159,7 +159,7 @@ const DashboardData = () => {
   const getCategoryLabel = (category) => {
     switch (category) {
       case "FIRST_SUPPLY_PENDING":
-        return "First Supply Pending";
+        return "Goods Supply Pending";
       case "AMC_BILL_PENDING":
         return "AMC Bill Pending";
       case "AMC_PAYMENT_PENDING":
@@ -440,6 +440,12 @@ const DashboardData = () => {
                       {/* <TableCell>Activity ID</TableCell> */}
                       <TableCell sx={{ color: "white" }}>LOA Number</TableCell>
                       <TableCell sx={{ color: "white" }}>Invoice No.</TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Invoice Date
+                      </TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Days Pending
+                      </TableCell>
                       <TableCell sx={{ color: "white" }}>Tx/Rx Qty.</TableCell>
                       <TableCell sx={{ color: "white" }}>
                         Invoice Amount
@@ -447,6 +453,7 @@ const DashboardData = () => {
                       <TableCell sx={{ color: "white" }}>
                         Received Amount
                       </TableCell>
+                      <TableCell sx={{ color: "white" }}>Remarks</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -479,6 +486,8 @@ const DashboardData = () => {
                           </Tooltip>
                         </TableCell>
                         <TableCell>{item.invoice_number}</TableCell>
+                        <TableCell>{formatDate(item.date_invoice)}</TableCell>
+                        <TableCell>{(item.days_pending)}</TableCell>
                         <TableCell>
                           {item.no_of_tx}/{item.no_of_rx}
                         </TableCell>
@@ -494,6 +503,7 @@ const DashboardData = () => {
                               +item.tax_deduction,
                           )}
                         </TableCell>
+                        <TableCell>{item.remarks}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
