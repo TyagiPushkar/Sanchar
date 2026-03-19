@@ -73,15 +73,23 @@ const StyledCard = styled(Card)(({ theme }) => ({
 }));
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  paddingBottom: 10,
   borderRadius: 12,
+  maxHeight: "calc(100vh - 300px)", // Adjust this value based on your layout
+  overflow: "auto",
+  position: "relative",
   "& .MuiTableHead-root": {
     background: "linear-gradient(135deg, #F69320 0%, #F69320 100%)",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
   },
   "& .MuiTableHead-root .MuiTableCell-root": {
     color: "white",
     fontWeight: 600,
     fontSize: "0.95rem",
     padding: "16px",
+    backgroundColor: "#F69320", // Fallback for browsers that don't support gradients on sticky elements
   },
   "& .MuiTableRow-root:nth-of-type(even)": {
     backgroundColor: "rgba(0, 0, 0, 0.02)",

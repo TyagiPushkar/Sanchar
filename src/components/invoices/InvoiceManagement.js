@@ -1229,7 +1229,10 @@ const InvoiceManagement = () => {
                   label="Bill Type"
                 >
                   <MenuItem value="Goods Bill">Goods Bill</MenuItem>
-                  <MenuItem value="AMC">AMC</MenuItem>
+                  <MenuItem value="AMC 1">AMC 1</MenuItem>
+                  <MenuItem value="AMC 2">AMC 2</MenuItem>
+                  <MenuItem value="AMC 3">AMC 3</MenuItem>
+                  <MenuItem value="AMC 4">AMC 4</MenuItem>
                 </Select>
                 {formErrors.BillType && (
                   <FormHelperText>{formErrors.BillType}</FormHelperText>

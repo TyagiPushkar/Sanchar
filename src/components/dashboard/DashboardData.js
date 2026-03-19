@@ -426,7 +426,7 @@ const DashboardData = () => {
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <PendingIcon sx={{ color: colors.pending }} />
                   <Typography variant="h6" sx={{ color: colors.textPrimary }}>
-                    Goods Supply Payment Pending (
+                    GOODS SUPPLY PENDING PAYMENT (
                     {dashboardData?.first_supply_pending?.length || 0})
                   </Typography>
                 </Box>

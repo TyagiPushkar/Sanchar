@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -14,8 +14,8 @@ import {
   Alert,
   Snackbar,
   Autocomplete,
-} from "@mui/material"
-import { LoadingButton } from "@mui/lab"
+} from "@mui/material";
+import { LoadingButton } from "@mui/lab";
 
 const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
   const [formData, setFormData] = useState({
@@ -24,67 +24,97 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
     contactPerson: "",
     contactNumber: "",
     remark: "",
-    LOA: ""
-  })
-  const [loaList, setLoaList] = useState([]);
+    LOA: "",
+  });
 
-  const [technicians, setTechnicians] = useState([])
-  const [stations, setStations] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [dataLoading, setDataLoading] = useState(true)
-  const [errors, setErrors] = useState({})
-  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" })
+  const [loaOptions, setLoaOptions] = useState([]);
+  const [stationOptions, setStationOptions] = useState([]);
+  const [technicians, setTechnicians] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [errors, setErrors] = useState({});
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   useEffect(() => {
     if (open) {
-      fetchData()
-      resetForm()
+      fetchData();
+      resetForm();
     }
-  }, [open])
+  }, [open]);
 
   const fetchData = async () => {
     try {
-      setDataLoading(true)
-      
-      // Fetch technicians
-      const [techResponse, stationResponse, loaResponse] = await Promise.all([
+      setDataLoading(true);
+
+      // Fetch all required data
+      const [techResponse, loaStationResponse] = await Promise.all([
         fetch(
           "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
         ),
-        fetch("https://namami-infotech.com/SANCHAR/src/buyer/buyer_list.php"),
-        fetch("https://namami-infotech.com/SANCHAR/src/menu/get_loa.php"),
+        fetch("https://namami-infotech.com/SANCHAR/src/buyer/station_list.php"),
       ]);
 
-
-      const [techData, stationData, loaData] = await Promise.all([
+      const [techData, loaStationData] = await Promise.all([
         techResponse.json(),
-        stationResponse.json(),
-        loaResponse.json(),
+        loaStationResponse.json(),
       ]);
-
 
       if (techData.success) {
-        setTechnicians(techData.data.filter(emp => emp.Role === "Technician" && emp.IsActive === 1))
+        setTechnicians(
+          techData.data.filter(
+            (emp) => emp.Role === "Technician" && emp.IsActive === 1,
+          ),
+        );
       }
 
-      if (stationData.success) {
-        setStations(stationData.data)
+      if (loaStationData.success) {
+        // Store the complete LOA data with their stations
+        setLoaOptions(loaStationData.data);
       }
-      if (loaData.success) {
-        setLoaList(loaData.data); // array of strings
-      }
-
     } catch (error) {
-      console.error("Error fetching data:", error)
+      console.error("Error fetching data:", error);
       setSnackbar({
         open: true,
         message: "Failed to load data",
         severity: "error",
-      })
+      });
     } finally {
-      setDataLoading(false)
+      setDataLoading(false);
     }
-  }
+  };
+
+  // Update stations when LOA changes
+  const handleLOAChange = (event, selectedLOAObject) => {
+    if (selectedLOAObject) {
+      // Set the LOA value
+      setFormData((prev) => ({
+        ...prev,
+        LOA: selectedLOAObject.LOA,
+        station: "", // Clear station when LOA changes
+      }));
+
+      // Set the stations for this LOA
+      setStationOptions(
+        selectedLOAObject.Stations.map((stationName) => ({
+          StationName: stationName,
+        })),
+      );
+
+      if (errors.LOA) setErrors((prev) => ({ ...prev, LOA: "" }));
+    } else {
+      // Clear both LOA and stations
+      setFormData((prev) => ({
+        ...prev,
+        LOA: "",
+        station: "",
+      }));
+      setStationOptions([]);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -93,75 +123,85 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       contactPerson: "",
       contactNumber: "",
       remark: "",
-      LOA: ""
-    })
-    setErrors({})
-  }
+      LOA: "",
+    });
+    setStationOptions([]);
+    setErrors({});
+  };
 
   const validateForm = () => {
-    const newErrors = {}
-    if (!formData.empId) newErrors.empId = "Technician is required"
-    if (!formData.station) newErrors.station = "Station is required"
-    if (!formData.contactPerson.trim()) newErrors.contactPerson = "Contact person is required"
-    if (!formData.LOA.trim()) newErrors.LOA = "LOA is required"
+    const newErrors = {};
+    if (!formData.empId) newErrors.empId = "Technician is required";
+    if (!formData.station) newErrors.station = "Station is required";
+    if (!formData.contactPerson.trim())
+      newErrors.contactPerson = "Contact person is required";
+    if (!formData.LOA) newErrors.LOA = "LOA is required";
     if (!formData.contactNumber.trim()) {
-      newErrors.contactNumber = "Contact number is required"
-    } else if (formData.contactNumber.length < 10) {
-      newErrors.contactNumber = "Invalid contact number"
+      newErrors.contactNumber = "Contact number is required";
+    } else if (!/^\d{10}$/.test(formData.contactNumber)) {
+      newErrors.contactNumber = "Contact number must be 10 digits";
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-}
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
     try {
-      setLoading(true)
-      const selectedTechnician = technicians.find(tech => tech.EmpId === formData.empId)
+      setLoading(true);
+      const selectedTechnician = technicians.find(
+        (tech) => tech.EmpId === formData.empId,
+      );
 
-      const formDataToSend = new FormData()
-      formDataToSend.append("Milestone", "Support Ticket")
-      formDataToSend.append("MenuId", "7")
-      formDataToSend.append("EmpName", selectedTechnician?.Name || "")
-      formDataToSend.append("EmpId", formData.empId)
-      formDataToSend.append("Station", formData.station)
-      formDataToSend.append("Status", "Assigned")
-      formDataToSend.append("Remark", formData.remark)
-      formDataToSend.append("ContactPerson", formData.contactPerson)
-      formDataToSend.append("ContactNumber", formData.contactNumber)
-      formDataToSend.append("LOA", formData.LOA)
+      const formDataToSend = new FormData();
+      formDataToSend.append("Milestone", "Support Ticket");
+      formDataToSend.append("MenuId", "7");
+      formDataToSend.append("EmpName", selectedTechnician?.Name || "");
+      formDataToSend.append("EmpId", formData.empId);
+      formDataToSend.append("Station", formData.station);
+      formDataToSend.append("Status", "Assigned");
+      formDataToSend.append("Remark", formData.remark);
+      formDataToSend.append("ContactPerson", formData.contactPerson);
+      formDataToSend.append("ContactNumber", formData.contactNumber);
+      formDataToSend.append("LOA", formData.LOA);
 
-      const response = await fetch("https://namami-infotech.com/SANCHAR/src/support/create_ticket.php", {
-        method: "POST",
-        body: formDataToSend,
-      })
+      const response = await fetch(
+        "https://namami-infotech.com/SANCHAR/src/support/create_ticket.php",
+        {
+          method: "POST",
+          body: formDataToSend,
+        },
+      );
 
-      const result = await response.json()
+      const result = await response.json();
 
       if (result.success) {
         setSnackbar({
           open: true,
           message: "Ticket created successfully",
           severity: "success",
-        })
-        onTicketCreated()
-        onClose()
+        });
+        onTicketCreated();
+        onClose();
       } else {
-        throw new Error(result.message || "Failed to create ticket")
+        throw new Error(result.message || "Failed to create ticket");
       }
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Error:", error);
       setSnackbar({
         open: true,
         message: error.message,
         severity: "error",
-      })
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
+
+  // Find the selected LOA object for display
+  const selectedLOAObject = loaOptions.find((loa) => loa.LOA === formData.LOA);
 
   return (
     <>
@@ -182,13 +222,12 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
             <Box
               sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}
             >
+              {/* LOA Selection - Shows full LOA objects */}
               <Autocomplete
-                options={loaList}
-                value={formData.LOA || null}
-                onChange={(e, newValue) => {
-                  setFormData((prev) => ({ ...prev, LOA: newValue || "" }));
-                  if (errors.LOA) setErrors((prev) => ({ ...prev, LOA: "" }));
-                }}
+                options={loaOptions}
+                getOptionLabel={(option) => option.LOA}
+                value={selectedLOAObject || null}
+                onChange={handleLOAChange}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -201,14 +240,14 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                 )}
               />
 
+              {/* Station Selection - Only shows stations from selected LOA */}
               <Autocomplete
-                options={stations}
-                getOptionLabel={(option) =>
-                  `${option.StationName} - ${option.ZoneName}`
-                }
+                options={stationOptions}
+                getOptionLabel={(option) => option.StationName}
                 value={
-                  stations.find((s) => s.StationName === formData.station) ||
-                  null
+                  stationOptions.find(
+                    (s) => s.StationName === formData.station,
+                  ) || null
                 }
                 onChange={(e, newValue) => {
                   setFormData((prev) => ({
@@ -218,19 +257,30 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                   if (errors.station)
                     setErrors((prev) => ({ ...prev, station: "" }));
                 }}
+                disabled={!formData.LOA || stationOptions.length === 0}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Station"
                     error={!!errors.station}
-                    helperText={errors.station}
+                    helperText={
+                      errors.station
+                        ? errors.station
+                        : !formData.LOA
+                          ? "Please select LOA first"
+                          : stationOptions.length === 0
+                            ? "No stations available for this LOA"
+                            : ""
+                    }
                     required
+                    fullWidth
                   />
                 )}
               />
 
+              {/* Contact Person */}
               <TextField
-                label="Contact Person"
+                label="Contact Persons"
                 value={formData.contactPerson}
                 onChange={(e) => {
                   setFormData((prev) => ({
@@ -246,13 +296,16 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                 fullWidth
               />
 
+              {/* Contact Number */}
               <TextField
                 label="Contact Number"
                 value={formData.contactNumber}
                 onChange={(e) => {
+                  // Allow only digits
+                  const value = e.target.value.replace(/\D/g, "");
                   setFormData((prev) => ({
                     ...prev,
-                    contactNumber: e.target.value,
+                    contactNumber: value,
                   }));
                   if (errors.contactNumber)
                     setErrors((prev) => ({ ...prev, contactNumber: "" }));
@@ -261,8 +314,10 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                 helperText={errors.contactNumber}
                 required
                 fullWidth
+                inputProps={{ maxLength: 10 }}
               />
 
+              {/* Technician Selection */}
               <Autocomplete
                 options={technicians}
                 getOptionLabel={(option) => `${option.Name} (${option.EmpId})`}
@@ -284,10 +339,12 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
                     error={!!errors.empId}
                     helperText={errors.empId}
                     required
+                    fullWidth
                   />
                 )}
               />
 
+              {/* Remarks */}
               <TextField
                 label="Remarks (Optional)"
                 value={formData.remark}
@@ -331,6 +388,6 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
       </Snackbar>
     </>
   );
-}
+};
 
-export default CreateTicketDialog
+export default CreateTicketDialog;
