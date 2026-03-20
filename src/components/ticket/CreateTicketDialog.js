@@ -280,7 +280,7 @@ const CreateTicketDialog = ({ open, onClose, onTicketCreated }) => {
 
               {/* Contact Person */}
               <TextField
-                label="Contact Persons"
+                label="Contact Person"
                 value={formData.contactPerson}
                 onChange={(e) => {
                   setFormData((prev) => ({
