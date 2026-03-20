@@ -159,7 +159,7 @@ const DashboardData = () => {
   const getCategoryLabel = (category) => {
     switch (category) {
       case "FIRST_SUPPLY_PENDING":
-        return "Goods Supply Pending";
+        return "Goods Supply Pending Pymt";
       case "AMC_BILL_PENDING":
         return "AMC Bill Pending";
       case "AMC_PAYMENT_PENDING":
