@@ -520,7 +520,9 @@ const PMTicketCreate = ({ open, onClose, onTicketCreated }) => {
         fetch(
           "https://namami-infotech.com/SANCHAR/src/employee/list_employee.php?Tenent_Id=1",
         ),
-        fetch("https://namami-infotech.com/SANCHAR/src/buyer/station_list.php"),
+        fetch(
+          "https://namami-infotech.com/SANCHAR/src/buyer/get_loa_section_station.php",
+        ),
       ]);
 
       const [techData, stationData] = await Promise.all([
