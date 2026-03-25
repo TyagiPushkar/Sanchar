@@ -150,7 +150,7 @@ const CancelButton = styled(IconButton)(({ theme }) => ({
 }));
 
 const TaskView = () => {
-  const {user} = useAuth();
+  const { user } = useAuth();
   const { TaskId } = useParams();
   const navigate = useNavigate();
   const [taskDetails, setTaskDetails] = useState([]);
@@ -247,6 +247,10 @@ const TaskView = () => {
   };
 
   const extractMainCheckpointId = (chkId) => {
+    if (chkId.includes("_")) {
+      const match = chkId.match(/_(\d+)/);
+      return match ? Number.parseInt(match[1]) : null;
+    }
     const match = chkId.match(/^(\d+)/);
     return match ? Number.parseInt(match[1]) : null;
   };
@@ -622,6 +626,12 @@ const TaskView = () => {
     taskDetails.forEach((detail) => {
       if (!detail.ChkId.includes(".meta")) {
         const mainCheckpointId = extractMainCheckpointId(detail.ChkId);
+        console.log(
+          "USED CHECKPOINT:",
+          detail.ChkId,
+          "MAIN:",
+          mainCheckpointId,
+        );
         if (!grouped[mainCheckpointId]) {
           grouped[mainCheckpointId] = {
             mainCheckpointId,
@@ -640,6 +650,7 @@ const TaskView = () => {
       }
     });
 
+    console.log("FINAL GROUPED CHECKPOINTS:", grouped);
     return Object.values(grouped);
   };
 
@@ -972,6 +983,7 @@ const TaskView = () => {
     );
   };
 
+  //loader on it
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -1037,7 +1049,6 @@ const TaskView = () => {
                       <StyledTableCell sx={{ width: "40%" }}>
                         Answer
                       </StyledTableCell>
-                      
                     </TableRow>
                   </StyledTableHead>
                   <TableBody>
@@ -1090,8 +1101,6 @@ const TaskView = () => {
                           <AnswerCell>
                             {renderAnswerContent(item, group)}
                           </AnswerCell>
-
-                         
                         </TableRow>
                       )),
                     )}
