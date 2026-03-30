@@ -166,12 +166,27 @@ const WorkStatus = () => {
     }
 
     // Filter by RM Status
+    // if (rmStatusFilter !== "all") {
+    //   if (rmStatusFilter === "completed") {
+    //     filtered = filtered.filter((item) => item.rm_status === "completed");
+    //   } else if (rmStatusFilter === "pending") {
+    //     filtered = filtered.filter(
+    //       (item) => !item.rm_status || item.rm_status === "pending",
+    //     );
+    //   }
+    // }
+    
+
     if (rmStatusFilter !== "all") {
-      if (rmStatusFilter === "completed") {
-        filtered = filtered.filter((item) => item.rm_status === "completed");
+      if (rmStatusFilter === "complete") {
+        filtered = filtered.filter(
+          (item) =>
+            item.rm_status && item.rm_status.toLowerCase() === "complete",
+        );
       } else if (rmStatusFilter === "pending") {
         filtered = filtered.filter(
-          (item) => !item.rm_status || item.rm_status === "pending",
+          (item) =>
+            !item.rm_status || item.rm_status.toLowerCase() === "pending",
         );
       }
     }
@@ -253,7 +268,6 @@ const WorkStatus = () => {
   const formatCurrency = (value) => {
     if (!value) return "-";
     return new Intl.NumberFormat("en-IN", {
-
       minimumFractionDigits: 0,
     }).format(value);
   };
@@ -272,10 +286,10 @@ const WorkStatus = () => {
           }}
         />
       );
-    } else if (status === "completed") {
+    } else if (status === "complete") {
       return (
         <Chip
-          label="Completed"
+          label="Complete"
           size="small"
           sx={{
             backgroundColor: colors.success,
@@ -387,7 +401,7 @@ const WorkStatus = () => {
   // Calculate summary statistics
   const totalRecords = filteredData.length;
   const completedRM = filteredData.filter(
-    (item) => item.rm_status === "completed",
+    (item) => item.rm_status === "complete",
   ).length;
   const pendingRM = filteredData.filter(
     (item) => !item.rm_status || item.rm_status === "pending",
@@ -588,7 +602,7 @@ const WorkStatus = () => {
                 onChange={(e) => setRmStatusFilter(e.target.value)}
               >
                 <MenuItem value="all">All</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="complete">Completed</MenuItem>
                 <MenuItem value="pending">Pending</MenuItem>
               </Select>
             </FormControl>
