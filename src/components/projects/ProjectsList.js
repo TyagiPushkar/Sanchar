@@ -170,6 +170,7 @@ function ProjectList() {
                       onClick={() =>
                         navigate(`/project/view/${project.TenderNo}`, {
                           state: {
+                            firstLOA: project.LOA,
                             tenderNo: project.TenderNo,
                             ActivityId: project.ActivityId,
                           },
@@ -185,7 +186,10 @@ function ProjectList() {
                         className="project-view-button"
                         onClick={() =>
                           navigate(`/assign/task/${project.ActivityId}`, {
-                            state: { tenderNo: project.TenderNo },
+                            state: { 
+                              tenderNo: project.TenderNo,
+                               loaNo: project.LOA 
+                              },
                           })
                         }
                       >

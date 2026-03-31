@@ -97,6 +97,7 @@ export default function TaskAssignment() {
   const [loadingTasks, setLoadingTasks] = useState(false)
   const location = useLocation()
   const { tenderNo } = location.state || {}
+  const { loaNo } = location.state || {}
 
   // Snackbar state for notifications
   const [snackbar, setSnackbar] = useState({
@@ -290,6 +291,7 @@ const filterAvailableStations = () => {
           Station: station.name,
           TargetDate: format(date, "yyyy-MM-dd"),
           TenderNo: tenderNo,
+          LOA: loaNo,
         }
 
         try {

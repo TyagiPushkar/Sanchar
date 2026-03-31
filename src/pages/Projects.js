@@ -22,6 +22,7 @@ function Projects() {
   const renderContent = () => {
      if (currentPath.includes("/projects")) {
           return <ProjectList />
+          
         } else if (currentPath.includes("/assign/task")) {
           return <TaskAssignment />
       } 

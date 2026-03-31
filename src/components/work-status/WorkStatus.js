@@ -73,6 +73,7 @@ const WorkStatus = () => {
     endDate: "",
   });
   const [rmStatusFilter, setRmStatusFilter] = useState("all");
+  const [workDoneFilter, setWorkDoneFilter] = useState("all");
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -95,6 +96,7 @@ const WorkStatus = () => {
     searchTerm,
     dateRange,
     rmStatusFilter,
+    workDoneFilter,
   ]);
 
   const fetchWorkStatus = async (filters = {}) => {
@@ -175,7 +177,6 @@ const WorkStatus = () => {
     //     );
     //   }
     // }
-    
 
     if (rmStatusFilter !== "all") {
       if (rmStatusFilter === "complete") {
@@ -187,6 +188,23 @@ const WorkStatus = () => {
         filtered = filtered.filter(
           (item) =>
             !item.rm_status || item.rm_status.toLowerCase() === "pending",
+        );
+      }
+    }
+
+    // Filter by Work Done Status
+    if (workDoneFilter !== "all") {
+      if (workDoneFilter === "complete") {
+        filtered = filtered.filter(
+          (item) =>
+            item.work_done_status &&
+            item.work_done_status.toLowerCase() === "complete",
+        );
+      } else if (workDoneFilter === "pending") {
+        filtered = filtered.filter(
+          (item) =>
+            !item.work_done_status ||
+            item.work_done_status.toLowerCase() === "pending",
         );
       }
     }
@@ -231,6 +249,7 @@ const WorkStatus = () => {
     setSearchTerm("");
     setDateRange({ startDate: "", endDate: "" });
     setRmStatusFilter("all");
+    setWorkDoneFilter("all");
   };
 
   const handleRefresh = () => {
@@ -401,10 +420,20 @@ const WorkStatus = () => {
   // Calculate summary statistics
   const totalRecords = filteredData.length;
   const completedRM = filteredData.filter(
-    (item) => item.rm_status === "complete",
+    (item) => item.rm_status && item.rm_status.toLowerCase() === "complete",
   ).length;
   const pendingRM = filteredData.filter(
-    (item) => !item.rm_status || item.rm_status === "pending",
+    (item) => !item.rm_status || item.rm_status.toLowerCase() === "pending",
+  ).length;
+  const completedWorkDone = filteredData.filter(
+    (item) =>
+      item.work_done_status &&
+      item.work_done_status.toLowerCase() === "complete",
+  ).length;
+  const pendingWorkDone = filteredData.filter(
+    (item) =>
+      !item.work_done_status ||
+      item.work_done_status.toLowerCase() === "pending",
   ).length;
   const totalValue = filteredData.reduce((sum, item) => {
     const txValue = (item.tx_qt || 0) * (item.tx_unit_price || 0);
@@ -432,8 +461,9 @@ const WorkStatus = () => {
             Work Status
           </Typography>
           <Typography variant="body2" sx={{ color: colors.textSecondary }}>
-            Total Records: {totalRecords} | Completed: {completedRM} | Pending:{" "}
-            {pendingRM}
+            Total: {totalRecords} | RM Completed: {completedRM} | RM Pending:{" "}
+            {pendingRM} | Work Done Completed: {completedWorkDone} | Work Done
+            Pending: {pendingWorkDone}
           </Typography>
         </Box>
 
@@ -541,7 +571,8 @@ const WorkStatus = () => {
             searchTerm ||
             dateRange.startDate ||
             dateRange.endDate ||
-            rmStatusFilter !== "all") && (
+            rmStatusFilter !== "all" ||
+            workDoneFilter !== "all") && (
             <Button
               size="small"
               onClick={handleClearFilters}
@@ -608,6 +639,22 @@ const WorkStatus = () => {
             </FormControl>
           </Grid>
 
+          {/* Work Done Status Filter */}
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Work Done</InputLabel>
+              <Select
+                value={workDoneFilter}
+                label="Work Done"
+                onChange={(e) => setWorkDoneFilter(e.target.value)}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="complete">Completed</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
           {/* Date Range Filters - Using standard TextField */}
           {/* <Grid item xs={12} md={2}>
             <TextField
@@ -637,10 +684,10 @@ const WorkStatus = () => {
           </Grid> */}
 
           {/* Search Field */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={2}>
             <TextField
               fullWidth
-              placeholder="Search by LOA, Station, or Section..."
+              placeholder="Search..."
               size="small"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

@@ -59,6 +59,7 @@ import {
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 import { motion } from "framer-motion";
+import { calculateWorkStatusForLOA } from "../../services/calculate_rm_wrokdone";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: 16,
@@ -134,9 +135,9 @@ const FilterContainer = styled(Box)(({ theme }) => ({
 
 export default function StationPhaseTable() {
   const location = useLocation();
-  const { tenderNo, ActivityId } = location.state || {};
   const navigate = useNavigate();
-
+  const { tenderNo, ActivityId } = location.state || {};
+  const { firstLOA } = location.state || {};
   const [stations, setStations] = useState([]);
   const [stationData, setStationData] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -162,6 +163,10 @@ export default function StationPhaseTable() {
   // New state for section filter
   const [selectedSection, setSelectedSection] = useState("all");
   const [sections, setSections] = useState([]);
+
+  // New state for work status stats
+  const [workStatusStats, setWorkStatusStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   const phases = [
     {
@@ -287,9 +292,23 @@ export default function StationPhaseTable() {
 
         if (
           completionDateResponse.data.success &&
-          completionDateResponse.data.data.length > 0
+          completionDateResponse.data.length > 0
         ) {
           setCompletionDate(completionDateResponse.data.data[0]);
+        }
+        //calculate the workdone and rx done on it
+        if (firstLOA) {
+          try {
+            setStatsLoading(true);
+            const statsResult = await calculateWorkStatusForLOA(firstLOA);
+            if (statsResult.success) {
+              setWorkStatusStats(statsResult.data);
+            }
+          } catch (err) {
+            console.error("Error fetching work status stats:", err);
+          } finally {
+            setStatsLoading(false);
+          }
         }
       } catch (err) {
         setError(err.message || "Failed to fetch data");
@@ -793,6 +812,164 @@ export default function StationPhaseTable() {
             </motion.div>
           </Grid>
         </Grid>
+
+        {/* Work Status Stats Section */}
+        {workStatusStats && (
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ fontWeight: 600, color: "#333" }}
+            >
+              Work Status Summary
+            </Typography>
+            <Grid container spacing={3}>
+              {/* Work Done Stats */}
+              <Grid item xs={12} sm={6} md={2.4}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <StyledCard>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography
+                        color="text.secondary"
+                        variant="body2"
+                        gutterBottom
+                      >
+                        Work Done
+                      </Typography>
+                      <Typography
+                        variant="h5"
+                        sx={{ fontWeight: 700, color: "#1976d2" }}
+                      >
+                        {workStatusStats.completedWorkDone}/
+                        {workStatusStats.totalWorkDone}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Pending: {workStatusStats.pendingWorkDone}
+                      </Typography>
+                    </CardContent>
+                  </StyledCard>
+                </motion.div>
+              </Grid>
+
+              {/* RM Done Stats */}
+              <Grid item xs={12} sm={6} md={2.4}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <StyledCard>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography
+                        color="text.secondary"
+                        variant="body2"
+                        gutterBottom
+                      >
+                        RM Done
+                      </Typography>
+                      <Typography
+                        variant="h5"
+                        sx={{ fontWeight: 700, color: "#2e7d32" }}
+                      >
+                        {workStatusStats.completedRMDone}/
+                        {workStatusStats.totalRMDone}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Pending: {workStatusStats.pendingRMDone}
+                      </Typography>
+                    </CardContent>
+                  </StyledCard>
+                </motion.div>
+              </Grid>
+
+              {/* TX Count & Amount */}
+              <Grid item xs={12} sm={6} md={2.4}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <StyledCard>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography
+                        color="text.secondary"
+                        variant="body2"
+                        gutterBottom
+                      >
+                        No. of TX
+                      </Typography>
+                      <Typography
+                        variant="h5"
+                        sx={{ fontWeight: 700, color: "#f57c00" }}
+                      >
+                        {workStatusStats.totalTXCount}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        ₹{workStatusStats.totalTXAmount.toLocaleString("en-IN")}
+                      </Typography>
+                    </CardContent>
+                  </StyledCard>
+                </motion.div>
+              </Grid>
+
+              {/* RX Count & Amount */}
+              <Grid item xs={12} sm={6} md={2.4}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <StyledCard>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography
+                        color="text.secondary"
+                        variant="body2"
+                        gutterBottom
+                      >
+                        No. of RX
+                      </Typography>
+                      <Typography
+                        variant="h5"
+                        sx={{ fontWeight: 700, color: "#c2185b" }}
+                      >
+                        {workStatusStats.totalRXCount}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        ₹{workStatusStats.totalRXAmount.toLocaleString("en-IN")}
+                      </Typography>
+                    </CardContent>
+                  </StyledCard>
+                </motion.div>
+              </Grid>
+
+              {/* Total Amount */}
+              <Grid item xs={12} sm={6} md={2.4}>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <StyledCard>
+                    <CardContent sx={{ p: 2 }}>
+                      <Typography
+                        color="text.secondary"
+                        variant="body2"
+                        gutterBottom
+                      >
+                        Total Amount
+                      </Typography>
+                      <Typography
+                        variant="h5"
+                        sx={{ fontWeight: 700, color: "#6a1b9a" }}
+                      >
+                        ₹{workStatusStats.totalAmount.toLocaleString("en-IN")}
+                      </Typography>
+                    </CardContent>
+                  </StyledCard>
+                </motion.div>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
 
         {filteredStations.length === 0 ? (
           <Alert severity="info" sx={{ mt: 2 }}>
