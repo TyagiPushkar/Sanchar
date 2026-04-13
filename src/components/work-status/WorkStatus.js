@@ -623,22 +623,6 @@ const WorkStatus = () => {
             />
           </Grid>
 
-          {/* RM Status Filter */}
-          <Grid item xs={12} md={2}>
-            <FormControl fullWidth size="small">
-              <InputLabel>RM Status</InputLabel>
-              <Select
-                value={rmStatusFilter}
-                label="RM Status"
-                onChange={(e) => setRmStatusFilter(e.target.value)}
-              >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="complete">Completed</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
           {/* Work Done Status Filter */}
           <Grid item xs={12} md={2}>
             <FormControl fullWidth size="small">
@@ -647,6 +631,22 @@ const WorkStatus = () => {
                 value={workDoneFilter}
                 label="Work Done"
                 onChange={(e) => setWorkDoneFilter(e.target.value)}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="complete">Completed</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          {/* RM Status Filter */}
+          <Grid item xs={12} md={2}>
+            <FormControl fullWidth size="small">
+              <InputLabel>RM Status</InputLabel>
+              <Select
+                value={rmStatusFilter}
+                label="RM Status"
+                onChange={(e) => setRmStatusFilter(e.target.value)}
               >
                 <MenuItem value="all">All</MenuItem>
                 <MenuItem value="complete">Completed</MenuItem>

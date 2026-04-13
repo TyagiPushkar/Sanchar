@@ -522,9 +522,9 @@ const CompletedWork = () => {
                               color: colors.textPrimary,
                               fontSize: "0.875rem",
                               maxWidth: 250,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
+                              // overflow: "hidden",
+                              //textOverflow: "ellipsis",
+                              // whiteSpace: "nowrap",
                             }}
                           >
                             {item.loa}

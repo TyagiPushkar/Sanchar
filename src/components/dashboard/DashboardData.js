@@ -69,11 +69,13 @@ const colors = {
   pending: "#ff9800",
   overdue: "#f44336",
   completed: "#4caf50",
+  amcRaised: "#8e24aa",
 };
 
 // Category colors for charts
 const CATEGORY_COLORS = {
   FIRST_SUPPLY_PENDING: "#ff9800",
+  INVOICE_TO_RAISED: "#673ab7", // updated
   AMC_BILL_PENDING: "#2196f3",
   AMC_PAYMENT_PENDING: "#f44336",
 };
@@ -104,6 +106,7 @@ const DashboardData = () => {
 
       if (data.success) {
         setDashboardData(data);
+        console.log("Dashboard data fetched successfully:", data);
       } else {
         throw new Error(data.message || "Failed to fetch dashboard data");
       }
@@ -147,6 +150,8 @@ const DashboardData = () => {
     switch (category) {
       case "FIRST_SUPPLY_PENDING":
         return <PendingIcon sx={{ fontSize: 40, color: colors.pending }} />;
+      case "AMC_BILL_RAISED":
+        return <PendingIcon sx={{ fontSize: 40, color: colors.amcRaised }} />;
       case "AMC_BILL_PENDING":
         return <ReceiptIcon sx={{ fontSize: 40, color: colors.info }} />;
       case "AMC_PAYMENT_PENDING":
@@ -160,6 +165,8 @@ const DashboardData = () => {
     switch (category) {
       case "FIRST_SUPPLY_PENDING":
         return "Goods Supply Pending Pymt";
+      case "AMC_BILL_RAISED":
+        return "INVOICE TO BE RAISED";
       case "AMC_BILL_PENDING":
         return "AMC Bill Pending";
       case "AMC_PAYMENT_PENDING":
@@ -175,6 +182,8 @@ const DashboardData = () => {
         return colors.pending;
       case "AMC_BILL_PENDING":
         return colors.info;
+      case "AMC_BILL_RAISED":
+        return colors.amcRaised; // new purple
       case "AMC_PAYMENT_PENDING":
         return colors.error;
       default:
@@ -202,6 +211,14 @@ const DashboardData = () => {
       value: parseFloat(item.total_amount),
       category: item.category,
     }));
+  };
+
+  const isWithin30Days = (date) => {
+    if (!date) return false;
+    const today = new Date();
+    const target = new Date(date);
+    const diff = (target - today) / (1000 * 60 * 60 * 24);
+    return diff >= 0 && diff <= 30;
   };
 
   if (loading) {
@@ -268,9 +285,18 @@ const DashboardData = () => {
       </Box>
 
       {/* Summary Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Total Summary Card */}
-        <Grid item xs={12} md={3}>
+
+      {/* <Grid
+        container
+        spacing={2}
+        sx={{
+          mb: 4,
+          flexWrap: "nowrap",
+          overflowX: "auto",
+        }}
+      > */}
+      {/* Total Summary Card
+        <Grid item sx={{ minWidth: 280 }}>
           <Card
             elevation={0}
             sx={{
@@ -285,8 +311,8 @@ const DashboardData = () => {
                 <Avatar
                   sx={{
                     bgcolor: "rgba(255,255,255,0.2)",
-                    width: 56,
-                    height: 56,
+                    width: 36,
+                    height: 36,
                   }}
                 >
                   <TrendingUpIcon sx={{ fontSize: 32 }} />
@@ -308,10 +334,10 @@ const DashboardData = () => {
               </Typography>
             </CardContent>
           </Card>
-        </Grid>
+        </Grid> */}
 
-        {/* Category Summary Cards */}
-        {dashboardData?.summary?.map((item) => (
+      {/* Category Summary Cards */}
+      {/* {dashboardData?.summary?.map((item) => (
           <Grid item xs={12} md={3} key={item.category}>
             <Card
               elevation={0}
@@ -354,7 +380,7 @@ const DashboardData = () => {
                 >
                   <Box>
                     <Typography
-                      variant="h5"
+                      variant="h10"
                       sx={{ color: colors.textPrimary, fontWeight: 600 }}
                     >
                       {item.total_records}
@@ -394,7 +420,155 @@ const DashboardData = () => {
               </CardContent>
             </Card>
           </Grid>
-        ))}
+        ))} */}
+      {/* </Grid> */}
+
+      {/* Summary Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        {/* Total Summary Card */}
+        <Grid item xs={12} sm={6} md={2.4}>
+          <Card
+            elevation={0}
+            sx={{
+              border: `1px solid ${colors.border}`,
+              borderRadius: 2,
+              background: `linear-gradient(135deg, ${colors.primary} 0%, #1565C0 100%)`,
+              color: "white",
+              height: "100%",
+            }}
+          >
+            <CardContent sx={{ p: 2 }}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Avatar
+                  sx={{
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    width: 36,
+                    height: 36,
+                  }}
+                >
+                  <TrendingUpIcon sx={{ fontSize: 20 }} />
+                </Avatar>
+                <Box>
+                  <Typography variant="caption">Total</Typography>
+                  <Typography variant="h6" fontWeight={600}>
+                    {totalRecords}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Typography variant="body2" sx={{ mt: 1, fontWeight: 500 }}>
+                {formatCurrency(totalAmount)}
+              </Typography>
+              {/* <Typography variant="caption" sx={{ opacity: 0.8 }}>
+                Total amount across all categories
+              </Typography> */}
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Sorted Category Cards */}
+        {dashboardData?.summary
+          ?.sort((a, b) => {
+            const order = [
+              "FIRST_SUPPLY_PENDING",
+              "INVOICE_TO_RAISED", // 👈 ye pehle ayega
+              "AMC_BILL_PENDING",
+              "AMC_PAYMENT_PENDING",
+            ];
+            return order.indexOf(a.category) - order.indexOf(b.category);
+          })
+          .map((item) => (
+            <Grid item xs={12} sm={6} md={2.4} key={item.category}>
+              <Card
+                elevation={0}
+                sx={{
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 2,
+                  cursor: "pointer",
+                  height: "100%",
+                  transition: "all 0.2s ease",
+                  "&:hover": {
+                    transform: "translateY(-3px)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
+                    borderColor: getCategoryColor(item.category),
+                  },
+                  ...(selectedCategory === item.category && {
+                    borderColor: getCategoryColor(item.category),
+                    borderWidth: 2,
+                  }),
+                }}
+                onClick={() =>
+                  setSelectedCategory(
+                    selectedCategory === item.category ? null : item.category,
+                  )
+                }
+              >
+                <CardContent sx={{ p: 2 }}>
+                  {/* Top Row */}
+                  <Box display="flex" alignItems="center" gap={1}>
+                    {/* <Avatar
+                      sx={{
+                        bgcolor: `${getCategoryColor(item.category)}20`,
+                        color: getCategoryColor(item.category),
+                        width: 32,
+                        height: 32,
+                      }}
+                    >
+                      {getCategoryIcon(item.category)}
+                    </Avatar> */}
+                    {getCategoryIcon(item.category)}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 600,
+                        color: colors.textPrimary,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {getCategoryLabel(item.category)}
+                    </Typography>
+                  </Box>
+
+                  {/* Numbers */}
+                  <Box
+                    mt={1}
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Typography variant="h6" fontWeight={600}>
+                      {item.total_records}
+                    </Typography>
+
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: getCategoryColor(item.category),
+                        fontWeight: 600,
+                      }}
+                    >
+                      {formatCurrency(item.total_amount)}
+                    </Typography>
+                  </Box>
+
+                  {/* Progress */}
+                  <LinearProgress
+                    variant="determinate"
+                    value={(item.total_records / totalRecords) * 100}
+                    sx={{
+                      mt: 1,
+                      height: 4,
+                      borderRadius: 2,
+                      backgroundColor: `${getCategoryColor(item.category)}20`,
+                      "& .MuiLinearProgress-bar": {
+                        backgroundColor: getCategoryColor(item.category),
+                      },
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
       </Grid>
 
       {/* Detailed Tables */}
@@ -475,10 +649,9 @@ const DashboardData = () => {
                             <Typography
                               variant="body2"
                               sx={{
-                                maxWidth: 300,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                whiteSpace: "normal",
+                                wordBreak: "break-word",
+                                lineHeight: 1.4,
                               }}
                             >
                               {item.loa}
@@ -487,7 +660,7 @@ const DashboardData = () => {
                         </TableCell>
                         <TableCell>{item.invoice_number}</TableCell>
                         <TableCell>{formatDate(item.date_invoice)}</TableCell>
-                        <TableCell>{(item.days_pending)}</TableCell>
+                        <TableCell>{item.days_pending}</TableCell>
                         <TableCell>
                           {item.no_of_tx}/{item.no_of_rx}
                         </TableCell>
@@ -513,6 +686,132 @@ const DashboardData = () => {
           </Grid>
         )}
 
+        {/* AMC Bill Raising */}
+        {(selectedCategory === null ||
+          selectedCategory === "AMC_BILL_RAISED") && (
+          <Grid item xs={12}>
+            <Paper
+              elevation={0}
+              sx={{
+                border: `1px solid ${colors.border}`,
+                borderRadius: 2,
+                overflow: "hidden",
+                mb: 3,
+                ...(selectedCategory === "AMC_BILL_RAISED" && {
+                  borderColor: colors.info,
+                  borderWidth: 2,
+                }),
+              }}
+            >
+              <Box
+                sx={{
+                  p: 2,
+                  backgroundColor: `${colors.amcRaised}15`,
+                  borderBottom: `1px solid ${colors.border}`,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <ReceiptIcon sx={{ color: colors.amcRaised }} />
+                  <Typography variant="h6" sx={{ color: colors.textPrimary }}>
+                    {/* AMC Bill To Be Raised ( */}
+                    Invoice To Be Raised (
+                    {dashboardData?.amc_bill_raised?.length || 0})
+                  </Typography>
+                </Box>
+              </Box>
+              <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: colors.amcRaised }}>
+                      {/* <TableCell>Activity ID</TableCell> */}
+                      <TableCell sx={{ color: "white" }}>LOA Number</TableCell>
+                      <TableCell sx={{ color: "white" }}>Period</TableCell>
+                      <TableCell sx={{ color: "white" }}>AMC</TableCell>
+                      <TableCell sx={{ color: "white" }}>
+                        Bill Start Date
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: "white" }}>
+                        Bill Amount
+                      </TableCell>
+                      {/* <TableCell sx={{ color: "white" }}>Remarks</TableCell> */}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dashboardData?.amc_bill_raised?.map((item) => (
+                      <TableRow key={item.id} hover>
+                        {/* <TableCell>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontFamily: "monospace",
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            {item.ActivityId}
+                          </Typography>
+                        </TableCell> */}
+                        <TableCell>
+                          <Tooltip title={item.LOA_Number}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                whiteSpace: "normal",
+                                wordBreak: "break-word",
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {item.LOA_Number}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>{item.period}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={item.amc_year}
+                            size="small"
+                            sx={{
+                              backgroundColor: isWithin30Days(
+                                item.bill_start_date,
+                              )
+                                ? colors.error
+                                : colors.amcRaised,
+                              color: "white",
+                              fontSize: "0.7rem",
+                              fontWeight: isWithin30Days(item.bill_start_date)
+                                ? 700
+                                : 500,
+                              boxShadow: isWithin30Days(item.bill_start_date)
+                                ? "0 0 10px rgba(244,67,54,0.6)"
+                                : "none",
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {formatDate(item.bill_start_date)}
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ fontWeight: 500, color: colors.info }}
+                        >
+                          {formatCurrency(item.bill_amount)}
+                        </TableCell>
+                        {/* <TableCell>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: colors.textSecondary }}
+                          >
+                            {item.remarks}
+                          </Typography>
+                        </TableCell> */}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Paper>
+          </Grid>
+        )}
+
         {/* AMC Bill Pending Table */}
         {(selectedCategory === null ||
           selectedCategory === "AMC_BILL_PENDING") && (
@@ -525,7 +824,7 @@ const DashboardData = () => {
                 overflow: "hidden",
                 mb: 3,
                 ...(selectedCategory === "AMC_BILL_PENDING" && {
-                  borderColor: colors.info,
+                  borderColor: colors.amcRaised,
                   borderWidth: 2,
                 }),
               }}
@@ -581,10 +880,9 @@ const DashboardData = () => {
                             <Typography
                               variant="body2"
                               sx={{
-                                maxWidth: 300,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                whiteSpace: "normal",
+                                wordBreak: "break-word",
+                                lineHeight: 1.4,
                               }}
                             >
                               {item.LOA_Number}
@@ -702,10 +1000,9 @@ const DashboardData = () => {
                             <Typography
                               variant="body2"
                               sx={{
-                                maxWidth: 300,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                whiteSpace: "normal",
+                                wordBreak: "break-word",
+                                lineHeight: 1.4,
                               }}
                             >
                               {item.LOA_Number}
