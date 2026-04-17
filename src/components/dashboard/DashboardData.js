@@ -25,6 +25,8 @@ import {
   LinearProgress,
   Avatar,
   useTheme,
+  TextField,
+  MenuItem,
 } from "@mui/material";
 import {
   Warning as WarningIcon,
@@ -51,7 +53,11 @@ import {
   Cell,
 } from "recharts";
 import CompletedWork from "../work-status/CompletedWork";
-
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import dayjs from "dayjs";
+import DatePicker from "react-datepicker";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 // Color palette
 const colors = {
   primary: "#1976d2",
@@ -91,6 +97,9 @@ const DashboardData = () => {
     message: "",
     severity: "success",
   });
+  const [loaFilter, setLoaFilter] = useState("");
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -220,7 +229,55 @@ const DashboardData = () => {
     const diff = (target - today) / (1000 * 60 * 60 * 24);
     return diff >= 0 && diff <= 30;
   };
+  const filteredData =
+    dashboardData?.amc_bill_raised?.filter((item) => {
+      const matchLOA = loaFilter ? item.LOA_Number === loaFilter : true;
 
+      const itemDate = dayjs(item.bill_start_date);
+
+      const matchFrom = fromDate
+        ? itemDate.isAfter(dayjs(fromDate).subtract(1, "day"))
+        : true;
+
+      const matchTo = toDate
+        ? itemDate.isBefore(dayjs(toDate).add(1, "day"))
+        : true;
+
+      return matchLOA && matchFrom && matchTo;
+    }) || [];
+  const uniqueLOAs = [
+    ...new Set(dashboardData?.amc_bill_raised?.map((i) => i.LOA_Number)),
+  ];
+  const handleExport = () => {
+    const exportData = filteredData.map((item) => ({
+      "LOA Number": item.LOA_Number,
+      Period: item.period,
+      AMC: item.amc_year,
+      "Bill Start Date": formatDate(item.bill_start_date),
+      "Bill Amount": item.bill_amount,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "AMC Data");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const blob = new Blob([excelBuffer], {
+      type: "application/octet-stream",
+    });
+
+    saveAs(blob, "AMC_Bill_Report.xlsx");
+  };
+  const handleClearFilters = () => {
+    setLoaFilter("");
+    setFromDate(null);
+    setToDate(null);
+  };
   if (loading) {
     return (
       <Box
@@ -285,144 +342,6 @@ const DashboardData = () => {
       </Box>
 
       {/* Summary Cards */}
-
-      {/* <Grid
-        container
-        spacing={2}
-        sx={{
-          mb: 4,
-          flexWrap: "nowrap",
-          overflowX: "auto",
-        }}
-      > */}
-      {/* Total Summary Card
-        <Grid item sx={{ minWidth: 280 }}>
-          <Card
-            elevation={0}
-            sx={{
-              border: `1px solid ${colors.border}`,
-              borderRadius: 2,
-              background: `linear-gradient(135deg, ${colors.primary} 0%, #1565C0 100%)`,
-              color: "white",
-            }}
-          >
-            <CardContent>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                <Avatar
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.2)",
-                    width: 36,
-                    height: 36,
-                  }}
-                >
-                  <TrendingUpIcon sx={{ fontSize: 32 }} />
-                </Avatar>
-                <Box sx={{ ml: 2 }}>
-                  <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                    Total Pending
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    {totalRecords}
-                  </Typography>
-                </Box>
-              </Box>
-              <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                {formatCurrency(totalAmount)}
-              </Typography>
-              <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                Total amount across all categories
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid> */}
-
-      {/* Category Summary Cards */}
-      {/* {dashboardData?.summary?.map((item) => (
-          <Grid item xs={12} md={3} key={item.category}>
-            <Card
-              elevation={0}
-              sx={{
-                border: `1px solid ${colors.border}`,
-                borderRadius: 2,
-                cursor: "pointer",
-                transition: "transform 0.2s, box-shadow 0.2s",
-                "&:hover": {
-                  transform: "translateY(-4px)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                  borderColor: getCategoryColor(item.category),
-                },
-                ...(selectedCategory === item.category && {
-                  borderColor: getCategoryColor(item.category),
-                  borderWidth: 2,
-                }),
-              }}
-              onClick={() =>
-                setSelectedCategory(
-                  selectedCategory === item.category ? null : item.category,
-                )
-              }
-            >
-              <CardContent>
-                <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-                  {getCategoryIcon(item.category)}
-                  <Box sx={{ ml: 2 }}>
-                    <Typography variant="h6" sx={{ color: colors.textPrimary }}>
-                      {getCategoryLabel(item.category)}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "baseline",
-                  }}
-                >
-                  <Box>
-                    <Typography
-                      variant="h10"
-                      sx={{ color: colors.textPrimary, fontWeight: 600 }}
-                    >
-                      {item.total_records}
-                    </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{ color: colors.textSecondary }}
-                    >
-                      Records
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: "right" }}>
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        color: getCategoryColor(item.category),
-                        fontWeight: 600,
-                      }}
-                    >
-                      {formatCurrency(item.total_amount)}
-                    </Typography>
-                  </Box>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={(item.total_records / totalRecords) * 100}
-                  sx={{
-                    mt: 2,
-                    height: 6,
-                    borderRadius: 3,
-                    backgroundColor: `${getCategoryColor(item.category)}20`,
-                    "& .MuiLinearProgress-bar": {
-                      backgroundColor: getCategoryColor(item.category),
-                    },
-                  }}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))} */}
-      {/* </Grid> */}
-
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {/* Total Summary Card */}
@@ -708,15 +627,140 @@ const DashboardData = () => {
                   p: 2,
                   backgroundColor: `${colors.amcRaised}15`,
                   borderBottom: `1px solid ${colors.border}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 2,
+                  overflow: "hidden",
                 }}
               >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {/* LEFT SIDE: TITLE ONLY */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    flexShrink: 0,
+                  }}
+                >
                   <ReceiptIcon sx={{ color: colors.amcRaised }} />
-                  <Typography variant="h6" sx={{ color: colors.textPrimary }}>
-                    {/* AMC Bill To Be Raised ( */}
+                  <Typography
+                    variant="h6"
+                    sx={{ color: colors.textPrimary, fontWeight: 600 }}
+                  >
                     Invoice To Be Raised (
                     {dashboardData?.amc_bill_raised?.length || 0})
                   </Typography>
+                </Box>
+
+                {/* RIGHT SIDE: ALL FILTERS WITH REDUCED GAP */}
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {" "}
+                  {/* Reduced gap from 1 to 0.5 */}
+                  {/* LOA FILTER */}
+                  <TextField
+                    select
+                    size="small"
+                    label="LOA"
+                    value={loaFilter}
+                    onChange={(e) => setLoaFilter(e.target.value)}
+                    SelectProps={{
+                      MenuProps: {
+                        anchorOrigin: {
+                          vertical: "bottom",
+                          horizontal: "left",
+                        },
+                        transformOrigin: {
+                          vertical: "top",
+                          horizontal: "left",
+                        },
+                        PaperProps: {
+                          sx: {
+                            mt: 1,
+                            maxHeight: 300,
+                          },
+                        },
+                      },
+                    }}
+                    sx={{
+                      width: 300,
+                      "& .MuiSelect-select": {
+                        whiteSpace: "normal",
+                        wordBreak: "break-word",
+                      },
+                    }}
+                  >
+                    <MenuItem value="">All</MenuItem>
+
+                    {[
+                      ...new Set(
+                        dashboardData?.amc_bill_raised?.map(
+                          (i) => i.LOA_Number,
+                        ) || [],
+                      ),
+                    ].map((loa) => (
+                      <MenuItem
+                        key={loa}
+                        value={loa}
+                        sx={{
+                          whiteSpace: "normal",
+                          wordBreak: "break-word",
+                          maxWidth: 300,
+                        }}
+                      >
+                        {loa}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  {/* DATE PICKERS - Reduced widths */}
+                  <Box sx={{ width: 100 }}>
+                    <DatePicker
+                      selected={fromDate}
+                      onChange={(date) => setFromDate(date)}
+                      customInput={
+                        <TextField
+                          size="small"
+                          label="From"
+                          sx={{
+                            width: "100%",
+                            m: 0,
+                          }}
+                        />
+                      }
+                    />
+                  </Box>
+                  <Box sx={{ width: 100 }}>
+                    <DatePicker
+                      selected={toDate}
+                      onChange={(date) => setToDate(date)}
+                      customInput={
+                        <TextField
+                          size="small"
+                          label="To"
+                          sx={{
+                            width: "100%",
+                            m: 0,
+                          }}
+                        />
+                      }
+                    />
+                  </Box>
+                  {/* EXPORT ICON BUTTON */}
+                  <IconButton
+                    onClick={handleExport}
+                    sx={{
+                      backgroundColor: colors.amcRaised,
+                      color: "white",
+                      width: "40px",
+                      height: "40px",
+                      "&:hover": { backgroundColor: "#6a1b9a" },
+                      m: 0,
+                    }}
+                    size="small"
+                  >
+                    <FileDownloadIcon />{" "}
+                    {/* Or use GetAppIcon / DownloadIcon */}
+                  </IconButton>
                 </Box>
               </Box>
               <TableContainer sx={{ maxHeight: "calc(100vh - 300px)" }}>
@@ -737,7 +781,7 @@ const DashboardData = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {dashboardData?.amc_bill_raised?.map((item) => (
+                    {filteredData?.map((item) => (
                       <TableRow key={item.id} hover>
                         {/* <TableCell>
                           <Typography
